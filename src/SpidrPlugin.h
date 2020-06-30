@@ -3,6 +3,8 @@
 #include <AnalysisPlugin.h>
 
 #include "TsneAnalysis.h"
+#include "FeatureExtraction.h"
+#include "PointData.h"
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
@@ -40,8 +42,16 @@ public slots:
 
 private:
     void initializeTsne();
+    /**
+    * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions 
+    * @param points Selected points in the data set
+    * @param numDimensions Will contains the number of enabled dimensions 
+    * @param data Will contain the attributes for all points, size: numPoints * numDimensions
+    */
+    void retrieveData(const Points points, unsigned int& numDimensions, std::vector<float>& data);
 
     TsneAnalysis _tsne;
+    FeatureExtraction _featExtraction;
     std::unique_ptr<SpidrSettingsWidget> _settings;
     QString _embeddingName;
 };

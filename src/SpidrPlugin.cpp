@@ -1,8 +1,6 @@
 #include "SpidrPlugin.h"
 #include "SpidrSettingsWidget.h"
 
-#include "PointData.h"
-
 #include <QtCore>
 #include <QtDebug>
 
@@ -31,9 +29,14 @@ void SpidrPlugin::init()
 {
     _settings = std::make_unique<SpidrSettingsWidget>(*this);
 
+    // Connet settings
     connect(_settings.get(), &SpidrSettingsWidget::dataSetPicked, this, &SpidrPlugin::dataSetPicked);
     connect(_settings.get(), &SpidrSettingsWidget::knnAlgorithmPicked, this, &SpidrPlugin::onKnnAlgorithmPicked);
     connect(_settings.get(), &SpidrSettingsWidget::distanceMetricPicked, this, &SpidrPlugin::onDistanceMetricPicked);
+
+    // Connect feature extraction
+
+    // Connect embedding
     connect(&_tsne, &TsneAnalysis::computationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
     connect(&_tsne, SIGNAL(newEmbedding()), this, SLOT(onNewEmbedding()));
 }
@@ -96,21 +99,45 @@ void SpidrPlugin::onDistanceMetricPicked(const int index)
 
 void SpidrPlugin::startComputation()
 {
-    initializeTsne();
-
-    // Run the computation
+    // Get the data
     QString setName = _settings->dataOptions.currentText();
     const Points& points = _core->requestData<Points>(setName);
 
+    QSize imgSize = points.getProperty("ImageSize", QSize()).toSize();
+    unsigned int numDimensions;
+    std::vector<float> data;        // Create list of data from the enabled dimensions
+    retrieveData(points, numDimensions, data);
+
+    // Extract features
+    //_featExtraction.setSettings();
+    _featExtraction.start();
+
+    // Caclculate distances and kNN
+
+    // Embedding: t-SNE
+    _embeddingName = _core->createDerivedData("Points", "Embedding", points.getName());
+    Points& embedding = _core->requestData<Points>(_embeddingName);
+    
+    embedding.setData(nullptr, 0, 2);
+    _core->notifyDataAdded(_embeddingName);
+
+    initializeTsne();
+
+    // Compute t-SNE with the given data
+    _tsne.initTSNE(data, numDimensions);
+
+    _tsne.start();
+}
+
+void SpidrPlugin::retrieveData(const Points points, unsigned int& numDimensions, std::vector<float>& data) {
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 
-    unsigned int numDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
+    // Get number of enabled dimensions
+    numDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
-    // Create list of data from the enabled dimensions
-    std::vector<float> data;
-
+    // Get indices of selected points
     auto selection = points.indices;
-
+    // If points represent all data set, select them all
     if (points.isFull()) {
         std::vector<std::uint32_t> all(points.getNumPoints());
         std::iota(std::begin(all), std::end(all), 0);
@@ -118,11 +145,11 @@ void SpidrPlugin::startComputation()
         selection = all;
     }
 
+    // For all selected points, retrieve values from each dimension
     data.reserve(selection.size() * numDimensions);
-
     for (const auto& pointId : selection)
     {
-        for (int dimensionId = 0; dimensionId < points.getNumDimensions(); dimensionId++)
+        for (unsigned int dimensionId = 0; dimensionId < points.getNumDimensions(); dimensionId++)
         {
             if (enabledDimensions[dimensionId]) {
                 const auto index = pointId * points.getNumDimensions() + dimensionId;
@@ -131,16 +158,6 @@ void SpidrPlugin::startComputation()
         }
     }
 
-    _embeddingName = _core->createDerivedData("Points", "Embedding", points.getName());
-    Points& embedding = _core->requestData<Points>(_embeddingName);
-    
-    embedding.setData(nullptr, 0, 2);
-    _core->notifyDataAdded(_embeddingName);
-
-    // Compute t-SNE with the given data
-    _tsne.initTSNE(data, numDimensions);
-
-    _tsne.start();
 }
 
 void SpidrPlugin::onNewEmbedding() {

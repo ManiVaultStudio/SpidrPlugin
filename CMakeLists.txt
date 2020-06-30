@@ -17,7 +17,20 @@ endif(MSVC)
 
 find_package(Qt5 COMPONENTS Widgets WebEngineWidgets REQUIRED)
 
-set(SOURCES
+set(PLUGIN
+    src/SpidrPlugin.h
+    src/SpidrPlugin.cpp
+    src/SpidrPlugin.json
+	src/FeatureExtraction.h
+	src/FeatureExtraction.cpp
+	src/DistanceCalculation.h
+	src/DistanceCalculation.cpp
+    src/TsneAnalysis.h
+    src/TsneAnalysis.cpp
+    src/TsneData.h
+)
+
+set(DIMENSIONSELECTIONHOLDER
     src/ModelResetter.h
     src/ModelResetter.cpp
     src/DimensionSelectionHolder.h
@@ -26,29 +39,24 @@ set(SOURCES
     src/DimensionSelectionItemModel.cpp
     src/DimensionSelectionProxyModel.h
     src/DimensionSelectionProxyModel.cpp
-    src/DimensionSelectionWidget.h
-    src/DimensionSelectionWidget.cpp
-    src/SpidrPlugin.h
-    src/SpidrPlugin.cpp
-    src/SpidrPlugin.json
-    src/SpidrSettingsWidget.h
-    src/SpidrSettingsWidget.cpp
-    src/TsneAnalysis.h
-    src/TsneAnalysis.cpp
-    src/TsneData.h
-	src/FeatureExtraction.h
-	src/FeatureExtraction.cpp
-	src/DistanceCalculation.h
-	src/DistanceCalculation.cpp
-)
-
-source_group( Plugin FILES ${SOURCES})
-
-set(UI_FILES
-    ui/DimensionSelectionWidget.ui
 )
 
 QT5_WRAP_UI(UI_HEADERS ${UI_FILES})
+
+file(GLOB WIDGETS src/*Widget.*)
+file(GLOB UIS src/*.ui)
+file(GLOB JSON src/*.json)
+
+set(SOURCES ${PLUGIN} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
+set(AUX ${JSON})
+
+source_group(Plugin FILES ${PLUGIN})
+source_group(DimensionSelectionHolder FILES ${DIMENSIONSELECTIONHOLDER})
+source_group(Widgets FILES ${WIDGETS})
+source_group(UI FILES ${UIS})
+source_group(Aux FILES ${AUX})
+
+add_library(${PROJECT} SHARED ${SOURCES} ${UIS} ${AUX})
 
 include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
 include_directories ("lib/HDI/include")
@@ -64,8 +72,6 @@ endif(APPLE)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     include_directories ("lib/Flann/Linux/include")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-
-add_library(${PROJECT} SHARED ${SOURCES} ${UI_FILES})
 
 target_compile_definitions(${PROJECT} PRIVATE QT_MESSAGELOGCONTEXT)
 
