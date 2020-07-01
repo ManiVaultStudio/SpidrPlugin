@@ -108,10 +108,10 @@ void SpidrPlugin::startComputation()
     std::vector<float> data;        // Create list of data from the enabled dimensions
     retrieveData(points, numDimensions, data);
 
-    // Extract features
-    //_featExtraction.setupData(data, points.indices, numDimensions, imgSize);
-    //_featExtraction.start();
-    //std::vector<float> histoFeats = _featExtraction.output();
+    //// Extract features
+    _featExtraction.setupData(data, points.indices, numDimensions, imgSize);
+    _featExtraction.start();
+    std::vector<float> histoFeats = _featExtraction.output();
 
     // Caclculate distances and kNN
 

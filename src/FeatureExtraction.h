@@ -47,6 +47,8 @@ private:
 
     std::vector<unsigned int> neighborhoodIndices(unsigned int pointInd);
 
+    void calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues);
+
 signals:
 
 private:

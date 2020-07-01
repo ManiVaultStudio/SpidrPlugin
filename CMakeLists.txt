@@ -16,6 +16,8 @@ if(MSVC)
 endif(MSVC)
 
 find_package(Qt5 COMPONENTS Widgets WebEngineWidgets REQUIRED)
+# use header only libs, thus no components specified
+find_package(Boost REQUIRED) 
 
 set(PLUGIN
     src/SpidrPlugin.h
@@ -41,10 +43,8 @@ set(DIMENSIONSELECTIONHOLDER
     src/DimensionSelectionProxyModel.cpp
 )
 
-QT5_WRAP_UI(UI_HEADERS ${UI_FILES})
-
 file(GLOB WIDGETS src/*Widget.*)
-file(GLOB UIS src/*.ui)
+file(GLOB UIS ui/*.ui)
 file(GLOB JSON src/*.json)
 
 set(SOURCES ${PLUGIN} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
@@ -56,12 +56,13 @@ source_group(Widgets FILES ${WIDGETS})
 source_group(UI FILES ${UIS})
 source_group(Aux FILES ${AUX})
 
+QT5_WRAP_UI(UI_HEADERS ${UIS})
+
 add_library(${PROJECT} SHARED ${SOURCES} ${UIS} ${AUX})
 
 include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
 include_directories ("lib/HDI/include")
-include_directories ("lib/boost")
-include_directories ("lib/") 	# for boost as well
+include_directories(${Boost_INCLUDE_DIRS})
 
 if(MSVC)
     include_directories ("lib/Flann/Win/include")
@@ -80,6 +81,7 @@ target_compile_definitions(${PROJECT} PRIVATE QT_MESSAGELOGCONTEXT)
 # Request C++17, in order to use std::for_each_n with std::execution::par_unseq.
 set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 17)
 
+target_link_libraries(${PROJECT} ${Boost_LIBRARIES})
 target_link_libraries(${PROJECT} Qt5::Widgets)
 target_link_libraries(${PROJECT} Qt5::WebEngineWidgets)
 target_link_libraries(${PROJECT} "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
