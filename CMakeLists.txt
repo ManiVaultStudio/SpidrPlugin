@@ -60,6 +60,8 @@ add_library(${PROJECT} SHARED ${SOURCES} ${UIS} ${AUX})
 
 include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
 include_directories ("lib/HDI/include")
+include_directories ("lib/boost")
+include_directories ("lib/") 	# for boost as well
 
 if(MSVC)
     include_directories ("lib/Flann/Win/include")

@@ -2,11 +2,11 @@
 #include "SpidrSettingsWidget.h"
 
 #include <QtCore>
+#include <QSize>
 #include <QtDebug>
 
-Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 #include <windows.h>
-
+Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 #include <set>
 
 // =============================================================================
@@ -109,22 +109,22 @@ void SpidrPlugin::startComputation()
     retrieveData(points, numDimensions, data);
 
     // Extract features
-    //_featExtraction.setSettings();
-    _featExtraction.start();
+    //_featExtraction.setupData(data, points.indices, numDimensions, imgSize);
+    //_featExtraction.start();
+    //std::vector<float> histoFeats = _featExtraction.output();
 
     // Caclculate distances and kNN
 
-    // Embedding: t-SNE
+    // Embedding
+    // First, create data set and hand it to the hdps core
     _embeddingName = _core->createDerivedData("Points", "Embedding", points.getName());
     Points& embedding = _core->requestData<Points>(_embeddingName);
-    
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);
 
+    // Second, compute t-SNE with the given data
     initializeTsne();
-
-    // Compute t-SNE with the given data
-    _tsne.initTSNE(data, numDimensions);
+    _tsne.initTSNE(data, numDimensions);    // TODO: change to use kNN 
 
     _tsne.start();
 }
