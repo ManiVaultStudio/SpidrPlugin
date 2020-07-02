@@ -5,6 +5,8 @@
 #include <QSize>
 #include <QtDebug>
 
+#include <utility>      // std::as_const
+#include <vector>       // std::vector
 #include <windows.h>
 Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 #include <set>
@@ -100,16 +102,16 @@ void SpidrPlugin::onDistanceMetricPicked(const int index)
 void SpidrPlugin::startComputation()
 {
     // Get the data
-    QString setName = _settings->dataOptions.currentText();
-    const Points& points = _core->requestData<Points>(setName);
+    QString dataName = _settings->dataOptions.currentText();
 
-    QSize imgSize = points.getProperty("ImageSize", QSize()).toSize();
+    QSize imgSize;
+    std::vector<unsigned int> pointIDsGlobal;
     unsigned int numDimensions;
     std::vector<float> data;        // Create list of data from the enabled dimensions
-    retrieveData(points, numDimensions, data);
+    retrieveData(dataName, imgSize, pointIDsGlobal, numDimensions, data);
 
     //// Extract features
-    _featExtraction.setupData(data, points.indices, numDimensions, imgSize);
+    _featExtraction.setupData(imgSize, pointIDsGlobal, numDimensions, data);
     _featExtraction.start();
     std::vector<float> histoFeats = _featExtraction.output();
 
@@ -117,7 +119,7 @@ void SpidrPlugin::startComputation()
 
     // Embedding
     // First, create data set and hand it to the hdps core
-    _embeddingName = _core->createDerivedData("Points", "Embedding", points.getName());
+    _embeddingName = _core->createDerivedData("Points", "Embedding", dataName);
     Points& embedding = _core->requestData<Points>(_embeddingName);
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);
@@ -129,25 +131,33 @@ void SpidrPlugin::startComputation()
     _tsne.start();
 }
 
-void SpidrPlugin::retrieveData(const Points points, unsigned int& numDimensions, std::vector<float>& data) {
+void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, std::vector<float>& data) {
+    // For now, only handle underived data until Points implementation 
+    // provides functionality to seamlessly obtain global IDs from derived data
+    Points& points = _core->requestData<Points>(dataName);
+    if (points.isDerivedData())
+        exit(-1);
+
+    imgSize = points.getProperty("ImageSize", QSize()).toSize();
+
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 
     // Get number of enabled dimensions
     numDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
     // Get indices of selected points
-    auto selection = points.indices;
+    pointIDsGlobal = points.indices;
     // If points represent all data set, select them all
     if (points.isFull()) {
         std::vector<std::uint32_t> all(points.getNumPoints());
         std::iota(std::begin(all), std::end(all), 0);
 
-        selection = all;
+        pointIDsGlobal = all;
     }
 
     // For all selected points, retrieve values from each dimension
-    data.reserve(selection.size() * numDimensions);
-    for (const auto& pointId : selection)
+    data.reserve(pointIDsGlobal.size() * numDimensions);
+    for (const auto& pointId : pointIDsGlobal)
     {
         for (unsigned int dimensionId = 0; dimensionId < points.getNumDimensions(); dimensionId++)
         {

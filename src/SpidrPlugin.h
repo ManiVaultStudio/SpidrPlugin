@@ -2,6 +2,9 @@
 
 #include <AnalysisPlugin.h>
 
+#include <QtCore>
+#include <QSize>
+
 #include "TsneAnalysis.h"
 #include "FeatureExtraction.h"
 #include "PointData.h"
@@ -44,11 +47,13 @@ private:
     void initializeTsne();
     /**
     * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions 
-    * @param points Selected points in the data set
-    * @param numDimensions Will contains the number of enabled dimensions 
-    * @param data Will contain the attributes for all points, size: numPoints * numDimensions
+    * @param dataName Name of data set as defined in hdps core
+    * @param imgSize Will contain the size of the image (width and height)
+    * @param pointIDsGlobal Will contain IDs of selected points in the data set
+    * @param numDimensions Will contain the number of enabled dimensions 
+    * @param data Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
     */
-    void retrieveData(const Points points, unsigned int& numDimensions, std::vector<float>& data);
+    void retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, std::vector<float>& data);
 
     TsneAnalysis _tsne;
     FeatureExtraction _featExtraction;

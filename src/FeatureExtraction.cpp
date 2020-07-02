@@ -5,7 +5,9 @@
 #include <algorithm>    // std::for_each, std::fill, std::find
 #include <execution>    // std::execution::par_unseq
 #include <vector>       // std::vector, std::begin, std::end
+#include <array>        // std::array
 #include <numeric>      // std::iota
+#include <utility>      // std::forward
 
 // Boost might be more useful for higher dimensional histograms
 // but it's convinient for now
@@ -16,7 +18,7 @@ FeatureExtraction::FeatureExtraction() :
     _numHistBins(5)
 {
     // square neighborhood
-    _numNeighbors = 
+    _numNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
     // uniform weighting
     std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1);
 }
@@ -30,12 +32,16 @@ void FeatureExtraction::run() {
     //computeHistogramFeatures();
 }
 
-void FeatureExtraction::setupData(const std::vector<float>& data, const std::vector<unsigned int>& pointIds, const int numDimensions, QSize imgSize) {
-    unsigned int numPoints = pointIds.size();
-    _pointIds = pointIds;
+void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const int numDimensions, const std::vector<float>& data) {
     _imgSize = imgSize;
-    _inputData.assign(numPoints, numDimensions, data);
-    qDebug() << "Variables set. Num dims: " << numDimensions << " Num data points: " << numPoints << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
+    _pointIds = pointIds;
+    _numPoints = pointIds.size();
+    _numDims = numDimensions;
+    _data = data;
+
+    assert(_data.size() == _numPoints * _numDims);
+
+    qDebug() << "Variables set. Num dims: " << numDimensions << " Num data points: " << pointIds.size() << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
     qDebug() << "feature extraction dataassigned.";
 }
 
@@ -50,21 +56,18 @@ void FeatureExtraction::computeHistogramFeatures() {
 void FeatureExtraction::initExtraction() {
     // Init, a.o. find min and max for each channel
 
-    unsigned int numDims = _inputData.getNumDimensions();
-    unsigned int numPoints = _inputData.getNumPoints();
-
-    _minMaxVals.resize(2 * numDims, 0);
+    _minMaxVals.resize(2 * _numDims, 0);
 
     // for each dimension iterate over all values
-    for (unsigned int dimCount = 0; dimCount < numDims; dimCount++) {
+    for (unsigned int dimCount = 0; dimCount < _numDims; dimCount++) {
         // set data iterator to dimension
-        std::vector<float>::iterator dataIt = _inputData.getDataNonConst().begin();
+        std::vector<float>::iterator dataIt = _data.begin();
         std::advance(dataIt, dimCount);
         // init min and max
         _minMaxVals.at(2 * dimCount) = *dataIt;
         _minMaxVals.at(2 * dimCount + 1) = *dataIt;
 
-        for (unsigned int pointCount = 0; pointCount < numPoints; pointCount++) {
+        for (unsigned int pointCount = 0; pointCount < _numPoints; pointCount++) {
             // min
             if (*dataIt < _minMaxVals.at(2 * dimCount))
                 _minMaxVals.at(2 * dimCount) = *dataIt;
@@ -72,32 +75,29 @@ void FeatureExtraction::initExtraction() {
             if (*dataIt > _minMaxVals.at(2 * dimCount + 1))
                 _minMaxVals.at(2 * dimCount + 1) = *dataIt;
             // step forward to next point
-            std::advance(dataIt, numDims);
+            std::advance(dataIt, _numDims);
         }
     }
 
 }
 
 void FeatureExtraction::extractFeatures() {
-    _histogramFeatures.resize(_inputData.getNumPoints() * _inputData.getNumDimensions() * _numHistBins);
-
-    unsigned int numDims = _inputData.getNumDimensions();
-    unsigned int numPoints = _inputData.getNumPoints();
-    std::vector<float> data = _inputData.getDataNonConst(); // there must be a better way to hand this to the par for_each
-    std::vector<float>::iterator dataIt = _inputData.getDataNonConst().begin();
+    _histogramFeatures.resize(_numPoints * _numDims * _numHistBins);
 
     // convolve over all selected data points
     std::for_each(std::execution::par_unseq, std::begin(_pointIds), std::end(_pointIds), [this](int pointID) {
         // get neighborhood of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(pointID);
 
-        // get data for neighborhood points
+        // get data for neighborhood points, TODO
         std::vector<float> neighborValues;
+        for (unsigned int neighborID : neighborIDs) {
 
-        // calculate histograms
+        }
+
+        // calculate histograms, TODO
         calculateHistogram(pointID, neighborValues);
     });
-
 
 }
 
@@ -131,6 +131,14 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
 
 void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues) {
     // TODO: set _histogramFeatures
+    using namespace boost::histogram; // strip the boost::histogram prefix
+    auto h = make_histogram(axis::regular<>(6, -1.0, 2.0, "x"));
+
+    auto axis = boost::histogram::axis::regular<>(_numHistBins, _minMaxVals[0], _minMaxVals[1]);
+    auto h0 = boost::histogram::make_histogram_with(std::vector<int>(), axis);
+    auto h1 = boost::histogram::make_histogram_with(std::vector<int>(), std::forward<boost::histogram::axis::regular<>>(axis), std::forward<boost::histogram::axis::regular<>>(axis));
+
+    // hist(..., weight(w))
 }
 
 const std::vector<float>& FeatureExtraction::output()

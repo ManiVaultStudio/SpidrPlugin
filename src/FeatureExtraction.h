@@ -26,8 +26,12 @@ public:
 
     /**
     * Setup feature extraction by introducing the data
+    * @param data retrieved data from points
+    * @param pointIds points.indices (global IDs)
+    * @param numDimensions enabled dimensios
+    * @param imgSize global image dimensions
     */
-    void setupData(const std::vector<float>& data, const std::vector<unsigned int>& pointIds, const int numDimensions, QSize imgSize);
+    void setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const int numDimensions, const std::vector<float>& data);
 
 private:
     void run() override;
@@ -67,8 +71,6 @@ private:
 
     // Data
 
-    // high dimensional data
-    TsneData _inputData;
     // Histogram features for each item, i.e. in case of 1D histograms for each data point there are _inputData.getNumDimensions() histograms with _numHistBins values
     std::vector<float> _histogramFeatures;
     // Image Size
@@ -76,4 +78,7 @@ private:
     // Global IDs of points in data
     std::vector<unsigned int> _pointIds;
 
+    unsigned int _numDims;
+    unsigned int _numPoints;
+    std::vector<float> _data;
 };
