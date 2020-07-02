@@ -1,10 +1,11 @@
 #include "FeatureExtraction.h"
 
-#include <iterator>     // std::advance
 #include <QDebug>       // qDebug
-#include <algorithm>    // std::for_each, std::fill
+#include <iterator>     // std::advance
+#include <algorithm>    // std::for_each, std::fill, std::find
 #include <execution>    // std::execution::par_unseq
 #include <vector>       // std::vector, std::begin, std::end
+#include <numeric>      // std::iota
 
 // Boost might be more useful for higher dimensional histograms
 // but it's convinient for now
@@ -15,7 +16,7 @@ FeatureExtraction::FeatureExtraction() :
     _numHistBins(5)
 {
     // square neighborhood
-    _numNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
+    _numNeighbors = 
     // uniform weighting
     std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1);
 }
@@ -88,7 +89,7 @@ void FeatureExtraction::extractFeatures() {
     // convolve over all selected data points
     std::for_each(std::execution::par_unseq, std::begin(_pointIds), std::end(_pointIds), [this](int pointID) {
         // get neighborhood of the current point
-        std::vector<unsigned int> neighborIDs = neighborhoodIndices(pointID);
+        std::vector<int> neighborIDs = neighborhoodIndices(pointID);
 
         // get data for neighborhood points
         std::vector<float> neighborValues;
@@ -101,10 +102,30 @@ void FeatureExtraction::extractFeatures() {
 }
 
 // For now, expect a rectangle selection (lasso selection might cause edge cases that were not thought of)
-// Use edge padding, i.e. repeat the value of the closest item covered by the kernel
-std::vector<unsigned int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
-    // TODO: implements this
-    std::vector<unsigned int> neighborsIDs(_numNeighbors, 0);
+// Padding: assign -1 to points outside the selection. Later assign 0 vector to all of them.
+std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
+    std::vector<int> neighborsIDs(_numNeighbors, 0);
+
+    // left and right neighbors
+    std::vector<int> lrNeighIDs(2*_neighborhoodSize + 1, 0);
+    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd-_neighborhoodSize);
+
+    // above and below neighbors
+    unsigned int localNeighCount = 0;
+    for (int i = -1 * _neighborhoodSize; i <= _neighborhoodSize; i++) {
+        for (int ID : lrNeighIDs) {
+            neighborsIDs[localNeighCount] = ID + i * _imgSize.width();
+            localNeighCount++;
+        }
+    }
+
+    // Check if neighborhood IDs are in selected points
+    for (int& ID : neighborsIDs) {
+        if (std::find(_pointIds.begin(), _pointIds.end(), ID) == _pointIds.end()) {
+            ID = -1;
+        }
+    }
+
     return neighborsIDs;
 }
 

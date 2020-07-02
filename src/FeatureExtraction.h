@@ -45,7 +45,7 @@ private:
 
     void extractFeatures();
 
-    std::vector<unsigned int> neighborhoodIndices(unsigned int pointInd);
+    std::vector<int> neighborhoodIndices(unsigned int pointInd);
 
     void calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues);
 
@@ -54,7 +54,7 @@ signals:
 private:
     // Options 
 
-    // Square neighborhood centered around an item with _neighborhoodSize left, right, top, buttom
+    // Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom
     unsigned int _neighborhoodSize;
     // Number of neighbors including center
     unsigned int _numNeighbors;
