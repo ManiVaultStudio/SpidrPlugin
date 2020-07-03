@@ -117,6 +117,7 @@ void SpidrPlugin::startComputation()
 
     // Caclculate distances and kNN
 
+
     // Embedding
     // First, create data set and hand it to the hdps core
     _embeddingName = _core->createDerivedData("Points", "Embedding", dataName);

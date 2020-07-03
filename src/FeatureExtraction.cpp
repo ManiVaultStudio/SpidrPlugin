@@ -102,7 +102,7 @@ void FeatureExtraction::extractFeatures() {
             }
         }
 
-        // calculate histograms, save histos in _histogramFeatures TODO
+        // calculate histograms, save histos in _histogramFeatures
         calculateHistogram(pointID, neighborValues);
     });
 
@@ -137,16 +137,13 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
 }
 
 void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues) {
-    // TODO: set _histogramFeatures
-    // Attantion: _minMaxVals[1] value will be placed in an overflow bin. Either change the last bin or collaps the overflow bin into the last bin
-    // once this works, check if the following is faster (VS Studio will complain but compile)
-    //const auto axi = axis::regular(10, 0.0, 1.0);
-    //auto h1 = make_histogram_with(std::vector<int>(), axi);
 
     // 1D histograms for each dimension
     // save the histogram in _histogramFeatures
     for (unsigned int dim = 0; dim < _numDims; dim++) {
         auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
+        // once this works, check if the following is faster (VS Studio will complain but compile)
+        //auto h = boost::histogram::make_histogram_with(std::vector<float>(), boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
         for (unsigned int neighbor = 0; neighbor < _numNeighbors; neighbor++) {
             h(neighborValues[neighbor * _numDims + dim], _neighborhoodWeights[neighbor]);
         }

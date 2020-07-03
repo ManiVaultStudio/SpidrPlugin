@@ -1,7 +1,5 @@
 #pragma once
 
-#include "TsneData.h"
-
 #include <vector>
 #include <QThread>
 #include <QSize>
@@ -71,8 +69,7 @@ private:
 
     // Data
 
-    // Histogram features for each item, i.e. in case of 1D histograms for each data point there are _inputData.getNumDimensions() histograms with _numHistBins values
-    std::vector<float> _histogramFeatures;
+    // Input
     // Image Size
     QSize _imgSize;
     // Global IDs of points in data
@@ -81,4 +78,9 @@ private:
     unsigned int _numDims;
     unsigned int _numPoints;
     std::vector<float> _data;
+
+    // Output
+    // Histogram features for each item, i.e. in case of 1D histograms for each data point there are _inputData.getNumDimensions() histograms with _numHistBins values
+    std::vector<float> _histogramFeatures;
+
 };

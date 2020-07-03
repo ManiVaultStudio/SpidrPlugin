@@ -30,6 +30,7 @@ set(PLUGIN
     src/TsneAnalysis.h
     src/TsneAnalysis.cpp
     src/TsneData.h
+	src/Utils.h
 )
 
 set(DIMENSIONSELECTIONHOLDER
