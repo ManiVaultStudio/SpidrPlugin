@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utils.h"
+#include "KNNUtils.h"
 
 #include <vector>
 #include <QThread>
@@ -37,6 +37,8 @@ private:
 
     // Data
     // Input
+    unsigned int _numDims;
+    unsigned int _numPoints;
     std::vector<float>* _histogramFeatures;
 
     // Output

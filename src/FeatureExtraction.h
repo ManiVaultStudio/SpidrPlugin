@@ -80,7 +80,8 @@ private:
     std::vector<float> _data;
 
     // Output
-    // Histogram features for each item, i.e. in case of 1D histograms for each data point there are _inputData.getNumDimensions() histograms with _numHistBins values
+    // Histogram features for each item. 
+    // In case of 1D histograms for each data point there are _inputData.getNumDimensions() histograms with _numHistBins values, i.e. size _numPoints * _numDims * _numHistBins
     std::vector<float> _histogramFeatures;
 
 };
