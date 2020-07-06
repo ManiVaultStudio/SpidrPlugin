@@ -8,6 +8,7 @@
 #include "TsneAnalysis.h"
 #include "FeatureExtraction.h"
 #include "PointData.h"
+#include "KNNUtils.h"
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
@@ -59,6 +60,8 @@ private:
     FeatureExtraction _featExtraction;
     std::unique_ptr<SpidrSettingsWidget> _settings;
     QString _embeddingName;
+
+    Parameters params;
 };
 
 // =============================================================================

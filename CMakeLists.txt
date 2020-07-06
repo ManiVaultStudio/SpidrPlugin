@@ -63,7 +63,7 @@ add_library(${PROJECT} SHARED ${SOURCES} ${UIS} ${AUX})
 
 include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
 include_directories ("lib/HDI/include")
-include_directories ("lib/")
+include_directories ("lib/hnswlib/")
 include_directories(${Boost_INCLUDE_DIRS})
 
 if(MSVC)
@@ -82,6 +82,16 @@ target_compile_definitions(${PROJECT} PRIVATE QT_MESSAGELOGCONTEXT)
 
 # Request C++17, in order to use std::for_each_n with std::execution::par_unseq.
 set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 17)
+
+find_package(OpenMP REQUIRED)
+
+if(OPENMP_FOUND)
+	message (STATUS "OpenMP found ${OpenMP_CXX_LIB_NAMES}")
+	target_link_libraries(${PROJECT} OpenMP::OpenMP_CXX)
+else()
+    message(WARNING, "OpenMP not found!")    
+endif()
+
 
 target_link_libraries(${PROJECT} ${Boost_LIBRARIES})
 target_link_libraries(${PROJECT} Qt5::Widgets)

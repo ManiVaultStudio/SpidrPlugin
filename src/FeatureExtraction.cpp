@@ -1,5 +1,7 @@
 #include "FeatureExtraction.h"
 
+#include "KNNUtils.h"
+
 #include <QDebug>       // qDebug
 #include <iterator>     // std::advance
 #include <algorithm>    // std::for_each, std::fill, std::find
@@ -32,7 +34,7 @@ void FeatureExtraction::run() {
     //computeHistogramFeatures();
 }
 
-void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const int numDimensions, const std::vector<float>& data) {
+void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const int numDimensions, const std::vector<float>& data, Parameters& params) {
     _imgSize = imgSize;
     _pointIds = pointIds;
     _numPoints = pointIds.size();

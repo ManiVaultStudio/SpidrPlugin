@@ -4,6 +4,7 @@
 #include <QThread>
 #include <QSize>
 
+class Parameters;
 /**
 * Calculate Spatial Features
 * .start() will execute run() in a new thread
@@ -29,7 +30,7 @@ public:
     * @param numDimensions enabled dimensios
     * @param imgSize global image dimensions
     */
-    void setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const int numDimensions, const std::vector<float>& data);
+    void setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const int numDimensions, const std::vector<float>& data, Parameters& params);
 
 private:
     void run() override;

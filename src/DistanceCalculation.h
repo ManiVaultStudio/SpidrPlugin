@@ -2,7 +2,9 @@
 
 #include "KNNUtils.h"
 
+#include <tuple>
 #include <vector>
+
 #include <QThread>
 #include <QSize>
 
@@ -17,9 +19,9 @@ public:
     DistanceCalculation();
     ~DistanceCalculation(void) override;
 
-    const std::vector<float>& output(); // tuple of indices and dists
+    const std::tuple< std::vector<int>, std::vector<float>>& output(); // tuple of indices and dists
 
-    void setupData(std::vector<float>* histogramFeatures, knn_library knn_lib = knn_library::KNN_FLANN, knn_distance_metric knn_metric= knn_distance_metric::KNN_METRIC_QF);
+    void setupData(std::vector<float>* histogramFeatures, Parameters& params);
 
 private:
     void run() override;
@@ -34,14 +36,16 @@ private:
     // Options
     knn_library _knn_lib;
     knn_distance_metric _knn_metric;
+    unsigned int _nn;
 
     // Data
     // Input
     unsigned int _numDims;
     unsigned int _numPoints;
+    unsigned int _numHistBins;
     std::vector<float>* _histogramFeatures;
 
     // Output
-    std::vector<int> indices;
-    std::vector<float> distances_squared;
+    std::vector<int> _indices;
+    std::vector<float> _distances_squared;
 };

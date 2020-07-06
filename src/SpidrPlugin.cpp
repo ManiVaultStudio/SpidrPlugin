@@ -20,6 +20,7 @@ SpidrPlugin::SpidrPlugin()
 :
 AnalysisPlugin("Spidr")
 {
+    params = Parameters();
 }
 
 SpidrPlugin::~SpidrPlugin(void)
@@ -111,7 +112,7 @@ void SpidrPlugin::startComputation()
     retrieveData(dataName, imgSize, pointIDsGlobal, numDimensions, data);
 
     //// Extract features
-    _featExtraction.setupData(imgSize, pointIDsGlobal, numDimensions, data);
+    _featExtraction.setupData(imgSize, pointIDsGlobal, numDimensions, data, params);
     _featExtraction.start();
     std::vector<float> histoFeats = _featExtraction.output();
 
