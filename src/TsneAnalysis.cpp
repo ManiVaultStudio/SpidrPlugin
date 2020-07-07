@@ -96,8 +96,6 @@ void TsneAnalysis::initTSNE(const std::vector<int>* knn_indices, const std::vect
         probGenParams._perplexity_multiplier = 3;
         probGenParams._num_trees = _numTrees;
         probGenParams._num_checks = _numChecks;
-        probGenParams._aknn_algorithm = _knnLibrary;
-        probGenParams._aknn_metric = _knnDistanceMetric;
 
         qDebug() << "tSNE initialized.";
 

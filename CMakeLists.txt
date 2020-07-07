@@ -29,7 +29,6 @@ set(PLUGIN
 	src/DistanceCalculation.cpp
     src/TsneAnalysis.h
     src/TsneAnalysis.cpp
-    src/TsneData.h
 	src/KNNUtils.h
 )
 

@@ -6,9 +6,7 @@
 
 enum knn_library
 {
-    KNN_HSNW = 0,
-    //  KNN_FLANN = 1,
-    //  KNN_KGRAPH = 2
+    KNN_HSNW = 0
 };
 
 

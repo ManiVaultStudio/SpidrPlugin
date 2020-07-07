@@ -14,7 +14,6 @@
 #include <QVBoxLayout>
 
 
-
 SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
 :
 _analysisPlugin(analysisPlugin)
@@ -23,12 +22,11 @@ _analysisPlugin(analysisPlugin)
     setMinimumWidth(minimumWidth);
     setMaximumWidth(2 * minimumWidth);
 
-    knnOptions.addItem("FLANN");
-    //knnOptions.addItem("HNSW");
-    //knnOptions.addItem("ANNOY");
+    knnOptions.addItem("HNSW");
 
-    distanceMetric.addItem("EMD");
     distanceMetric.addItem("QF");
+    distanceMetric.addItem("Hellinger");
+//    distanceMetric.addItem("EMD");
 
     kernelWeight.addItem("Uniform");
     kernelWeight.addItem("Binomial");
