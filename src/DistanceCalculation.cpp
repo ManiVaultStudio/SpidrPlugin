@@ -15,6 +15,7 @@ void DistanceCalculation::setupData(std::vector<float>* histogramFeatures, Param
     
     _knn_lib = params._aknn_algorithm;
     _knn_metric = params._aknn_metric;
+    _histogramFeatures = histogramFeatures;
 
     // resize
     _nn = params._perplexity*params._perplexity_multiplier + 1;
@@ -36,7 +37,7 @@ void DistanceCalculation::computekNN() {
 
         // setup hsnw index
         hnswlib::SpaceInterface<float> *space = NULL;
-        space = new hnswlib::QFSpace(_numDims);
+        space = new hnswlib::QFSpace(_numDims, _numHistBins);
         hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default values for M, ef_construction random_seed
 
         // add data points: each data point holds _numDims*_numHistBins values
@@ -51,10 +52,12 @@ void DistanceCalculation::computekNN() {
 #pragma omp parallel for
         for (int i = 0; i < _numPoints; ++i)
         {
+            // find nearest neighbors
             auto top_candidates = appr_alg.searchKnn(_histogramFeatures + (i*(_numDims*_numHistBins)), (hnswlib::labeltype)_nn);
             while (top_candidates.size() > _nn) {
                 top_candidates.pop();
             }
+            // save nn in _indices and _distances_squared 
             auto *distances_offset = _distances_squared.data() + (i*_nn);
             auto indices_offset = _indices.data() + (i*_nn);
             int j = 0;

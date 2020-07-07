@@ -6,9 +6,11 @@
 #include <QSize>
 
 #include "TsneAnalysis.h"
+#include "DistanceCalculation.h"
 #include "FeatureExtraction.h"
 #include "PointData.h"
 #include "KNNUtils.h"
+
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
@@ -57,11 +59,12 @@ private:
     void retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, std::vector<float>& data);
 
     TsneAnalysis _tsne;
+    DistanceCalculation _distCalc;
     FeatureExtraction _featExtraction;
     std::unique_ptr<SpidrSettingsWidget> _settings;
     QString _embeddingName;
 
-    Parameters params;
+    Parameters _params;
 };
 
 // =============================================================================

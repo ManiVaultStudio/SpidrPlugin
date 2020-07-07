@@ -20,7 +20,7 @@ SpidrPlugin::SpidrPlugin()
 :
 AnalysisPlugin("Spidr")
 {
-    params = Parameters();
+    _params = Parameters();
 }
 
 SpidrPlugin::~SpidrPlugin(void)
@@ -112,12 +112,12 @@ void SpidrPlugin::startComputation()
     retrieveData(dataName, imgSize, pointIDsGlobal, numDimensions, data);
 
     //// Extract features
-    _featExtraction.setupData(imgSize, pointIDsGlobal, numDimensions, data, params);
+    _featExtraction.setupData(imgSize, pointIDsGlobal, numDimensions, data, _params);
     _featExtraction.start();
     std::vector<float> histoFeats = _featExtraction.output();
 
     // Caclculate distances and kNN
-
+    _distCalc.setupData(&histoFeats, _params);
 
     // Embedding
     // First, create data set and hand it to the hdps core
