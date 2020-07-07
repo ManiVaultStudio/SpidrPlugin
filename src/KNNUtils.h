@@ -25,27 +25,6 @@ enum ground_dist
     SIM_EXP = 1
 };
 
-class Parameters {
-public:
-    Parameters() :
-        _perplexity(30),
-        _perplexity_multiplier(3),
-        _num_trees(4),
-        _num_checks(1024),
-        _aknn_algorithm(KNN_HSNW),
-        _aknn_metric(KNN_METRIC_QF)
-    {}
-
-public:
-    float       _perplexity;            //! Perplexity value in evert distribution.
-    int         _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
-    int         _num_trees;             //! Number of trees used int the AKNN
-    int         _num_checks;            //! Number of checks used int the AKNN
-    knn_library _aknn_algorithm;
-    knn_distance_metric _aknn_metric;
-};
-
-
 namespace hnswlib {
 
 

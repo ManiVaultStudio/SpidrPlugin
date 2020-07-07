@@ -16,6 +16,27 @@ class SpidrSettingsWidget;
 using namespace hdps::plugin;
 using namespace hdps::gui;
 
+class Parameters {
+public:
+    Parameters() :
+        _perplexity(30),
+        _perplexity_multiplier(3),
+        _aknn_algorithm(KNN_HSNW),
+        _aknn_metric(KNN_METRIC_QF)
+    {}
+
+public:
+    float               _perplexity;            //! Perplexity value in evert distribution.
+    int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
+    knn_library         _aknn_algorithm;
+    knn_distance_metric _aknn_metric;
+    unsigned int        _numHistBins;
+    unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1;
+    unsigned int        _numPoints;             
+    unsigned int        _numDims;             
+};
+
+
 // =============================================================================
 // View
 // =============================================================================
@@ -47,7 +68,8 @@ public slots:
     void onNewEmbedding();
 
 private:
-    void initializeTsne();
+    void initializeTsneSettings();
+
     /**
     * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions 
     * @param dataName Name of data set as defined in hdps core
@@ -56,14 +78,13 @@ private:
     * @param numDimensions Will contain the number of enabled dimensions 
     * @param data Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
     */
-    void retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, std::vector<float>& data);
+    void retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, unsigned int& numPoints, std::vector<float>& data);
 
     TsneAnalysis _tsne;
     DistanceCalculation _distCalc;
     FeatureExtraction _featExtraction;
     std::unique_ptr<SpidrSettingsWidget> _settings;
     QString _embeddingName;
-
     Parameters _params;
 };
 

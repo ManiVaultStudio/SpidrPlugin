@@ -1,9 +1,10 @@
 #include "TsneAnalysis.h"
 
+#include <algorithm>            // std::min, max
 #include <vector>
 #include <assert.h>
 
-#include "SpidrPlugin.h"
+#include "SpidrPlugin.h"        // class Parameters
 #include <QDebug>
 
 #include "hdi/dimensionality_reduction/tsne_parameters.h"
@@ -82,16 +83,12 @@ void TsneAnalysis::computeGradientDescent()
     embed();
 }
 
-void TsneAnalysis::initTSNE(const std::vector<float>& data, const int numDimensions)
+void TsneAnalysis::initTSNE(const std::vector<int>* knn_indices, const std::vector<float>* knn_distances, Parameters params)
 {
-    unsigned int numPoints = data.size() / numDimensions;
-    qDebug() << "Variables set. Num dims: " << numDimensions << " Num data points: " << numPoints;
-    
-    // Input data
-    _inputData.assign(numPoints, numDimensions, data);
-    qDebug() << "t-SNE input data assigned.";
-    
-    /// Computation of the high dimensional similarities
+    _numPoints = knn_indices->size() / params._nn;
+    qDebug() << "Variables set. Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors";
+        
+    // Computation of the high dimensional similarities
     qDebug() << "Output allocated.";
     {
         hdi::dr::HDJointProbabilityGenerator<float>::Parameters probGenParams;
@@ -105,15 +102,15 @@ void TsneAnalysis::initTSNE(const std::vector<float>& data, const int numDimensi
         qDebug() << "tSNE initialized.";
 
         _probabilityDistribution.clear();
-        _probabilityDistribution.resize(numPoints);
+        _probabilityDistribution.resize(_numPoints);
         qDebug() << "Sparse matrix allocated.";
 
-        qDebug() << "Computing high dimensional probability distributions.. Num dims: " << numDimensions << " Num data points: " << numPoints;
+        qDebug() << "Computing high dimensional probability distributions.. Num data points: " << _numPoints;
         hdi::dr::HDJointProbabilityGenerator<float> probabilityGenerator;
         double t = 0.0;
         {
             hdi::utils::ScopedTimer<double> timer(t);
-            probabilityGenerator.computeJointProbabilityDistribution(_inputData.getDataNonConst().data(), numDimensions, numPoints, _probabilityDistribution, probGenParams);
+            probabilityGenerator.computeGaussianDistributions(*knn_distances, *knn_indices, params._nn, _probabilityDistribution, probGenParams);
         }
         qDebug() << "Probability distributions calculated.";
         qDebug() << "================================================================================";
@@ -134,8 +131,8 @@ void TsneAnalysis::initGradientDescent()
     tsneParams._mom_switching_iter = _exaggerationIter;
     tsneParams._remove_exaggeration_iter = _exaggerationIter;
     tsneParams._exponential_decay_iter = 150;
-    tsneParams._exaggeration_factor = 4 + _inputData.getNumPoints() / 60000.0;
-    _A_tSNE.setTheta(std::min(0.5, std::max(0.0, (_inputData.getNumPoints() - 1000.0)*0.00005)));
+    tsneParams._exaggeration_factor = 4 + _numPoints / 60000.0;
+    _A_tSNE.setTheta(std::min(0.5, std::max(0.0, (_numPoints - 1000.0)*0.00005)));
 
     // Create a context local to this thread that shares with the global share context
     offBuffer = new OffscreenBuffer();
@@ -204,37 +201,12 @@ void TsneAnalysis::run() {
 // Copy tSNE output to our output
 void TsneAnalysis::copyFloatOutput()
 {
-    _outputData.assign(_inputData.getNumPoints(), _numDimensionsOutput, _embedding.getContainer());
+    _outputData = _embedding.getContainer();
 }
 
-const TsneData& TsneAnalysis::output()
+const std::vector<float>& TsneAnalysis::output()
 {
     return _outputData;
-}
-
-void TsneAnalysis::setKnnAlgorithm(int algorithm)
-{
-    switch (algorithm)
-    {
-    case 0: _knnLibrary = hdi::utils::KNN_FLANN; break;
-    case 1: _knnLibrary = hdi::utils::KNN_HNSW; break;
-    case 2: _knnLibrary = hdi::utils::KNN_ANNOY; break;
-    default: _knnLibrary = hdi::utils::KNN_FLANN;
-    }
-}
-
-void TsneAnalysis::setDistanceMetric(int metric)
-{
-    switch (metric)
-    {
-    case 0: _knnDistanceMetric = hdi::utils::KNN_METRIC_EUCLIDEAN; break;
-    case 1: _knnDistanceMetric = hdi::utils::KNN_METRIC_COSINE; break;
-    case 2: _knnDistanceMetric = hdi::utils::KNN_METRIC_INNER_PRODUCT; break;
-    case 3: _knnDistanceMetric = hdi::utils::KNN_METRIC_MANHATTAN; break;
-    case 4: _knnDistanceMetric = hdi::utils::KNN_METRIC_HAMMING; break;
-    case 5: _knnDistanceMetric = hdi::utils::KNN_METRIC_DOT; break;
-    default: _knnDistanceMetric = hdi::utils::KNN_METRIC_EUCLIDEAN;
-    }
 }
 
 void TsneAnalysis::setVerbose(bool verbose)
@@ -245,16 +217,6 @@ void TsneAnalysis::setVerbose(bool verbose)
 void TsneAnalysis::setIterations(int iterations)
 {
     _iterations = iterations;
-}
-
-void TsneAnalysis::setNumTrees(int numTrees)
-{
-    _numTrees = numTrees;
-}
-
-void TsneAnalysis::setNumChecks(int numChecks)
-{
-    _numChecks = numChecks;
 }
 
 void TsneAnalysis::setExaggerationIter(int exaggerationIter)

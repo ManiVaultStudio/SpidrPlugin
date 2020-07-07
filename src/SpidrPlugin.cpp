@@ -90,16 +90,6 @@ void SpidrPlugin::dataSetPicked(const QString& name)
     _settings->dataChanged(points);
 }
 
-void SpidrPlugin::onKnnAlgorithmPicked(const int index)
-{
-    _tsne.setKnnAlgorithm(index);
-}
-
-void SpidrPlugin::onDistanceMetricPicked(const int index)
-{
-    _tsne.setDistanceMetric(index);
-}
-
 void SpidrPlugin::startComputation()
 {
     // Get the data
@@ -108,8 +98,10 @@ void SpidrPlugin::startComputation()
     QSize imgSize;
     std::vector<unsigned int> pointIDsGlobal;
     unsigned int numDimensions;
+    unsigned int numPoints;
     std::vector<float> data;        // Create list of data from the enabled dimensions
-    retrieveData(dataName, imgSize, pointIDsGlobal, numDimensions, data);
+    retrieveData(dataName, imgSize, pointIDsGlobal, numDimensions, numPoints, data);
+    _params._numPoints = numPoints;
 
     //// Extract features
     _featExtraction.setupData(imgSize, pointIDsGlobal, numDimensions, data, _params);
@@ -118,6 +110,9 @@ void SpidrPlugin::startComputation()
 
     // Caclculate distances and kNN
     _distCalc.setupData(&histoFeats, _params);
+    _distCalc.start();
+    const std::vector<int>* indices = _distCalc.get_knn_indices();
+    const std::vector<float>* distances_squared = _distCalc.get_knn_distances_squared();
 
     // Embedding
     // First, create data set and hand it to the hdps core
@@ -127,13 +122,12 @@ void SpidrPlugin::startComputation()
     _core->notifyDataAdded(_embeddingName);
 
     // Second, compute t-SNE with the given data
-    initializeTsne();
-    _tsne.initTSNE(data, numDimensions);    // TODO: change to use kNN 
-
+    initializeTsneSettings();
+    _tsne.initTSNE(indices, distances_squared, _params);    // TODO: change to use kNN 
     _tsne.start();
 }
 
-void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, std::vector<float>& data) {
+void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, unsigned int& numPoints, std::vector<float>& data) {
     // For now, only handle underived data until Points implementation 
     // provides functionality to seamlessly obtain global IDs from derived data
     Points& points = _core->requestData<Points>(dataName);
@@ -157,6 +151,9 @@ void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<uns
         pointIDsGlobal = all;
     }
 
+    // Get the number of points
+    numPoints = pointIDsGlobal.size();
+
     // For all selected points, retrieve values from each dimension
     data.reserve(pointIDsGlobal.size() * numDimensions);
     for (const auto& pointId : pointIDsGlobal)
@@ -172,22 +169,32 @@ void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<uns
 
 }
 
+void SpidrPlugin::onKnnAlgorithmPicked(const int index)
+{
+    _distCalc.setKnnAlgorithm(index);
+}
+
+void SpidrPlugin::onDistanceMetricPicked(const int index)
+{
+    _distCalc.setDistanceMetric(index);
+}
+
+
 void SpidrPlugin::onNewEmbedding() {
-    const TsneData& outputData = _tsne.output();
+    const std::vector<float>& outputData = _tsne.output();
     Points& embedding = _core->requestData<Points>(_embeddingName);
     
-    embedding.setData(outputData.getData().data(), outputData.getNumPoints(), 2);
+    embedding.setData(outputData.data(), _params._numPoints, 2);
 
     _core->notifyDataChanged(_embeddingName);
 }
 
-void SpidrPlugin::initializeTsne() {
+void SpidrPlugin::initializeTsneSettings() {
     // Initialize the tSNE computation with the settings from the settings widget
     _tsne.setIterations(_settings->numIterations.text().toInt());
     _tsne.setPerplexity(_settings->perplexity.text().toInt());
     _tsne.setExaggerationIter(_settings->exaggeration.text().toInt());
-    _tsne.setNumTrees(_settings->numTrees.text().toInt());
-    _tsne.setNumChecks(_settings->numChecks.text().toInt());
+
 }
 
 void SpidrPlugin::stopComputation() {

@@ -1,5 +1,6 @@
 #include "DistanceCalculation.h"
 
+#include "SpidrPlugin.h"        // class Parameters
 #include "hnswlib/hnswlib.h"
 
 DistanceCalculation::DistanceCalculation() 
@@ -17,13 +18,12 @@ void DistanceCalculation::setupData(std::vector<float>* histogramFeatures, Param
     _knn_metric = params._aknn_metric;
     _histogramFeatures = histogramFeatures;
 
-    // resize
     _nn = params._perplexity*params._perplexity_multiplier + 1;
+    params._nn = _nn;
     _indices.resize(_numPoints*_nn);
     _distances_squared.resize(_numPoints*_nn);
 
-    //TODO 
-//     _numHistBins = 
+    _numHistBins = params._numHistBins;
 }
 
 void DistanceCalculation::run() {
@@ -72,7 +72,36 @@ void DistanceCalculation::computekNN() {
     }
 }
 
-const std::tuple< std::vector<int>, std::vector<float>>& DistanceCalculation::output() {
+const std::tuple< std::vector<int>, std::vector<float>> DistanceCalculation::output() {
     return { _indices, _distances_squared };
 }
 
+std::vector<int>* DistanceCalculation::get_knn_indices() {
+    return &_indices;
+}
+
+std::vector<float>* DistanceCalculation::get_knn_distances_squared() {
+    return &_distances_squared;
+}
+
+
+void DistanceCalculation::setKnnAlgorithm(int index)
+{
+    // index corresponds to order in which algorithm were added to widget
+    switch (index)
+    {
+    case 0: _knn_lib = knn_library::KNN_HSNW; break;
+    default: _knn_lib = knn_library::KNN_HSNW;
+    }
+}
+
+void DistanceCalculation::setDistanceMetric(int index)
+{
+    // index corresponds to order in which algorithm were added to widget
+    switch (index)
+    {
+    case 0: _knn_metric = knn_distance_metric::KNN_METRIC_QF; break;
+    case 1: _knn_metric = knn_distance_metric::KNN_METRIC_HEL; break;
+    default: _knn_metric = knn_distance_metric::KNN_METRIC_QF;
+    }
+}
