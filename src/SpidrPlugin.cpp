@@ -97,14 +97,11 @@ void SpidrPlugin::startComputation()
 
     QSize imgSize;
     std::vector<unsigned int> pointIDsGlobal;
-    unsigned int numDimensions;
-    unsigned int numPoints;
     std::vector<float> data;        // Create list of data from the enabled dimensions
-    retrieveData(dataName, imgSize, pointIDsGlobal, numDimensions, numPoints, data);
-    _params._numPoints = numPoints;
+    retrieveData(dataName, imgSize, pointIDsGlobal, data, _params);
 
     //// Extract features
-    _featExtraction.setupData(imgSize, pointIDsGlobal, numDimensions, data, _params);
+    _featExtraction.setupData(imgSize, pointIDsGlobal, data, _params);
     _featExtraction.start();
     std::vector<float> histoFeats = _featExtraction.output();
 
@@ -121,13 +118,15 @@ void SpidrPlugin::startComputation()
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);
 
+    qDebug() << "Created new data set for embedding";
+
     // Second, compute t-SNE with the given data
     initializeTsneSettings();
     _tsne.initTSNE(indices, distances_squared, _params);    // TODO: change to use kNN 
     _tsne.start();
 }
 
-void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, unsigned int& numPoints, std::vector<float>& data) {
+void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& data, Parameters& params) {
     // For now, only handle underived data until Points implementation 
     // provides functionality to seamlessly obtain global IDs from derived data
     Points& points = _core->requestData<Points>(dataName);
@@ -139,7 +138,7 @@ void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<uns
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 
     // Get number of enabled dimensions
-    numDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
+    unsigned int numDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
     // Get indices of selected points
     pointIDsGlobal = points.indices;
@@ -150,9 +149,6 @@ void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<uns
 
         pointIDsGlobal = all;
     }
-
-    // Get the number of points
-    numPoints = pointIDsGlobal.size();
 
     // For all selected points, retrieve values from each dimension
     data.reserve(pointIDsGlobal.size() * numDimensions);
@@ -166,6 +162,13 @@ void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<uns
             }
         }
     }
+
+    // Set Parameters
+    _params._numPoints  = pointIDsGlobal.size();
+    _params._numDims = numDimensions;
+
+    qDebug() << "SpidrPlugin: Read data.";
+    qDebug() << "Feature Extraction. Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
 
 }
 
@@ -190,11 +193,13 @@ void SpidrPlugin::onNewEmbedding() {
 }
 
 void SpidrPlugin::initializeTsneSettings() {
+    
     // Initialize the tSNE computation with the settings from the settings widget
     _tsne.setIterations(_settings->numIterations.text().toInt());
     _tsne.setPerplexity(_settings->perplexity.text().toInt());
     _tsne.setExaggerationIter(_settings->exaggeration.text().toInt());
 
+    qDebug() << "t-SNE computation settings: perplexity " << _tsne.perplexity() << ", iterations " << _tsne.iterations();
 }
 
 void SpidrPlugin::stopComputation() {

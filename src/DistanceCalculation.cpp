@@ -3,7 +3,9 @@
 #include "SpidrPlugin.h"        // class Parameters
 #include "hnswlib/hnswlib.h"
 
-DistanceCalculation::DistanceCalculation() 
+DistanceCalculation::DistanceCalculation() :
+    _knn_lib(knn_library::KNN_HSNW),
+    _knn_metric(knn_distance_metric::KNN_METRIC_QF)
 {
 }
 
@@ -13,26 +15,34 @@ DistanceCalculation::~DistanceCalculation()
 }
 
 void DistanceCalculation::setupData(std::vector<float>* histogramFeatures, Parameters& params) {
-    
-    _knn_lib = params._aknn_algorithm;
-    _knn_metric = params._aknn_metric;
-    _histogramFeatures = histogramFeatures;
-
+    // (Most) Options are set outside this funciton
     _nn = params._perplexity*params._perplexity_multiplier + 1;
     params._nn = _nn;
+
+    // Data
+    // Input
+    _numPoints = params._numPoints;
+    _numDims = params._numDims;
+    _numHistBins = params._numHistBins;
+    _histogramFeatures = histogramFeatures;
+
+    // Output
     _indices.resize(_numPoints*_nn);
     _distances_squared.resize(_numPoints*_nn);
 
-    _numHistBins = params._numHistBins;
+    assert(_histogramFeatures->size() == _numPoints * _numDims * _numHistBins);
+
+    qDebug() << "Distance calculation. Num data points: " << _numPoints << " Feature values per point: " << _numDims * _numHistBins;
+    qDebug() << "Number of NN to calculate: " << _nn;
+
 }
 
 void DistanceCalculation::run() {
-    //computekNN();
+    computekNN();
 }
 
 void DistanceCalculation::computekNN() {
     
-
     if (_knn_lib == knn_library::KNN_HSNW) {
 
         // setup hsnw index
@@ -70,6 +80,9 @@ void DistanceCalculation::computekNN() {
             }
         }
     }
+
+    qDebug() << "Distance calculation finished";
+
 }
 
 const std::tuple< std::vector<int>, std::vector<float>> DistanceCalculation::output() {

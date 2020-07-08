@@ -21,8 +21,8 @@ public:
     Parameters() :
         _perplexity(30),
         _perplexity_multiplier(3),
-        _aknn_algorithm(KNN_HSNW),
-        _aknn_metric(KNN_METRIC_QF)
+        _aknn_algorithm(knn_library::KNN_HSNW),
+        _aknn_metric(knn_distance_metric::KNN_METRIC_QF)
     {}
 
 public:
@@ -30,10 +30,10 @@ public:
     int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
     knn_library         _aknn_algorithm;
     knn_distance_metric _aknn_metric;
-    unsigned int        _numHistBins;
-    unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1;
-    unsigned int        _numPoints;             
-    unsigned int        _numDims;             
+    unsigned int        _numHistBins;           // to be set in FeatureExtraction
+    unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1; to be set in DistanceCalculation
+    unsigned int        _numPoints;             // to be set in SpidrPlugin
+    unsigned int        _numDims;               // to be set in SpidrPlugin
 };
 
 
@@ -78,7 +78,7 @@ private:
     * @param numDimensions Will contain the number of enabled dimensions 
     * @param data Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
     */
-    void retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, unsigned int& numDimensions, unsigned int& numPoints, std::vector<float>& data);
+    void retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& data, Parameters& params);
 
     TsneAnalysis _tsne;
     DistanceCalculation _distCalc;

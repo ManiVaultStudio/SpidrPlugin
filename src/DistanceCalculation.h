@@ -36,6 +36,7 @@ private:
     void computekNN();
 
 signals:
+ // TODO: add slots that change _knn_lib and _knn_metric when widgets emit signal
 
 private:
     // Options
@@ -47,7 +48,7 @@ private:
     // Input
     unsigned int _numDims;
     unsigned int _numPoints;
-    unsigned int _numHistBins;
+    unsigned int _numHistBins;              // don't set this from the widget input. Instead you the value set in the feature extraction
     std::vector<float>* _histogramFeatures;
 
     // Output

@@ -30,7 +30,7 @@ public:
     * @param numDimensions enabled dimensios
     * @param imgSize global image dimensions
     */
-    void setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const int numDimensions, const std::vector<float>& data, Parameters& params);
+    void setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const std::vector<float>& data, Parameters& params);
 
 private:
     void run() override;
@@ -53,6 +53,7 @@ private:
     void calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues);
 
 signals:
+ // TODO: add slots that change _neighborhoodSize, _numHistBins and _neighborhoodWeights when widgets emit signal
 
 private:
     // Options 
@@ -69,7 +70,6 @@ private:
     std::vector<float> _minMaxVals;
 
     // Data
-
     // Input
     // Image Size
     QSize _imgSize;
@@ -78,7 +78,7 @@ private:
 
     unsigned int _numDims;
     unsigned int _numPoints;
-    std::vector<float> _data;
+    std::vector<float> _attribute_data;
 
     // Output
     // Histogram features for each item. 

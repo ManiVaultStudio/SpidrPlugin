@@ -86,7 +86,7 @@ void TsneAnalysis::computeGradientDescent()
 void TsneAnalysis::initTSNE(const std::vector<int>* knn_indices, const std::vector<float>* knn_distances, Parameters params)
 {
     _numPoints = knn_indices->size() / params._nn;
-    qDebug() << "Variables set. Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors";
+    qDebug() << "t-SNE computation. Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors";
         
     // Computation of the high dimensional similarities
     qDebug() << "Output allocated.";

@@ -1,6 +1,7 @@
 #include "FeatureExtraction.h"
 
 #include "KNNUtils.h"
+#include "SpidrPlugin.h"    // class Parameters
 
 #include <QDebug>       // qDebug
 #include <iterator>     // std::advance
@@ -34,17 +35,24 @@ void FeatureExtraction::run() {
     //computeHistogramFeatures();
 }
 
-void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const int numDimensions, const std::vector<float>& data, Parameters& params) {
+void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const std::vector<float>& data, Parameters& params) {
+    // Options are set outside this function
+    params._numHistBins = _numHistBins;
+
+    // Data
+    // Input
     _imgSize = imgSize;
     _pointIds = pointIds;
     _numPoints = pointIds.size();
-    _numDims = numDimensions;
-    _data = data;
+    _numDims = params._numDims;
+    _attribute_data = data;
 
-    assert(_data.size() == _numPoints * _numDims);
+    // Output
+    _histogramFeatures.resize(_numPoints * _numDims * _numHistBins);
 
-    qDebug() << "Variables set. Num dims: " << numDimensions << " Num data points: " << pointIds.size() << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
-    qDebug() << "feature extraction dataassigned.";
+    assert(_attribute_data.size() == _numPoints * _numDims);
+
+    qDebug() << "Feature Extraction. Num Bins: " << _numHistBins;
 }
 
 void FeatureExtraction::computeHistogramFeatures() {
@@ -63,7 +71,7 @@ void FeatureExtraction::initExtraction() {
     // for each dimension iterate over all values
     for (unsigned int dimCount = 0; dimCount < _numDims; dimCount++) {
         // set data iterator to dimension
-        std::vector<float>::iterator dataIt = _data.begin();
+        std::vector<float>::iterator dataIt = _attribute_data.begin();
         std::advance(dataIt, dimCount);
         // init min and max
         _minMaxVals.at(2 * dimCount) = *dataIt;
@@ -84,8 +92,7 @@ void FeatureExtraction::initExtraction() {
 }
 
 void FeatureExtraction::extractFeatures() {
-    _histogramFeatures.resize(_numPoints * _numDims * _numHistBins);
-
+    
     // convolve over all selected data points
     std::for_each(std::execution::par_unseq, std::begin(_pointIds), std::end(_pointIds), [this](int pointID) {
         // get neighborhood of the current point
@@ -100,13 +107,15 @@ void FeatureExtraction::extractFeatures() {
         for (unsigned int neighbor = 0; neighbor < _numNeighbors; neighbor++) {
             if (neighborIDs[neighbor] == -1)
             for (unsigned int dim = 0; dim < _numDims; dim++) {
-                neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _data[neighborIDs[neighbor] * _numDims + dim] : 0;
+                neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data[neighborIDs[neighbor] * _numDims + dim] : 0;
             }
         }
 
         // calculate histograms, save histos in _histogramFeatures
         calculateHistogram(pointID, neighborValues);
     });
+
+    qDebug() << "feature extraction finished.";
 
 }
 
