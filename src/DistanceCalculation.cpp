@@ -32,13 +32,17 @@ void DistanceCalculation::setupData(std::vector<float>* histogramFeatures, Param
 
     assert(_histogramFeatures->size() == _numPoints * _numDims * _numHistBins);
 
-    qDebug() << "Distance calculation. Num data points: " << _numPoints << " Feature values per point: " << _numDims * _numHistBins;
-    qDebug() << "Number of NN to calculate: " << _nn;
+    qDebug() << "Distance calculation. Num data points: " << _numPoints << " Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn;
 
 }
 
-void DistanceCalculation::run() {
+void DistanceCalculation::start() {
+    qDebug() << "Distance calculation started";
+
     computekNN();
+
+    qDebug() << "Distance calculation finished";
+
 }
 
 void DistanceCalculation::computekNN() {
@@ -80,8 +84,6 @@ void DistanceCalculation::computekNN() {
             }
         }
     }
-
-    qDebug() << "Distance calculation finished";
 
 }
 

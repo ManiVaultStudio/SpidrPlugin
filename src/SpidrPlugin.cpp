@@ -92,6 +92,7 @@ void SpidrPlugin::dataSetPicked(const QString& name)
 
 void SpidrPlugin::startComputation()
 {
+
     // Get the data
     QString dataName = _settings->dataOptions.currentText();
 
@@ -103,10 +104,10 @@ void SpidrPlugin::startComputation()
     //// Extract features
     _featExtraction.setupData(imgSize, pointIDsGlobal, data, _params);
     _featExtraction.start();
-    std::vector<float> histoFeats = _featExtraction.output();
+    std::vector<float>* histoFeats = _featExtraction.output();
 
     // Caclculate distances and kNN
-    _distCalc.setupData(&histoFeats, _params);
+    _distCalc.setupData(histoFeats, _params);
     _distCalc.start();
     const std::vector<int>* indices = _distCalc.get_knn_indices();
     const std::vector<float>* distances_squared = _distCalc.get_knn_distances_squared();
@@ -168,7 +169,7 @@ void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<uns
     _params._numDims = numDimensions;
 
     qDebug() << "SpidrPlugin: Read data.";
-    qDebug() << "Feature Extraction. Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
+    qDebug() << "SpidrPlugin. Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
 
 }
 

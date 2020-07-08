@@ -3,6 +3,8 @@
 #include "KNNUtils.h"
 #include "SpidrPlugin.h"    // class Parameters
 
+#include "omp.h"
+
 #include <QDebug>       // qDebug
 #include <iterator>     // std::advance
 #include <algorithm>    // std::for_each, std::fill, std::find
@@ -31,8 +33,13 @@ FeatureExtraction::~FeatureExtraction()
 {
 }
 
-void FeatureExtraction::run() {
-    //computeHistogramFeatures();
+void FeatureExtraction::start() {
+    qDebug() << "feature extraction started.";
+
+    computeHistogramFeatures();
+
+    qDebug() << "feature extraction finished.";
+
 }
 
 void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const std::vector<float>& data, Parameters& params) {
@@ -64,28 +71,26 @@ void FeatureExtraction::computeHistogramFeatures() {
 }
 
 void FeatureExtraction::initExtraction() {
-    // Init, a.o. find min and max for each channel
-
+    // Init
+    // a.o.: find min and max for each channel
     _minMaxVals.resize(2 * _numDims, 0);
 
     // for each dimension iterate over all values
+    // remember data stucture (point1 d0, point1 d1,... point1 dn, point2 d0, point2 d1, ...)
     for (unsigned int dimCount = 0; dimCount < _numDims; dimCount++) {
-        // set data iterator to dimension
-        std::vector<float>::iterator dataIt = _attribute_data.begin();
-        std::advance(dataIt, dimCount);
         // init min and max
-        _minMaxVals.at(2 * dimCount) = *dataIt;
-        _minMaxVals.at(2 * dimCount + 1) = *dataIt;
+        float currentVal = _attribute_data.at(dimCount);
+        _minMaxVals.at(2 * dimCount) = currentVal;
+        _minMaxVals.at(2 * dimCount + 1) = currentVal;
 
         for (unsigned int pointCount = 0; pointCount < _numPoints; pointCount++) {
+            currentVal = _attribute_data.at(pointCount * _numDims + dimCount);
             // min
-            if (*dataIt < _minMaxVals.at(2 * dimCount))
-                _minMaxVals.at(2 * dimCount) = *dataIt;
+            if (currentVal < _minMaxVals.at(2 * dimCount))
+                _minMaxVals.at(2 * dimCount) = currentVal;
             // max
-            if (*dataIt > _minMaxVals.at(2 * dimCount + 1))
-                _minMaxVals.at(2 * dimCount + 1) = *dataIt;
-            // step forward to next point
-            std::advance(dataIt, _numDims);
+            else if (currentVal > _minMaxVals.at(2 * dimCount + 1))
+                _minMaxVals.at(2 * dimCount + 1) = currentVal;
         }
     }
 
@@ -94,9 +99,10 @@ void FeatureExtraction::initExtraction() {
 void FeatureExtraction::extractFeatures() {
     
     // convolve over all selected data points
-    std::for_each(std::execution::par_unseq, std::begin(_pointIds), std::end(_pointIds), [this](int pointID) {
+    #pragma omp parallel for 
+    for (int pointID = 0; pointID < _pointIds.size(); pointID++) {
         // get neighborhood of the current point
-        std::vector<int> neighborIDs = neighborhoodIndices(pointID);
+        std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
 
         assert(neighborIDs.size() == _numNeighbors);
 
@@ -112,10 +118,8 @@ void FeatureExtraction::extractFeatures() {
         }
 
         // calculate histograms, save histos in _histogramFeatures
-        calculateHistogram(pointID, neighborValues);
-    });
-
-    qDebug() << "feature extraction finished.";
+        calculateHistogram(_pointIds.at(pointID), neighborValues);
+    }
 
 }
 
@@ -170,7 +174,7 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
 
 }
 
-const std::vector<float>& FeatureExtraction::output()
+std::vector<float>* FeatureExtraction::output()
 {
-    return _histogramFeatures;
+    return &_histogramFeatures;
 }

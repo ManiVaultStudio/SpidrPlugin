@@ -105,20 +105,28 @@ _analysisPlugin(analysisPlugin)
 
     // Add options to their appropriate group box
     auto* const settingsLayout = new QVBoxLayout();
+
     settingsLayout->addWidget(knnAlgorithmLabel);
     settingsLayout->addWidget(&knnOptions);
+
     settingsLayout->addWidget(distanceMetricLabel);
     settingsLayout->addWidget(&distanceMetric);
+    
     settingsLayout->addWidget(kernelWeightLabel);
     settingsLayout->addWidget(&kernelWeight);
+    
     settingsLayout->addWidget(iterationLabel);
-    settingsLayout->addWidget(&kernelSize);
-    settingsLayout->addWidget(kernelSizeLabel);
-    settingsLayout->addWidget(&histBinSize);
-    settingsLayout->addWidget(histBinSizeLabel);
     settingsLayout->addWidget(&numIterations);
+    
+    settingsLayout->addWidget(kernelSizeLabel);
+    settingsLayout->addWidget(&kernelSize);
+    
+    settingsLayout->addWidget(histBinSizeLabel);
+    settingsLayout->addWidget(&histBinSize);
+    
     settingsLayout->addWidget(perplexityLabel);
     settingsLayout->addWidget(&perplexity);
+    
     settingsBox->setLayout(settingsLayout);
 
     auto* const advancedSettingsLayout = new QGridLayout();

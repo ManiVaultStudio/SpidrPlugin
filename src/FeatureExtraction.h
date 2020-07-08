@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <QThread>
+#include <QObject>
 #include <QSize>
 
 class Parameters;
@@ -9,14 +9,14 @@ class Parameters;
 * Calculate Spatial Features
 * .start() will execute run() in a new thread
 */
-class FeatureExtraction : public QThread
+class FeatureExtraction  : public QObject // QThread
 {
     Q_OBJECT
 public:
     FeatureExtraction();
     ~FeatureExtraction(void) override;
 
-    const std::vector<float>& output();
+    std::vector<float>* output();
 
     void setNeighborhoodSize(unsigned int size);    // TODO sets _numNeighbors
     void setNumHistBins(unsigned int size);
@@ -32,8 +32,9 @@ public:
     */
     void setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const std::vector<float>& data, Parameters& params);
 
+    void start();
+
 private:
-    void run() override;
 
     /**
     * Calculates histgram features

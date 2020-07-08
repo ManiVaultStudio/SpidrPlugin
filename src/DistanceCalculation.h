@@ -5,7 +5,7 @@
 #include <tuple>
 #include <vector>
 
-#include <QThread>
+#include <QObject>
 #include <QSize>
 
 class Parameters;
@@ -14,7 +14,7 @@ class Parameters;
 * Calculate Spatial Features
 * .start() will execute run() in a new thread
 */
-class DistanceCalculation : public QThread
+class DistanceCalculation : public QObject // QThread
 {
     Q_OBJECT
 public:
@@ -30,8 +30,9 @@ public:
 
     void setupData(std::vector<float>* histogramFeatures, Parameters& params);
 
+    void start();
+
 private:
-    void run() override;
 
     void computekNN();
 
