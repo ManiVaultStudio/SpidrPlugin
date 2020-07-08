@@ -99,7 +99,7 @@ void FeatureExtraction::initExtraction() {
 void FeatureExtraction::extractFeatures() {
     
     // convolve over all selected data points
-    #pragma omp parallel for 
+//    #pragma omp parallel for 
     for (int pointID = 0; pointID < _pointIds.size(); pointID++) {
         // get neighborhood of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
@@ -126,17 +126,27 @@ void FeatureExtraction::extractFeatures() {
 // For now, expect a rectangle selection (lasso selection might cause edge cases that were not thought of)
 // Padding: assign -1 to points outside the selection. Later assign 0 vector to all of them.
 std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
-    std::vector<int> neighborsIDs(_numNeighbors, 0);
+    std::vector<int> neighborsIDs(_numNeighbors, -1);
+    int imWidth = _imgSize.width();
+    int rowID = int(pointInd / imWidth);
 
     // left and right neighbors
-    std::vector<int> lrNeighIDs(2*_neighborhoodSize + 1, 0);
-    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd-_neighborhoodSize);
+    std::vector<int> lrNeighIDs(2 * _neighborhoodSize + 1, 0);
+    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - _neighborhoodSize);
+
+    // are left and right out of the picture?
+    for (int& n : lrNeighIDs) {
+        if (n < rowID * imWidth)
+            n = -1;
+        else if (n >= (rowID + 1) * imWidth)
+            n = -1;
+    }
 
     // above and below neighbors
     unsigned int localNeighCount = 0;
-    for (int i = -1 * _neighborhoodSize; i <= _neighborhoodSize; i++) {
+    for (int i = -1 * _neighborhoodSize; i <= (int)_neighborhoodSize; i++) {
         for (int ID : lrNeighIDs) {
-            neighborsIDs[localNeighCount] = ID + i * _imgSize.width();
+            neighborsIDs[localNeighCount] = ID != -1 ? ID + i * _imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
             localNeighCount++;
         }
     }
@@ -169,7 +179,7 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
         for (unsigned int bin = 0; bin < _numHistBins; bin++) {
             _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numDims + bin] = h.at(bin);
         }
-        _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numDims + _numHistBins] = h.at(_numHistBins + 1); // _minMaxVals[dim + 1] is saved in overflow bin
+        _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numDims + _numHistBins] = h.at(_numHistBins + 1); // _minMaxVals[dim + 1] (the  is saved in overflow bin
     }
 
 }
