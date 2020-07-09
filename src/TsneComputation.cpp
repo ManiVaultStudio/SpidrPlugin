@@ -1,4 +1,4 @@
-#include "TsneAnalysis.h"
+#include "TsneComputation.h"
 
 #include <algorithm>            // std::min, max
 #include <vector>
@@ -56,7 +56,7 @@ private:
 
 OffscreenBuffer* offBuffer;
 
-TsneAnalysis::TsneAnalysis() :
+TsneComputation::TsneComputation() :
 _iterations(1000),
 _numTrees(4),
 _numChecks(1024),
@@ -72,18 +72,18 @@ _continueFromIteration(0)
     
 }
 
-TsneAnalysis::~TsneAnalysis()
+TsneComputation::~TsneComputation()
 {
 }
 
-void TsneAnalysis::computeGradientDescent()
+void TsneComputation::computeGradientDescent()
 {
     initGradientDescent();
 
     embed();
 }
 
-void TsneAnalysis::initTSNE(const std::vector<int>* knn_indices, const std::vector<float>* knn_distances, Parameters params)
+void TsneComputation::initTSNE(const std::vector<int>* knn_indices, const std::vector<float>* knn_distances, Parameters params)
 {
     _numPoints = knn_indices->size() / params._nn;
     qDebug() << "t-SNE computation. Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors";
@@ -117,7 +117,7 @@ void TsneAnalysis::initTSNE(const std::vector<int>* knn_indices, const std::vect
     }
 }
 
-void TsneAnalysis::initGradientDescent()
+void TsneComputation::initGradientDescent()
 {
     _continueFromIteration = 0;
 
@@ -144,7 +144,7 @@ void TsneAnalysis::initGradientDescent()
 }
 
 // Computing gradient descent
-void TsneAnalysis::embed()
+void TsneComputation::embed()
 {
     double elapsed = 0;
     double t = 0;
@@ -192,52 +192,52 @@ void TsneAnalysis::embed()
     qDebug() << "================================================================================";
 }
 
-void TsneAnalysis::run() {
+void TsneComputation::run() {
     computeGradientDescent();
 }
 
 // Copy tSNE output to our output
-void TsneAnalysis::copyFloatOutput()
+void TsneComputation::copyFloatOutput()
 {
     _outputData = _embedding.getContainer();
 }
 
-const std::vector<float>& TsneAnalysis::output()
+const std::vector<float>& TsneComputation::output()
 {
     return _outputData;
 }
 
-void TsneAnalysis::setVerbose(bool verbose)
+void TsneComputation::setVerbose(bool verbose)
 {
     _verbose = verbose;
 }
 
-void TsneAnalysis::setIterations(int iterations)
+void TsneComputation::setIterations(int iterations)
 {
     _iterations = iterations;
 }
 
-void TsneAnalysis::setExaggerationIter(int exaggerationIter)
+void TsneComputation::setExaggerationIter(int exaggerationIter)
 {
     _exaggerationIter = exaggerationIter;
 }
 
-void TsneAnalysis::setPerplexity(int perplexity)
+void TsneComputation::setPerplexity(int perplexity)
 {
     _perplexity = perplexity;
 }
 
-void TsneAnalysis::setNumDimensionsOutput(int numDimensionsOutput)
+void TsneComputation::setNumDimensionsOutput(int numDimensionsOutput)
 {
     _numDimensionsOutput = numDimensionsOutput;
 }
 
-void TsneAnalysis::stopGradientDescent()
+void TsneComputation::stopGradientDescent()
 {
     _isGradientDescentRunning = false;
 }
 
-void TsneAnalysis::markForDeletion()
+void TsneComputation::markForDeletion()
 {
     _isMarkedForDeletion = true;
 

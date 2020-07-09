@@ -5,7 +5,9 @@
 #include <QtCore>
 #include <QSize>
 
-#include "TsneAnalysis.h"
+#include "SpidrAnalysis.h"
+
+#include "TsneComputation.h"
 #include "DistanceCalculation.h"
 #include "FeatureExtraction.h"
 #include "PointData.h"
@@ -22,7 +24,8 @@ public:
         _perplexity(30),
         _perplexity_multiplier(3),
         _aknn_algorithm(knn_library::KNN_HNSW),
-        _aknn_metric(knn_distance_metric::KNN_METRIC_QF)
+        _aknn_metric(knn_distance_metric::KNN_METRIC_QF),
+        _numHistBins(-1), _nn(-1), _numPoints(-1), _numDims(-1)
     {}
 
 public:
@@ -80,7 +83,9 @@ private:
     */
     void retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& data, Parameters& params);
 
-    TsneAnalysis _tsne;
+    SpidrAnalysis _spidrAnalysis;
+
+    TsneComputation _tsne;
     DistanceCalculation _distCalc;
     FeatureExtraction _featExtraction;
     std::unique_ptr<SpidrSettingsWidget> _settings;

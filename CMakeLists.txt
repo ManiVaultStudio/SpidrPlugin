@@ -23,12 +23,14 @@ set(PLUGIN
     src/SpidrPlugin.h
     src/SpidrPlugin.cpp
     src/SpidrPlugin.json
+    src/SpidrAnalysis.h
+    src/SpidrAnalysis.cpp
 	src/FeatureExtraction.h
 	src/FeatureExtraction.cpp
 	src/DistanceCalculation.h
 	src/DistanceCalculation.cpp
-    src/TsneAnalysis.h
-    src/TsneAnalysis.cpp
+    src/TsneComputation.h
+    src/TsneComputation.cpp
 	src/KNNUtils.h
 )
 

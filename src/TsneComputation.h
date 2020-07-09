@@ -11,12 +11,12 @@
 
 class Parameters;
 
-class TsneAnalysis : public QThread
+class TsneComputation : public QThread
 {
     Q_OBJECT
 public:
-    TsneAnalysis();
-    ~TsneAnalysis() override;
+    TsneComputation();
+    ~TsneComputation() override;
 
     void setVerbose(bool verbose);
     void setIterations(int iterations);

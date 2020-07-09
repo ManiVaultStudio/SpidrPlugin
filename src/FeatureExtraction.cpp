@@ -61,7 +61,7 @@ void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>
 
     assert(_attribute_data.size() == _numPoints * _numDims);
 
-    qDebug() << "Feature Extraction: Num Bins: " << _numHistBins;
+    qDebug() << "Feature extraction: Num Bins: " << _numHistBins;
 }
 
 void FeatureExtraction::computeHistogramFeatures() {

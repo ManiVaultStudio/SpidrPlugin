@@ -1,5 +1,8 @@
 #include "SpidrPlugin.h"
 #include "SpidrSettingsWidget.h"
+#include "TsneComputation.h"
+#include "DistanceCalculation.h"
+#include "FeatureExtraction.h"
 
 #include <QtCore>
 #include <QSize>
@@ -20,7 +23,6 @@ SpidrPlugin::SpidrPlugin()
 :
 AnalysisPlugin("Spidr")
 {
-    _params = Parameters();
 }
 
 SpidrPlugin::~SpidrPlugin(void)
@@ -40,7 +42,7 @@ void SpidrPlugin::init()
     // Connect feature extraction
 
     // Connect embedding
-    connect(&_tsne, &TsneAnalysis::computationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
+    connect(&_tsne, &TsneComputation::computationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
     connect(&_tsne, SIGNAL(newEmbedding()), this, SLOT(onNewEmbedding()));
 }
 

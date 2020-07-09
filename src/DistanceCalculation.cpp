@@ -48,23 +48,23 @@ void DistanceCalculation::start() {
 void DistanceCalculation::computekNN() {
     
     if (_knn_lib == knn_library::KNN_HNSW) {
-        qDebug() << "Distance definition: HNSWLib for knn computation";
+        qDebug() << "Distance calculation: HNSWLib for knn computation";
 
         // setup hsnw index
         hnswlib::SpaceInterface<float> *space = NULL;
         if (_knn_metric == knn_distance_metric::KNN_METRIC_QF)
         {
-            qDebug() << "Distance definition: QFSpace for metric definition";
+            qDebug() << "Distance calculation: QFSpace for metric definition";
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_HEL)
         {
-            qDebug() << "Distance definition: HellingerSpace for metric definition";
+            qDebug() << "Distance calculation: HellingerSpace for metric definition";
             space = new hnswlib::HellingerSpace(_numDims, _numHistBins);
         }
         else
         {
-            qDebug() << "Distance definition: ERROR: Distance metric unknown. Using default metric: QFSpace.";
+            qDebug() << "Distance calculation: ERROR: Distance metric unknown. Using default metric: QFSpace.";
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
 
