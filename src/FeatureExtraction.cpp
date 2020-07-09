@@ -23,9 +23,9 @@ FeatureExtraction::FeatureExtraction() :
     _numHistBins(5)
 {
     // square neighborhood
-    _numNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
+    _numLocNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
     // uniform weighting
-    _neighborhoodWeights.resize(_numNeighbors);
+    _neighborhoodWeights.resize(_numLocNeighbors);
     std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1);
 }
 
@@ -109,13 +109,13 @@ void FeatureExtraction::extractFeatures() {
         // get neighborhood of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
 
-        assert(neighborIDs.size() == _numNeighbors);
+        assert(neighborIDs.size() == _numLocNeighbors);
 
         // get data for all neighborhood points
         // Padding: if neighbor is outside selection, assign 0 to all dimension values
         std::vector<float> neighborValues;
-        neighborValues.resize(_numNeighbors * _numDims);
-        for (unsigned int neighbor = 0; neighbor < _numNeighbors; neighbor++) {
+        neighborValues.resize(_numLocNeighbors * _numDims);
+        for (unsigned int neighbor = 0; neighbor < _numLocNeighbors; neighbor++) {
             for (unsigned int dim = 0; dim < _numDims; dim++) {
                 neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data[neighborIDs[neighbor] * _numDims + dim] : 0;
             }
@@ -130,7 +130,7 @@ void FeatureExtraction::extractFeatures() {
 // For now, expect a rectangle selection (lasso selection might cause edge cases that were not thought of)
 // Padding: assign -1 to points outside the selection. Later assign 0 vector to all of them.
 std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
-    std::vector<int> neighborsIDs(_numNeighbors, -1);
+    std::vector<int> neighborsIDs(_numLocNeighbors, -1);
     int imWidth = _imgSize.width();
     int rowID = int(pointInd / imWidth);
 
@@ -174,7 +174,7 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
         auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[2 * dim], _minMaxVals[2 * dim + 1]));
         // once this works, check if the following is faster (VS Studio will complain but compile)
         //auto h = boost::histogram::make_histogram_with(std::vector<float>(), boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
-        for (unsigned int neighbor = 0; neighbor < _numNeighbors; neighbor++) {
+        for (unsigned int neighbor = 0; neighbor < _numLocNeighbors; neighbor++) {
             h(neighborValues[neighbor * _numDims + dim], boost::histogram::weight(_neighborhoodWeights[neighbor]));
         }
 
@@ -185,9 +185,9 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
             _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + bin] = h.at(bin);
         }
         // the max value is stored in the overflow bin
-        if (h.at(_numHistBins) != 0)
+        if (h.at(_numHistBins) != 0) {
             _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + _numHistBins - 1] += h.at(_numHistBins);
-
+        }
     }
 
 }

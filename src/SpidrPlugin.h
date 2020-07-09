@@ -21,7 +21,7 @@ public:
     Parameters() :
         _perplexity(30),
         _perplexity_multiplier(3),
-        _aknn_algorithm(knn_library::KNN_HSNW),
+        _aknn_algorithm(knn_library::KNN_HNSW),
         _aknn_metric(knn_distance_metric::KNN_METRIC_QF)
     {}
 

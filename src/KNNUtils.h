@@ -6,15 +6,15 @@
 
 enum knn_library
 {
-    KNN_HSNW = 0
+    KNN_HNSW = 0
 };
 
 
 enum knn_distance_metric
 {
-    KNN_METRIC_HEL = -1,
     KNN_METRIC_QF = 0,
     //	KNN_METRIC_EMD = 1
+    KNN_METRIC_HEL = 2,
 };
 
 enum ground_dist

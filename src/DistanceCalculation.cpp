@@ -4,7 +4,7 @@
 #include "hnswlib/hnswlib.h"
 
 DistanceCalculation::DistanceCalculation() :
-    _knn_lib(knn_library::KNN_HSNW),
+    _knn_lib(knn_library::KNN_HNSW),
     _knn_metric(knn_distance_metric::KNN_METRIC_QF)
 {
 }
@@ -47,23 +47,39 @@ void DistanceCalculation::start() {
 
 void DistanceCalculation::computekNN() {
     
-    if (_knn_lib == knn_library::KNN_HSNW) {
+    if (_knn_lib == knn_library::KNN_HNSW) {
+        qDebug() << "Use hnsw for knn computation";
 
         // setup hsnw index
         hnswlib::SpaceInterface<float> *space = NULL;
-        space = new hnswlib::QFSpace(_numDims, _numHistBins);
+        if (_knn_metric = knn_distance_metric::KNN_METRIC_QF)
+        {
+            qDebug() << "Distance definition: QFSpace";
+            space = new hnswlib::QFSpace(_numDims, _numHistBins);
+        }
+        else if (_knn_metric = knn_distance_metric::KNN_METRIC_HEL)
+        {
+            qDebug() << "Distance definition: HellingerSpace";
+            space = new hnswlib::HellingerSpace(_numDims, _numHistBins);
+        }
+        else
+        {
+            qDebug() << "ERROR: Distance metric unknown. Using default distance: QFSpace.";
+            space = new hnswlib::QFSpace(_numDims, _numHistBins);
+        }
+
         hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default values for M, ef_construction random_seed
 
         // add data points: each data point holds _numDims*_numHistBins values
         appr_alg.addPoint((void*)_histogramFeatures, (std::size_t) 0);
-#pragma omp parallel for
+        //#pragma omp parallel for
         for (int i = 1; i < _numPoints; ++i)
         {
             appr_alg.addPoint((void*)(_histogramFeatures + (i*(_numDims*_numHistBins))), (hnswlib::labeltype) i);
         }
 
         // query dataset
-#pragma omp parallel for
+        //#pragma omp parallel for
         for (int i = 0; i < _numPoints; ++i)
         {
             // find nearest neighbors
@@ -105,8 +121,8 @@ void DistanceCalculation::setKnnAlgorithm(int index)
     // index corresponds to order in which algorithm were added to widget
     switch (index)
     {
-    case 0: _knn_lib = knn_library::KNN_HSNW; break;
-    default: _knn_lib = knn_library::KNN_HSNW;
+    case 0: _knn_lib = knn_library::KNN_HNSW; break;
+    default: _knn_lib = knn_library::KNN_HNSW;
     }
 }
 
@@ -116,7 +132,8 @@ void DistanceCalculation::setDistanceMetric(int index)
     switch (index)
     {
     case 0: _knn_metric = knn_distance_metric::KNN_METRIC_QF; break;
-    case 1: _knn_metric = knn_distance_metric::KNN_METRIC_HEL; break;
+    //case 1: _knn_metric = knn_distance_metric::KNN_METRIC_EMD; break;
+    case 2: _knn_metric = knn_distance_metric::KNN_METRIC_HEL; break;
     default: _knn_metric = knn_distance_metric::KNN_METRIC_QF;
     }
 }
