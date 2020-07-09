@@ -32,50 +32,50 @@ void DistanceCalculation::setupData(std::vector<float>* histogramFeatures, Param
 
     assert(_histogramFeatures->size() == _numPoints * _numDims * _numHistBins);
 
-    qDebug() << "Distance calculation. Num data points: " << _numPoints << " Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn;
+    qDebug() << "Distance calculation: Num data points: " << _numPoints << " Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn;
 
 }
 
 void DistanceCalculation::start() {
-    qDebug() << "Distance calculation started";
+    qDebug() << "Distance calculation: started";
 
     computekNN();
 
-    qDebug() << "Distance calculation finished";
+    qDebug() << "Distance calculation: finished";
 
 }
 
 void DistanceCalculation::computekNN() {
     
     if (_knn_lib == knn_library::KNN_HNSW) {
-        qDebug() << "Use hnsw for knn computation";
+        qDebug() << "Distance definition: HNSWLib for knn computation";
 
         // setup hsnw index
         hnswlib::SpaceInterface<float> *space = NULL;
         if (_knn_metric = knn_distance_metric::KNN_METRIC_QF)
         {
-            qDebug() << "Distance definition: QFSpace";
+            qDebug() << "Distance definition: QFSpace for metric definition";
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
         else if (_knn_metric = knn_distance_metric::KNN_METRIC_HEL)
         {
-            qDebug() << "Distance definition: HellingerSpace";
+            qDebug() << "Distance definition: HellingerSpace for metric definition";
             space = new hnswlib::HellingerSpace(_numDims, _numHistBins);
         }
         else
         {
-            qDebug() << "ERROR: Distance metric unknown. Using default distance: QFSpace.";
+            qDebug() << "Distance definition: ERROR: Distance metric unknown. Using default metric: QFSpace.";
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
 
         hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default values for M, ef_construction random_seed
 
         // add data points: each data point holds _numDims*_numHistBins values
-        appr_alg.addPoint((void*)_histogramFeatures, (std::size_t) 0);
+        appr_alg.addPoint((void*)_histogramFeatures->data(), (std::size_t) 0);
         //#pragma omp parallel for
         for (int i = 1; i < _numPoints; ++i)
         {
-            appr_alg.addPoint((void*)(_histogramFeatures + (i*(_numDims*_numHistBins))), (hnswlib::labeltype) i);
+            appr_alg.addPoint((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype) i);
         }
 
         // query dataset
@@ -83,7 +83,7 @@ void DistanceCalculation::computekNN() {
         for (int i = 0; i < _numPoints; ++i)
         {
             // find nearest neighbors
-            auto top_candidates = appr_alg.searchKnn(_histogramFeatures + (i*(_numDims*_numHistBins)), (hnswlib::labeltype)_nn);
+            auto top_candidates = appr_alg.searchKnn((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype)_nn);
             while (top_candidates.size() > _nn) {
                 top_candidates.pop();
             }
@@ -133,7 +133,7 @@ void DistanceCalculation::setDistanceMetric(int index)
     {
     case 0: _knn_metric = knn_distance_metric::KNN_METRIC_QF; break;
     //case 1: _knn_metric = knn_distance_metric::KNN_METRIC_EMD; break;
-    case 2: _knn_metric = knn_distance_metric::KNN_METRIC_HEL; break;
+    case 1: _knn_metric = knn_distance_metric::KNN_METRIC_HEL; break;
     default: _knn_metric = knn_distance_metric::KNN_METRIC_QF;
     }
 }

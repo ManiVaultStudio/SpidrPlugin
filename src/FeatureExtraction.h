@@ -62,7 +62,7 @@ private:
     // Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom
     unsigned int _neighborhoodSize;
     // Number of neighbors including center
-    unsigned int _numNeighbors;
+    unsigned int _numLocNeighbors;
     // Weightings of neighborhood kernel
     std::vector<float> _neighborhoodWeights;
     // Number of bins in each histogram

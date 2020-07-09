@@ -35,11 +35,11 @@ FeatureExtraction::~FeatureExtraction()
 }
 
 void FeatureExtraction::start() {
-    qDebug() << "Feature extraction started.";
+    qDebug() << "Feature extraction: started.";
 
     computeHistogramFeatures();
 
-    qDebug() << "Feature extraction finished.";
+    qDebug() << "Feature extraction: finished.";
 
 }
 
@@ -61,7 +61,7 @@ void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>
 
     assert(_attribute_data.size() == _numPoints * _numDims);
 
-    qDebug() << "Feature Extraction. Num Bins: " << _numHistBins;
+    qDebug() << "Feature Extraction: Num Bins: " << _numHistBins;
 }
 
 void FeatureExtraction::computeHistogramFeatures() {

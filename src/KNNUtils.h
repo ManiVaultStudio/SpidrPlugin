@@ -161,7 +161,7 @@ namespace hnswlib {
         size_t data_size_;
         size_t dim_;
 
-        space_params_QF params_;
+        space_params_Hel params_;
 
     public:
         HellingerSpace(size_t dim, size_t bin) {
@@ -179,7 +179,7 @@ namespace hnswlib {
         }
 
         void *get_dist_func_param() {
-            return &dim_;
+            return (void *) &params_;
         }
 
         ~HellingerSpace() {}

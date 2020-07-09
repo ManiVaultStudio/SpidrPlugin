@@ -169,7 +169,7 @@ void SpidrPlugin::retrieveData(QString dataName, QSize& imgSize, std::vector<uns
     _params._numDims = numDimensions;
 
     qDebug() << "SpidrPlugin: Read data.";
-    qDebug() << "SpidrPlugin. Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
+    qDebug() << "SpidrPlugin: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
 
 }
 
