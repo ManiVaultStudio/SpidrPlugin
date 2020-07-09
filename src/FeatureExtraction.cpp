@@ -104,7 +104,7 @@ void FeatureExtraction::initExtraction() {
 void FeatureExtraction::extractFeatures() {
     
     // convolve over all selected data points
-//    #pragma omp parallel for 
+#pragma omp parallel for 
     for (int pointID = 0; pointID < _pointIds.size(); pointID++) {
         // get neighborhood of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));

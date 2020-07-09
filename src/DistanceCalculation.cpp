@@ -52,12 +52,12 @@ void DistanceCalculation::computekNN() {
 
         // setup hsnw index
         hnswlib::SpaceInterface<float> *space = NULL;
-        if (_knn_metric = knn_distance_metric::KNN_METRIC_QF)
+        if (_knn_metric == knn_distance_metric::KNN_METRIC_QF)
         {
             qDebug() << "Distance definition: QFSpace for metric definition";
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
-        else if (_knn_metric = knn_distance_metric::KNN_METRIC_HEL)
+        else if (_knn_metric == knn_distance_metric::KNN_METRIC_HEL)
         {
             qDebug() << "Distance definition: HellingerSpace for metric definition";
             space = new hnswlib::HellingerSpace(_numDims, _numHistBins);
@@ -68,18 +68,18 @@ void DistanceCalculation::computekNN() {
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
 
-        hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default values for M, ef_construction random_seed
+        hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default HNSW values for M, ef_construction random_seed
 
         // add data points: each data point holds _numDims*_numHistBins values
         appr_alg.addPoint((void*)_histogramFeatures->data(), (std::size_t) 0);
-        //#pragma omp parallel for
+//#pragma omp parallel for
         for (int i = 1; i < _numPoints; ++i)
         {
             appr_alg.addPoint((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype) i);
         }
 
         // query dataset
-        //#pragma omp parallel for
+#pragma omp parallel for
         for (int i = 0; i < _numPoints; ++i)
         {
             // find nearest neighbors
