@@ -104,29 +104,29 @@ _analysisPlugin(analysisPlugin)
     startButton.setCheckable(true);
 
     // Add options to their appropriate group box
-    auto* const settingsLayout = new QVBoxLayout();
+    auto* const settingsLayout = new QGridLayout();
 
-    settingsLayout->addWidget(knnAlgorithmLabel);
-    settingsLayout->addWidget(&knnOptions);
+    settingsLayout->addWidget(knnAlgorithmLabel, 0, 0, 1, 2);
+    settingsLayout->addWidget(&knnOptions, 1, 0, 1, 2);
 
-    settingsLayout->addWidget(distanceMetricLabel);
-    settingsLayout->addWidget(&distanceMetric);
+    settingsLayout->addWidget(distanceMetricLabel, 2, 0, 1, 2);
+    settingsLayout->addWidget(&distanceMetric, 3, 0, 1, 2);
     
-    settingsLayout->addWidget(kernelWeightLabel);
-    settingsLayout->addWidget(&kernelWeight);
+    settingsLayout->addWidget(kernelWeightLabel, 4, 0, 1, 2);
+    settingsLayout->addWidget(&kernelWeight, 5, 0, 1, 2);
     
-    settingsLayout->addWidget(iterationLabel);
-    settingsLayout->addWidget(&numIterations);
+    settingsLayout->addWidget(iterationLabel, 6, 0);
+    settingsLayout->addWidget(&numIterations, 7, 0);
     
-    settingsLayout->addWidget(kernelSizeLabel);
-    settingsLayout->addWidget(&kernelSize);
+    settingsLayout->addWidget(perplexityLabel, 8, 0);
+    settingsLayout->addWidget(&perplexity, 9, 0);
+
+    settingsLayout->addWidget(kernelSizeLabel, 6, 1);
+    settingsLayout->addWidget(&kernelSize, 7, 1);
     
-    settingsLayout->addWidget(histBinSizeLabel);
-    settingsLayout->addWidget(&histBinSize);
-    
-    settingsLayout->addWidget(perplexityLabel);
-    settingsLayout->addWidget(&perplexity);
-    
+    settingsLayout->addWidget(histBinSizeLabel, 8, 1);
+    settingsLayout->addWidget(&histBinSize, 9, 1);
+        
     settingsBox->setLayout(settingsLayout);
 
     auto* const advancedSettingsLayout = new QGridLayout();
