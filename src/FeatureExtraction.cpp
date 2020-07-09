@@ -25,6 +25,7 @@ FeatureExtraction::FeatureExtraction() :
     // square neighborhood
     _numNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
     // uniform weighting
+    _neighborhoodWeights.resize(_numNeighbors);
     std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1);
 }
 
@@ -34,11 +35,11 @@ FeatureExtraction::~FeatureExtraction()
 }
 
 void FeatureExtraction::start() {
-    qDebug() << "feature extraction started.";
+    qDebug() << "Feature extraction started.";
 
     computeHistogramFeatures();
 
-    qDebug() << "feature extraction finished.";
+    qDebug() << "Feature extraction finished.";
 
 }
 
@@ -56,6 +57,7 @@ void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>
 
     // Output
     _histogramFeatures.resize(_numPoints * _numDims * _numHistBins);
+    std::fill(_histogramFeatures.begin(), _histogramFeatures.end(), -1);
 
     assert(_attribute_data.size() == _numPoints * _numDims);
 
@@ -68,6 +70,9 @@ void FeatureExtraction::computeHistogramFeatures() {
 
     // convolution over all points to create histograms
     extractFeatures();
+
+    // if there is a -1 in the features, this value was not set at all
+    assert(std::find(_histogramFeatures.begin(), _histogramFeatures.end(), -1) == _histogramFeatures.end());
 }
 
 void FeatureExtraction::initExtraction() {
@@ -111,7 +116,6 @@ void FeatureExtraction::extractFeatures() {
         std::vector<float> neighborValues;
         neighborValues.resize(_numNeighbors * _numDims);
         for (unsigned int neighbor = 0; neighbor < _numNeighbors; neighbor++) {
-            if (neighborIDs[neighbor] == -1)
             for (unsigned int dim = 0; dim < _numDims; dim++) {
                 neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data[neighborIDs[neighbor] * _numDims + dim] : 0;
             }
@@ -153,6 +157,7 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
 
     // Check if neighborhood IDs are in selected points
     for (int& ID : neighborsIDs) {
+        // if neighbor is not in neighborhood, assign -1
         if (std::find(_pointIds.begin(), _pointIds.end(), ID) == _pointIds.end()) {
             ID = -1;
         }
@@ -166,20 +171,23 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
     // 1D histograms for each dimension
     // save the histogram in _histogramFeatures
     for (unsigned int dim = 0; dim < _numDims; dim++) {
-        auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
+        auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[2 * dim], _minMaxVals[2 * dim + 1]));
         // once this works, check if the following is faster (VS Studio will complain but compile)
         //auto h = boost::histogram::make_histogram_with(std::vector<float>(), boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
         for (unsigned int neighbor = 0; neighbor < _numNeighbors; neighbor++) {
-            h(neighborValues[neighbor * _numDims + dim], _neighborhoodWeights[neighbor]);
+            h(neighborValues[neighbor * _numDims + dim], boost::histogram::weight(_neighborhoodWeights[neighbor]));
         }
 
         assert(h.rank() == 1); // 1D hist
         assert(h.axis().size() == _numHistBins);
 
         for (unsigned int bin = 0; bin < _numHistBins; bin++) {
-            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numDims + bin] = h.at(bin);
+            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + bin] = h.at(bin);
         }
-        _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numDims + _numHistBins] = h.at(_numHistBins + 1); // _minMaxVals[dim + 1] (the  is saved in overflow bin
+        // the max value is stored in the overflow bin
+        if (h.at(_numHistBins) != 0)
+            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + _numHistBins - 1] += h.at(_numHistBins);
+
     }
 
 }
