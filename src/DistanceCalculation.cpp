@@ -36,7 +36,7 @@ void DistanceCalculation::setupData(std::vector<float>* histogramFeatures, Param
 
 }
 
-void DistanceCalculation::start() {
+void DistanceCalculation::run() {
     qDebug() << "Distance calculation: started";
 
     computekNN();

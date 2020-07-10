@@ -34,7 +34,7 @@ FeatureExtraction::~FeatureExtraction()
 {
 }
 
-void FeatureExtraction::start() {
+void FeatureExtraction::run() {
     qDebug() << "Feature extraction: started.";
 
     computeHistogramFeatures();
@@ -43,17 +43,17 @@ void FeatureExtraction::start() {
 
 }
 
-void FeatureExtraction::setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const std::vector<float>& data, Parameters& params) {
+void FeatureExtraction::setupData(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params) {
     // Options are set outside this function
     params._numHistBins = _numHistBins;
 
     // Data
     // Input
-    _imgSize = imgSize;
+    _imgSize = params._imgSize;
     _pointIds = pointIds;
     _numPoints = pointIds.size();
     _numDims = params._numDims;
-    _attribute_data = data;
+    _attribute_data = attribute_data;
 
     // Output
     _histogramFeatures.resize(_numPoints * _numDims * _numHistBins);
@@ -105,7 +105,7 @@ void FeatureExtraction::extractFeatures() {
     
     // convolve over all selected data points
 #pragma omp parallel for 
-    for (int pointID = 0; pointID < _pointIds.size(); pointID++) {
+    for (int pointID = 0; pointID < _numPoints; pointID++) {
         // get neighborhood of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
 
@@ -117,7 +117,7 @@ void FeatureExtraction::extractFeatures() {
         neighborValues.resize(_numLocNeighbors * _numDims);
         for (unsigned int neighbor = 0; neighbor < _numLocNeighbors; neighbor++) {
             for (unsigned int dim = 0; dim < _numDims; dim++) {
-                neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data[neighborIDs[neighbor] * _numDims + dim] : 0;
+                neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data.at(neighborIDs[neighbor] * _numDims + dim) : 0;
             }
         }
 

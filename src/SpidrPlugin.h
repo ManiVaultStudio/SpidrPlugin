@@ -6,38 +6,12 @@
 #include <QSize>
 
 #include "SpidrAnalysis.h"
-
-#include "TsneComputation.h"
-#include "DistanceCalculation.h"
-#include "FeatureExtraction.h"
 #include "PointData.h"
-#include "KNNUtils.h"
 
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
 using namespace hdps::gui;
-
-class Parameters {
-public:
-    Parameters() :
-        _perplexity(30),
-        _perplexity_multiplier(3),
-        _aknn_algorithm(knn_library::KNN_HNSW),
-        _aknn_metric(knn_distance_metric::KNN_METRIC_QF),
-        _numHistBins(-1), _nn(-1), _numPoints(-1), _numDims(-1)
-    {}
-
-public:
-    float               _perplexity;            //! Perplexity value in evert distribution.
-    int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
-    knn_library         _aknn_algorithm;
-    knn_distance_metric _aknn_metric;
-    unsigned int        _numHistBins;           // to be set in FeatureExtraction
-    unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1; to be set in DistanceCalculation
-    unsigned int        _numPoints;             // to be set in SpidrPlugin
-    unsigned int        _numDims;               // to be set in SpidrPlugin
-};
 
 
 // =============================================================================
@@ -81,16 +55,12 @@ private:
     * @param numDimensions Will contain the number of enabled dimensions 
     * @param data Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
     */
-    void retrieveData(QString dataName, QSize& imgSize, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& data, Parameters& params);
+    void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize);
 
     SpidrAnalysis _spidrAnalysis;
 
-    TsneComputation _tsne;
-    DistanceCalculation _distCalc;
-    FeatureExtraction _featExtraction;
     std::unique_ptr<SpidrSettingsWidget> _settings;
     QString _embeddingName;
-    Parameters _params;
 };
 
 // =============================================================================

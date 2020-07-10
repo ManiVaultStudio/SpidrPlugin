@@ -30,7 +30,7 @@ public:
 
     void setupData(std::vector<float>* histogramFeatures, Parameters& params);
 
-    void start();
+    void run();
 
 private:
 
@@ -50,7 +50,7 @@ private:
     unsigned int _numDims;
     unsigned int _numPoints;
     unsigned int _numHistBins;              // don't set this from the widget input. Instead you the value set in the feature extraction
-    std::vector<float>* _histogramFeatures;
+    const std::vector<float>* _histogramFeatures;
 
     // Output
     std::vector<int> _indices;

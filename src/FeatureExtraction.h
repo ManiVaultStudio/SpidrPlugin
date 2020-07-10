@@ -5,11 +5,8 @@
 #include <QSize>
 
 class Parameters;
-/**
-* Calculate Spatial Features
-* .start() will execute run() in a new thread
-*/
-class FeatureExtraction  : public QObject // QThread
+
+class FeatureExtraction : public QObject
 {
     Q_OBJECT
 public:
@@ -19,8 +16,8 @@ public:
     std::vector<float>* output();
 
     void setNeighborhoodSize(unsigned int size);    // TODO sets _numNeighbors
-    void setNumHistBins(unsigned int size);
-//    void setNumHistBins(heuristic heu);
+    void setNumHistBins(unsigned int size);         // TODO 
+    //void setNumHistBins(heuristic heu);           // TODO introduce enum for options
     void setNeighborhoodWeighting(int weighting);   // TODO introduce enum for options
 
     /**
@@ -30,9 +27,9 @@ public:
     * @param numDimensions enabled dimensios
     * @param imgSize global image dimensions
     */
-    void setupData(QSize imgSize, const std::vector<unsigned int>& pointIds, const std::vector<float>& data, Parameters& params);
+    void setupData(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params);
 
-    void start();
+    void run();
 
 private:
 
@@ -72,13 +69,10 @@ private:
 
     // Data
     // Input
-    // Image Size
     QSize _imgSize;
-    // Global IDs of points in data
-    std::vector<unsigned int> _pointIds;
-
     unsigned int _numDims;
     unsigned int _numPoints;
+    std::vector<unsigned int> _pointIds;
     std::vector<float> _attribute_data;
 
     // Output

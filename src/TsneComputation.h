@@ -4,14 +4,14 @@
 #include "hdi/dimensionality_reduction/sparse_tsne_user_def_probabilities.h"
 #include "hdi/dimensionality_reduction/gradient_descent_tsne_texture.h"
 
-#include <QThread>
+#include <QObject>
 
 #include <vector>
 #include <string>
 
 class Parameters;
 
-class TsneComputation : public QThread
+class TsneComputation : public QObject
 {
     Q_OBJECT
 public:
@@ -34,6 +34,7 @@ public:
     void stopGradientDescent();
     void markForDeletion();
 
+    void run();
     const std::vector<float>& output();
 
     inline bool isTsneRunning() { return _isTsneRunning; }
@@ -41,8 +42,6 @@ public:
     inline bool isMarkedForDeletion() { return _isMarkedForDeletion; }
 
 private:
-    void run() override;
-
     void computeGradientDescent();
     void initGradientDescent();
     void embed();
