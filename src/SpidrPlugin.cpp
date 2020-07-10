@@ -35,6 +35,7 @@ void SpidrPlugin::init()
     connect(_settings.get(), &SpidrSettingsWidget::dataSetPicked, this, &SpidrPlugin::dataSetPicked);
     connect(_settings.get(), &SpidrSettingsWidget::knnAlgorithmPicked, this, &SpidrPlugin::onKnnAlgorithmPicked);
     connect(_settings.get(), &SpidrSettingsWidget::distanceMetricPicked, this, &SpidrPlugin::onDistanceMetricPicked);
+    connect(_settings.get(), &SpidrSettingsWidget::kernelWeightPicked, this, &SpidrPlugin::onkernelWeightPicked);
 
     // Connect embedding
     connect(&_spidrAnalysis, &SpidrAnalysis::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
@@ -167,6 +168,11 @@ void SpidrPlugin::onKnnAlgorithmPicked(const int index)
 void SpidrPlugin::onDistanceMetricPicked(const int index)
 {
     _spidrAnalysis.setDistanceMetric(index);
+}
+
+void SpidrPlugin::onkernelWeightPicked(const int index)
+{
+    _spidrAnalysis.setKernelWeight(index);
 }
 
 

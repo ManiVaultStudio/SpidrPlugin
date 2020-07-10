@@ -1,6 +1,5 @@
 #pragma once
 
-#include "KNNUtils.h"
 
 #include <tuple>
 #include <vector>
@@ -9,6 +8,8 @@
 #include <QSize>
 
 class Parameters;
+enum knn_library;
+enum knn_distance_metric;
 
 /**
 * Calculate Spatial Features

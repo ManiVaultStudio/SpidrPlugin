@@ -13,7 +13,7 @@ enum knn_library
 enum knn_distance_metric
 {
     KNN_METRIC_QF = 0,
-    //	KNN_METRIC_EMD = 1
+    KNN_METRIC_EMD = 1,
     KNN_METRIC_HEL = 2,
 };
 

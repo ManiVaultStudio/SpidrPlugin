@@ -4,6 +4,8 @@
 #include "DistanceCalculation.h"
 #include "FeatureExtraction.h"
 
+#include "FeatureUtils.h"       // class Parameters
+
 SpidrAnalysis::SpidrAnalysis()
 {
     // Connect embedding
@@ -66,6 +68,17 @@ void SpidrAnalysis::setKnnAlgorithm(const int index) {
 void SpidrAnalysis::setDistanceMetric(const int index) {
     _distCalc.setDistanceMetric(index);
 }
+
+void SpidrAnalysis::setKernelWeight(const int index) {
+    switch (index)
+    {
+    case 0 : _params._neighWeighting = loc_Neigh_Weighting::WEIGHT_UNIF; break;
+    case 1 : _params._neighWeighting = loc_Neigh_Weighting::WEIGHT_BINO; break;
+    case 2 : _params._neighWeighting = loc_Neigh_Weighting::WEIGHT_GAUS; break;
+    default: _params._neighWeighting = loc_Neigh_Weighting::WEIGHT_UNIF; break;
+    }
+}
+
 
 const unsigned int SpidrAnalysis::getNumPoints() {
     return _pointIDsGlobal.size();

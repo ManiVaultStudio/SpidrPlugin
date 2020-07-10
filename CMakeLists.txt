@@ -31,7 +31,6 @@ set(PLUGIN
 	src/DistanceCalculation.cpp
     src/TsneComputation.h
     src/TsneComputation.cpp
-	src/KNNUtils.h
 )
 
 set(DIMENSIONSELECTIONHOLDER
@@ -45,15 +44,17 @@ set(DIMENSIONSELECTIONHOLDER
     src/DimensionSelectionProxyModel.cpp
 )
 
+file(GLOB UTILS src/*Utils.*)
 file(GLOB WIDGETS src/*Widget.*)
 file(GLOB UIS ui/*.ui)
 file(GLOB JSON src/*.json)
 
-set(SOURCES ${PLUGIN} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
+set(SOURCES ${PLUGIN} ${UTILS} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
 set(AUX ${JSON})
 
 source_group(Plugin FILES ${PLUGIN})
 source_group(DimensionSelectionHolder FILES ${DIMENSIONSELECTIONHOLDER})
+source_group(Utils FILES ${UTILS})
 source_group(Widgets FILES ${WIDGETS})
 source_group(UI FILES ${UIS})
 source_group(Aux FILES ${AUX})

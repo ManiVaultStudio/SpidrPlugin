@@ -1,7 +1,7 @@
 #include "FeatureExtraction.h"
 
 #include "KNNUtils.h"
-#include "SpidrPlugin.h"    // class Parameters
+#include "FeatureUtils.h"       // class Parameters
 
 #include "omp.h"
 
@@ -44,8 +44,11 @@ void FeatureExtraction::run() {
 }
 
 void FeatureExtraction::setupData(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params) {
-    // Options are set outside this function
+    // (Most) parameters are set outside this function
     params._numHistBins = _numHistBins;
+    
+    // Set neighborhood weights
+    weightNeighborhood(params._neighWeighting);
 
     // Data
     // Input
@@ -190,6 +193,16 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
         }
     }
 
+}
+
+void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
+    switch (weighting)
+    {
+    case loc_Neigh_Weighting::WEIGHT_UNIF: break; // already done in constructor
+    case loc_Neigh_Weighting::WEIGHT_BINO: break;
+    case loc_Neigh_Weighting::WEIGHT_GAUS: break; 
+    default:  break;
+    }
 }
 
 std::vector<float>* FeatureExtraction::output()

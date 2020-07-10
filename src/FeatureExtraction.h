@@ -4,7 +4,9 @@
 #include <QObject>
 #include <QSize>
 
+
 class Parameters;
+enum loc_Neigh_Weighting;
 
 class FeatureExtraction : public QObject
 {
@@ -49,6 +51,8 @@ private:
     std::vector<int> neighborhoodIndices(unsigned int pointInd);
 
     void calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues);
+
+    void weightNeighborhood(loc_Neigh_Weighting weighting);
 
 signals:
  // TODO: add slots that change _neighborhoodSize, _numHistBins and _neighborhoodWeights when widgets emit signal

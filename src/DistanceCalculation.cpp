@@ -1,7 +1,11 @@
 #include "DistanceCalculation.h"
 
-#include "SpidrPlugin.h"        // class Parameters
+#include "FeatureUtils.h"       // class Parameters
+#include "KNNUtils.h"
+
 #include "hnswlib/hnswlib.h"
+
+#include <QDebug>
 
 DistanceCalculation::DistanceCalculation() :
     _knn_lib(knn_library::KNN_HNSW),

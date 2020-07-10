@@ -29,8 +29,8 @@ _analysisPlugin(analysisPlugin)
     distanceMetric.addItem("Hellinger");
 
     kernelWeight.addItem("Uniform");
-//    kernelWeight.addItem("Binomial");
-//    kernelWeight.addItem("Gaussian");
+    kernelWeight.addItem("Binomial");
+    kernelWeight.addItem("Gaussian");
 
     connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
     connect(&knnOptions,    SIGNAL(currentIndexChanged(int)), this, SIGNAL(knnAlgorithmPicked(int)));
