@@ -1,10 +1,6 @@
 #include "SpidrAnalysis.h"
 
-#include "TsneComputation.h"
-#include "DistanceCalculation.h"
-#include "FeatureExtraction.h"
-
-#include "FeatureUtils.h"       // class Parameters
+#include "FeatureUtils.h"
 
 SpidrAnalysis::SpidrAnalysis()
 {

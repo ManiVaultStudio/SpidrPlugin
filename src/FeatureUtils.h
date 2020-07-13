@@ -1,10 +1,10 @@
 #pragma once
 
-#include "KNNUtils.h"
-
 #include <QSize>
 
+#include <cmath>
 #include <vector>
+#include <exception>
 
 enum loc_Neigh_Weighting
 {
@@ -13,32 +13,38 @@ enum loc_Neigh_Weighting
     WEIGHT_GAUS = 2
 };
 
-
-std::vector<float> PascalsTriangleRow(const unsigned int n);
-std::vector<float> BinomialKernel2D(const unsigned int n);
-
-std::vector<float> GaussianKernel1D(const unsigned int n, const unsigned int sd=1);
-std::vector<float> GaussianKernel2D(const unsigned int n, const unsigned int sd = 1);
-
-class Parameters {
-public:
-    Parameters() :
-        _perplexity(30), _perplexity_multiplier(3),
-        _aknn_algorithm(knn_library::KNN_HNSW), _aknn_metric(knn_distance_metric::KNN_METRIC_QF), _neighWeighting(loc_Neigh_Weighting::WEIGHT_UNIF),
-        _numHistBins(-1), _nn(-1), _numPoints(-1), _numDims(-1), _imgSize(-1, -1)
-    {}
-
-public:
-    float               _perplexity;            //! Perplexity value in evert distribution.
-    int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
-    knn_library         _aknn_algorithm;
-    knn_distance_metric _aknn_metric;
-    loc_Neigh_Weighting _neighWeighting;
-    unsigned int        _numHistBins;           // to be set in FeatureExtraction
-    unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1; to be set in DistanceCalculation
-    unsigned int        _numPoints;             // to be set in SpidrAnalysis
-    unsigned int        _numDims;               // to be set in SpidrAnalysis
-    QSize               _imgSize;               // to be set in SpidrAnalysis
+enum norm_vec
+{
+    NORM_NOT = 0, // No normalization
+    NORM_MAX = 1,
+    NORM_SUM = 2
 };
 
+
+enum bin_size
+{
+    MANUAL = 0,
+    SQRT = 1,
+    STURGES = 2,
+    RICE = 3
+};
+
+template<typename T>
+std::vector<float> NormVector(std::vector<T> vec, float normVal);
+
+std::vector<unsigned int> PascalsTriangleRow(const unsigned int n);
+
+// @param norm: 1 indicates max, 2 indicates sum, 0 indicates no normalization
+std::vector<float> BinomialKernel2D(const unsigned int width, norm_vec norm = norm_vec::NORM_NOT);
+
+std::vector<float> GaussianKernel1D(const unsigned int width, const float sd = 1);
+
+// @param norm: 1 indicates max, 2 indicates sum, 0 indicates no normalization
+std::vector<float> GaussianKernel2D(const unsigned int width, const float sd = 1, norm_vec norm = norm_vec::NORM_NOT);
+
+unsigned int SqrtBinSize(unsigned int numItems);
+
+unsigned int SturgesBinSize(unsigned int numItems);
+
+unsigned int RiceBinSize(unsigned int numItems);
 

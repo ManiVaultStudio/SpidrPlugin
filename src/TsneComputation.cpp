@@ -1,10 +1,11 @@
 #include "TsneComputation.h"
 
+#include "AnalysisParameters.h"
+
 #include <algorithm>            // std::min, max
 #include <vector>
 #include <assert.h>
 
-#include "FeatureUtils.h"       // class Parameters
 #include <QDebug>
 
 #include "hdi/dimensionality_reduction/tsne_parameters.h"

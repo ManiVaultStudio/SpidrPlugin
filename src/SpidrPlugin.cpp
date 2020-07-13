@@ -175,7 +175,6 @@ void SpidrPlugin::onkernelWeightPicked(const int index)
     _spidrAnalysis.setKernelWeight(index);
 }
 
-
 void SpidrPlugin::onNewEmbedding() {
     const std::vector<float>& outputData = _spidrAnalysis.output();
     Points& embedding = _core->requestData<Points>(_embeddingName);

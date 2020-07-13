@@ -3,7 +3,7 @@
 #include "TsneComputation.h"
 #include "DistanceCalculation.h"
 #include "FeatureExtraction.h"
-#include "FeatureUtils.h"
+#include "AnalysisParameters.h"
 
 #include <QThread>
 #include <QSize>

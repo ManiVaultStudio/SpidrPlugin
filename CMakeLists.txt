@@ -31,6 +31,7 @@ set(PLUGIN
 	src/DistanceCalculation.cpp
     src/TsneComputation.h
     src/TsneComputation.cpp
+	src/AnalysisParameters.h
 )
 
 set(DIMENSIONSELECTIONHOLDER

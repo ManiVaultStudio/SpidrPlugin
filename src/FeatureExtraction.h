@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QSize>
 
-
 class Parameters;
 enum loc_Neigh_Weighting;
 
@@ -18,9 +17,11 @@ public:
     std::vector<float>* output();
 
     void setNeighborhoodSize(unsigned int size);    // TODO sets _numNeighbors
+    void setNeighborhoodWeighting(loc_Neigh_Weighting weighting);
     void setNumHistBins(unsigned int size);         // TODO 
     //void setNumHistBins(heuristic heu);           // TODO introduce enum for options
-    void setNeighborhoodWeighting(int weighting);   // TODO introduce enum for options
+
+    loc_Neigh_Weighting getNeighborhoodWeighting();
 
     /**
     * Setup feature extraction by introducing the data
@@ -52,18 +53,22 @@ private:
 
     void calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues);
 
-    void weightNeighborhood(loc_Neigh_Weighting weighting);
-
 signals:
  // TODO: add slots that change _neighborhoodSize, _numHistBins and _neighborhoodWeights when widgets emit signal
 
 private:
+
+    void weightNeighborhood(loc_Neigh_Weighting weighting);
+
+
     // Options 
 
-    // Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom
-    unsigned int _neighborhoodSize;
     // Number of neighbors including center
     unsigned int _numLocNeighbors;
+    // Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom
+    unsigned int _neighborhoodSize;
+    // Weighting type of neighborhood kernel
+    loc_Neigh_Weighting _neighborhoodWeighting;
     // Weightings of neighborhood kernel
     std::vector<float> _neighborhoodWeights;
     // Number of bins in each histogram

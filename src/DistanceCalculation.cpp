@@ -1,6 +1,6 @@
 #include "DistanceCalculation.h"
 
-#include "FeatureUtils.h"       // class Parameters
+#include "AnalysisParameters.h"
 #include "KNNUtils.h"
 
 #include "hnswlib/hnswlib.h"
@@ -75,12 +75,19 @@ void DistanceCalculation::computekNN() {
         hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default HNSW values for M, ef_construction random_seed
 
         // add data points: each data point holds _numDims*_numHistBins values
-        appr_alg.addPoint((void*)_histogramFeatures->data(), (std::size_t) 0);
+        //appr_alg.addPoint((void*)_histogramFeatures->data(), (std::size_t) 0);
 //#pragma omp parallel for
-        for (int i = 1; i < _numPoints; ++i)
-        {
+        //for (int i = 1; i < _numPoints; ++i)
+        //{
+        //    appr_alg.addPoint((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype) i);
+        //}
+
+        int num_threads = std::thread::hardware_concurrency();
+
+        hnswlib::ParallelFor(0, _numPoints, num_threads, [&](size_t i, size_t threadId) {
             appr_alg.addPoint((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype) i);
-        }
+        });
+        //appr_alg.checkIntegrity();
 
         // query dataset
 #pragma omp parallel for

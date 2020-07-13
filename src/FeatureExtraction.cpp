@@ -1,7 +1,8 @@
 #include "FeatureExtraction.h"
 
 #include "KNNUtils.h"
-#include "FeatureUtils.h"       // class Parameters
+#include "FeatureUtils.h"
+#include "AnalysisParameters.h"     // class Parameters
 
 #include "omp.h"
 
@@ -25,6 +26,7 @@ FeatureExtraction::FeatureExtraction() :
     // square neighborhood
     _numLocNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
     // uniform weighting
+    _neighborhoodWeighting = loc_Neigh_Weighting::WEIGHT_UNIF;
     _neighborhoodWeights.resize(_numLocNeighbors);
     std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1);
 }
@@ -47,8 +49,11 @@ void FeatureExtraction::setupData(const std::vector<unsigned int>& pointIds, con
     // (Most) parameters are set outside this function
     params._numHistBins = _numHistBins;
     
-    // Set neighborhood weights
-    weightNeighborhood(params._neighWeighting);
+    // Set neighborhood
+    _numLocNeighbors = params._numLocNeighbors;
+    _neighborhoodSize = (_numLocNeighbors + 1) * (_numLocNeighbors + 1);
+    _neighborhoodWeighting = params._neighWeighting;
+    weightNeighborhood(params._neighWeighting);     // sets _neighborhoodWeights
 
     // Data
     // Input
@@ -198,11 +203,21 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
 void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
     switch (weighting)
     {
-    case loc_Neigh_Weighting::WEIGHT_UNIF: break; // already done in constructor
-    case loc_Neigh_Weighting::WEIGHT_BINO: break;
-    case loc_Neigh_Weighting::WEIGHT_GAUS: break; 
+    case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1); break; 
+    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_neighborhoodSize, norm_vec::NORM_MAX); break;
+    case loc_Neigh_Weighting::WEIGHT_GAUS: _neighborhoodWeights = GaussianKernel2D(_neighborhoodSize, norm_vec::NORM_NOT); break;
     default:  break;
     }
+}
+
+void FeatureExtraction::setNeighborhoodWeighting(loc_Neigh_Weighting weighting) {
+    _neighborhoodWeighting = weighting;
+    weightNeighborhood(weighting);
+}
+
+loc_Neigh_Weighting FeatureExtraction::getNeighborhoodWeighting()
+{
+    return _neighborhoodWeighting;
 }
 
 std::vector<float>* FeatureExtraction::output()
