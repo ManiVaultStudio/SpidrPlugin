@@ -18,7 +18,8 @@ Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 using namespace hdps;
 SpidrPlugin::SpidrPlugin()
 :
-AnalysisPlugin("Spidr")
+AnalysisPlugin("Spidr"),
+_spidrAnalysis(this)
 {
 }
 
@@ -108,6 +109,7 @@ void SpidrPlugin::startComputation()
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
 
+     
     _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize);
     initializeAnalysisSettings();
 
@@ -178,7 +180,7 @@ void SpidrPlugin::stopComputation() {
     if (_spidrAnalysis.isRunning())
     {
         // release openGL context 
-        _spidrAnalysis.stopComputation(); 
+        _spidrAnalysis.stopComputation();
         _spidrAnalysis.exit();
 
         // Wait until the thread has terminated (max. 3 seconds)

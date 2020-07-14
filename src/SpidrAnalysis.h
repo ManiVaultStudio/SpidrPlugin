@@ -16,7 +16,7 @@ class SpidrAnalysis : public QThread
 {
     Q_OBJECT
 public:
-    SpidrAnalysis();
+    SpidrAnalysis(QObject* parent);
     ~SpidrAnalysis() override;
 
     void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, unsigned int numDimensions, QSize imgSize);

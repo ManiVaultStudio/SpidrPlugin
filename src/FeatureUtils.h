@@ -6,27 +6,27 @@
 #include <vector>
 #include <exception>
 
-enum loc_Neigh_Weighting
+enum class loc_Neigh_Weighting : unsigned int
 {
     WEIGHT_UNIF = 0,
     WEIGHT_BINO = 1,
-    WEIGHT_GAUS = 2
+    WEIGHT_GAUS = 2,
 };
 
-enum norm_vec
+enum class norm_vec : unsigned int
 {
     NORM_NOT = 0, // No normalization
     NORM_MAX = 1,
-    NORM_SUM = 2
+    NORM_SUM = 2,
 };
 
 
-enum bin_size
+enum class bin_size : unsigned int
 {
     MANUAL = 0,
     SQRT = 1,
     STURGES = 2,
-    RICE = 3
+    RICE = 3,
 };
 
 template<typename T>

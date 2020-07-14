@@ -5,7 +5,7 @@
 #include <QSize>
 
 class Parameters;
-enum loc_Neigh_Weighting;
+enum class loc_Neigh_Weighting : unsigned int;
 
 class FeatureExtraction : public QObject
 {
@@ -16,10 +16,10 @@ public:
 
     std::vector<float>* output();
 
-    void setNeighborhoodSize(unsigned int size);    // TODO sets _numNeighbors
+    void setNumLocNeighbors(unsigned int size);
     void setNeighborhoodWeighting(loc_Neigh_Weighting weighting);
-    void setNumHistBins(unsigned int size);         // TODO 
-    //void setNumHistBins(heuristic heu);           // TODO introduce enum for options
+    void setNumHistBins(unsigned int size);
+    //void setNumHistBins(heuristic heu);
 
     loc_Neigh_Weighting getNeighborhoodWeighting();
 
@@ -64,7 +64,9 @@ private:
     // Options 
 
     // Number of neighbors including center
-    unsigned int _LocNeighbors;
+    unsigned int _locNeighbors;
+    // Width of the kernel (2* _locNeighbors +1)
+    unsigned int _kernelWidth;
     // Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom
     unsigned int _neighborhoodSize;
     // Weighting type of neighborhood kernel
@@ -73,8 +75,6 @@ private:
     std::vector<float> _neighborhoodWeights;
     // Number of bins in each histogram
     unsigned int _numHistBins;
-    // Extrema for each dimension/channel, i.e. [min_Ch0, max_Ch0, min_Ch1, max_Ch1, ...]
-    std::vector<float> _minMaxVals;
 
     // Data
     // Input
@@ -83,6 +83,8 @@ private:
     unsigned int _numPoints;
     std::vector<unsigned int> _pointIds;
     std::vector<float> _attribute_data;
+    // Extrema for each dimension/channel, i.e. [min_Ch0, max_Ch0, min_Ch1, max_Ch1, ...]
+    std::vector<float> _minMaxVals;
 
     // Output
     // Histogram features for each item. 

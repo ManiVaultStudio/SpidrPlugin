@@ -24,10 +24,10 @@ FeatureExtraction::FeatureExtraction() :
     _numHistBins(5)
 {
     // square neighborhood
-    _LocNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
+    _locNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
     // uniform weighting
     _neighborhoodWeighting = loc_Neigh_Weighting::WEIGHT_UNIF;
-    _neighborhoodWeights.resize(_LocNeighbors);
+    _neighborhoodWeights.resize(_locNeighbors);
     std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1);
 }
 
@@ -48,11 +48,12 @@ void FeatureExtraction::compute() {
 void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params) {
     // Parameters
     _numHistBins = params._numHistBins;
-    _LocNeighbors = params._numLocNeighbors;
+    _locNeighbors = params._numLocNeighbors;
     _neighborhoodWeighting = params._neighWeighting;
 
     // Set neighborhood
-    _neighborhoodSize = (2 * _LocNeighbors + 1) * (2 * _LocNeighbors + 1);
+    _kernelWidth = (2 * _locNeighbors) + 1;
+    _neighborhoodSize = _kernelWidth * _kernelWidth;
     weightNeighborhood(params._neighWeighting);     // sets _neighborhoodWeights
 
     // Data
@@ -69,7 +70,7 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
 
     assert(_attribute_data.size() == _numPoints * _numDims);
 
-    qDebug() << "Feature extraction: Num neighbors (in each direction): " << _LocNeighbors << "(total neighbors: " << _neighborhoodSize << ") Num Bins: " << _numHistBins << " Neighbor weighting: " << _neighborhoodWeighting;
+    qDebug() << "Feature extraction: Num neighbors (in each direction): " << _locNeighbors << "(total neighbors: " << _neighborhoodSize << ") Num Bins: " << _numHistBins << " Neighbor weighting: " << (unsigned int)_neighborhoodWeighting;
 }
 
 void FeatureExtraction::computeHistogramFeatures() {
@@ -112,7 +113,7 @@ void FeatureExtraction::initExtraction() {
 void FeatureExtraction::extractFeatures() {
     
     // convolve over all selected data points
-//#pragma omp parallel for 
+#pragma omp parallel for 
     for (int pointID = 0; pointID < _numPoints; pointID++) {
         // get neighborhood of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
@@ -143,8 +144,8 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
     int rowID = int(pointInd / imWidth);
 
     // left and right neighbors
-    std::vector<int> lrNeighIDs(2 * _LocNeighbors + 1, 0);
-    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - _LocNeighbors);
+    std::vector<int> lrNeighIDs(2 * _locNeighbors + 1, 0);
+    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - _locNeighbors);
 
     // are left and right out of the picture?
     for (int& n : lrNeighIDs) {
@@ -156,7 +157,7 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
 
     // above and below neighbors
     unsigned int localNeighCount = 0;
-    for (int i = -1 * _LocNeighbors; i <= (int)_LocNeighbors; i++) {
+    for (int i = -1 * _locNeighbors; i <= (int)_locNeighbors; i++) {
         for (int ID : lrNeighIDs) {
             neighborsIDs[localNeighCount] = ID != -1 ? ID + i * _imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
             localNeighCount++;
@@ -205,8 +206,8 @@ void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
     switch (weighting)
     {
     case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1); break; 
-    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_neighborhoodSize, norm_vec::NORM_MAX); break;
-    case loc_Neigh_Weighting::WEIGHT_GAUS: _neighborhoodWeights = GaussianKernel2D(_neighborhoodSize, norm_vec::NORM_NOT); break;
+    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;
+    case loc_Neigh_Weighting::WEIGHT_GAUS: _neighborhoodWeights = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NOT); break;
     default:  break;
     }
 }
@@ -215,6 +216,17 @@ void FeatureExtraction::setNeighborhoodWeighting(loc_Neigh_Weighting weighting) 
     _neighborhoodWeighting = weighting;
     weightNeighborhood(weighting);
 }
+
+void FeatureExtraction::setNumLocNeighbors(unsigned int size) {
+    _locNeighbors = size;
+    _kernelWidth = (2 * size) + 1;
+    _neighborhoodSize = _kernelWidth * _kernelWidth;
+}
+
+void FeatureExtraction::setNumHistBins(unsigned int size) {
+    _numHistBins = size;
+}
+
 
 loc_Neigh_Weighting FeatureExtraction::getNeighborhoodWeighting()
 {

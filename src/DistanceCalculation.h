@@ -7,8 +7,8 @@
 #include <QSize>
 
 class Parameters;
-enum knn_library;
-enum knn_distance_metric;
+enum class knn_library : unsigned int;
+enum class knn_distance_metric : unsigned int;
 
 /**
 * Calculate Spatial Features

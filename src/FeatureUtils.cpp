@@ -45,9 +45,9 @@ std::vector<float> BinomialKernel2D(const unsigned int width, norm_vec norm) {
     }
 
     // normalization
-    if (norm == 1)
+    if (norm == norm_vec::NORM_MAX)
         bino2D = NormVector(bino2D, max);
-    else if (norm == 2)
+    else if (norm == norm_vec::NORM_SUM)
         bino2D = NormVector(bino2D, sum);
 
     return bino2D;
@@ -96,9 +96,9 @@ std::vector<float> GaussianKernel2D(const unsigned int width, const float sd, no
     }
 
     // normalization
-    if (norm == 1)
+    if (norm == norm_vec::NORM_MAX)
         gauss2D = NormVector(gauss2D, max);
-    else if (norm == 2)
+    else if (norm == norm_vec::NORM_SUM)
         gauss2D = NormVector(gauss2D, sum);
 
     return gauss2D;

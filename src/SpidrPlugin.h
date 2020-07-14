@@ -2,6 +2,8 @@
 
 #include <AnalysisPlugin.h>
 
+#include <memory>
+
 #include <QtCore>
 #include <QSize>
 
@@ -57,9 +59,9 @@ private:
     void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize);
 
     SpidrAnalysis _spidrAnalysis;
-
     std::unique_ptr<SpidrSettingsWidget> _settings;
     QString _embeddingName;
+    QThread workerThread;
 };
 
 // =============================================================================

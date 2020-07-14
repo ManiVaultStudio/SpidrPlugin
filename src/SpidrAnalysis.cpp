@@ -2,7 +2,7 @@
 
 #include <QDebug>
 
-SpidrAnalysis::SpidrAnalysis()
+SpidrAnalysis::SpidrAnalysis(QObject* parent) : QThread(parent)
 {
     // Connect embedding
     connect(&_tsne, &TsneComputation::computationStopped, this, &SpidrAnalysis::embeddingComputationStopped);
