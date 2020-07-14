@@ -201,6 +201,7 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
 }
 
 void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
+    _neighborhoodWeights.resize(_neighborhoodSize);
     switch (weighting)
     {
     case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1); break; 
