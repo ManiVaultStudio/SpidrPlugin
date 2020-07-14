@@ -25,12 +25,12 @@ public:
     std::vector<int>* get_knn_indices();
     std::vector<float>* get_knn_distances_squared();
 
-    void setKnnAlgorithm(int index);
-    void setDistanceMetric(int index);
+    void setKnnAlgorithm(knn_library knn);
+    void setDistanceMetric(knn_distance_metric metric);
 
-    void setupData(std::vector<float>* histogramFeatures, Parameters& params);
+    void setup(std::vector<float>* histogramFeatures, Parameters& params);
 
-    void run();
+    void compute();
 
 private:
 

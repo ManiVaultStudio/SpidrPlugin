@@ -1,5 +1,6 @@
 # Spatial Information in Dimensionality Reduction (Spidr)
 
+git clone -recurse-submodule
 
 ## Dependencies
 

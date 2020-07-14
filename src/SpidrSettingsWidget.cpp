@@ -41,10 +41,7 @@ _analysisPlugin(analysisPlugin)
     histBinSizeHeur.addItem("Rice");
 
     connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
-    connect(&knnOptions,    SIGNAL(currentIndexChanged(int)), this, SIGNAL(knnAlgorithmPicked(int)));
-    connect(&distanceMetric,SIGNAL(currentIndexChanged(int)), this, SIGNAL(distanceMetricPicked(int)));
 
-    connect(&kernelWeight, SIGNAL(currentIndexChanged(int)), this, SIGNAL(kernelWeightPicked(int)));
     connect(&kernelSize, SIGNAL(textChanged(QString)), SLOT(kernelSizeChanged(QString)));
     connect(&kernelSize, SIGNAL(textChanged(QString)), this, SLOT(onHistBinSizeChanged(QString)));
     connect(&histBinSize, SIGNAL(textChanged(QString)), SLOT(histBinSizeChanged(QString)));
@@ -262,7 +259,6 @@ void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
         histBinSize.setText(QString::number(binNum));
         histBinSize.setReadOnly(true);
 
-        emit histBinSizeHeurPicked(binNum);
     }
 
 }
@@ -286,7 +282,6 @@ void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
         histBinSize.setReadOnly(true);
     }
 
-    emit histBinSizeHeurPicked(value);
 }
 
 

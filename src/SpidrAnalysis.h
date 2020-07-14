@@ -4,6 +4,8 @@
 #include "DistanceCalculation.h"
 #include "FeatureExtraction.h"
 #include "AnalysisParameters.h"
+#include "FeatureUtils.h"
+#include "KNNUtils.h"
 
 #include <QThread>
 #include <QSize>
@@ -17,22 +19,30 @@ public:
     SpidrAnalysis();
     ~SpidrAnalysis() override;
 
-    void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, unsigned int numDimensions, QSize imgSize);
-
-    void initializeTsneSettings(int numIterations, int perplexity, int exaggeration);
+    void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, unsigned int numDimensions, QSize imgSize);
 
     // release openGL context of the t-SNE computation
     void stopComputation();
 
     // Setter
+    void setKernelWeight(const int index);
+    void setNumLocNeighbors(const int index);
+    void setNumHistBins(const unsigned int index);
     void setKnnAlgorithm(const int index);
     void setDistanceMetric(const int index);
-    void setKernelWeight(const int index);
+    void setPerplexity(const unsigned  index);
+    void setNumIterations(const unsigned  index);
+    void setExaggeration(const unsigned  index);
+
+    void initializeAnalysisSettings(const int kernelInd, unsigned int numLocNeighbors, unsigned int numHistBins, \
+                                    const int aknnAlgInd, const int aknnMetInd, \
+                                    int numIterations, int perplexity, int exaggeration);
 
     // Getter
     const unsigned int getNumPoints();
     bool embeddingIsRunning();
     const std::vector<float> &output();
+    const Parameters getParameters();
 
 signals:
     void embeddingComputationStopped();

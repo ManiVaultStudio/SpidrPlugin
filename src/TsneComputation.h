@@ -30,11 +30,12 @@ public:
     inline int perplexity() { return _perplexity; }
     inline int numDimensionsOutput() { return _numDimensionsOutput; }
 
-    void initTSNE(const std::vector<int>* knn_indices, const std::vector<float>* knn_distances, Parameters params);
+    void setup(std::vector<int>* knn_indices, std::vector<float>* knn_distances, Parameters params);
+    void initTSNE();
     void stopGradientDescent();
     void markForDeletion();
 
-    void run();
+    void compute();
     const std::vector<float>& output();
 
     inline bool isTsneRunning() { return _isTsneRunning; }
@@ -59,6 +60,8 @@ private:
     hdi::data::Embedding<float> _embedding;
 
     // Data
+    const std::vector<int>* _knn_indices;
+    const std::vector<float>* _knn_distances;
     unsigned int _numPoints;
     std::vector<float> _outputData;
 
@@ -68,7 +71,9 @@ private:
     int _numChecks;
     int _exaggerationIter;
     int _perplexity;
+    int _perplexity_multiplier;
     int _numDimensionsOutput;
+    int _nn;
 
     // Flags
     bool _verbose;

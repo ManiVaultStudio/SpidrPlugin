@@ -40,13 +40,11 @@ public:
 
 public slots:
     void dataSetPicked(const QString& name);
-    void onKnnAlgorithmPicked(const int index);
-    void onDistanceMetricPicked(const int index);
-    void onkernelWeightPicked(const int index);
     void onNewEmbedding();
 
 private:
-    void initializeTsneSettings();
+    void initializeAnalysisSettings();
+
 
     /**
     * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions 

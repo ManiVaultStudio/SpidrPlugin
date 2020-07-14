@@ -16,18 +16,20 @@ public:
 
 public:
     // data
-    unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1; to be set in DistanceCalculation
-    unsigned int        _numPoints;             // to be set in SpidrAnalysis
-    unsigned int        _numDims;               // to be set in SpidrAnalysis
-    QSize               _imgSize;               // to be set in SpidrAnalysis
+    unsigned int        _numPoints;             // 
+    unsigned int        _numDims;               // 
+    QSize               _imgSize;               // 
     // features
     loc_Neigh_Weighting _neighWeighting;        //
     unsigned int        _numLocNeighbors;       //
-    unsigned int        _numHistBins;           // to be set in FeatureExtraction
+    unsigned int        _numHistBins;           // 
     // distance
-    knn_library         _aknn_algorithm;
-    knn_distance_metric _aknn_metric;
+    unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1
+    knn_library         _aknn_algorithm;        // 
+    knn_distance_metric _aknn_metric;           //
     // embeddings
     float               _perplexity;            //! Perplexity value in evert distribution.
     int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
+    int                 _numIterations;         //
+    int                 _exaggeration;          //
 };

@@ -33,9 +33,6 @@ void SpidrPlugin::init()
 
     // Connet settings
     connect(_settings.get(), &SpidrSettingsWidget::dataSetPicked, this, &SpidrPlugin::dataSetPicked);
-    connect(_settings.get(), &SpidrSettingsWidget::knnAlgorithmPicked, this, &SpidrPlugin::onKnnAlgorithmPicked);
-    connect(_settings.get(), &SpidrSettingsWidget::distanceMetricPicked, this, &SpidrPlugin::onDistanceMetricPicked);
-    connect(_settings.get(), &SpidrSettingsWidget::kernelWeightPicked, this, &SpidrPlugin::onkernelWeightPicked);
 
     // Connect embedding
     connect(&_spidrAnalysis, &SpidrAnalysis::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
@@ -91,30 +88,28 @@ void SpidrPlugin::dataSetPicked(const QString& name)
 void SpidrPlugin::startComputation()
 {
     // Get the data
-    QString dataName = _settings->dataOptions.currentText();
-
-    qDebug() << "SpidrPlugin: Read data.";
+    qDebug() << "SpidrPlugin: Read data ";
 
     std::vector<unsigned int> pointIDsGlobal;
     std::vector<float> attribute_data;        // Create list of data from the enabled dimensions
     QSize imgSize;
     unsigned int numDims;
+    QString dataName = _settings->dataOptions.currentText();
     retrieveData(dataName, pointIDsGlobal, attribute_data, numDims, imgSize);
 
-    qDebug() << "SpidrPlugin: Num data points: " << pointIDsGlobal.size() << " Num dims: " << numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
-
     // Create a new data set and hand it to the hdps core
+    qDebug() << "SpidrPlugin: Create new data set for embedding";
+
     _embeddingName = _core->createDerivedData("Points", "Embedding", dataName);
     Points& embedding = _core->requestData<Points>(_embeddingName);
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);
 
-    qDebug() << "SpidrPlugin: Created new data set for embedding";
+    // Setup worker classes with data and parameters
+    qDebug() << "SpidrPlugin: Initialize settings";
 
-    // Setup worker classes
-    _spidrAnalysis.setup(attribute_data, pointIDsGlobal, numDims, imgSize);
-    initializeTsneSettings();
-    qDebug() << "SpidrPlugin: Initialized t-SNE computation settings";
+    _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize);
+    initializeAnalysisSettings();
 
     // Start spatial analysis
     _spidrAnalysis.start();
@@ -160,20 +155,6 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
 
 }
 
-void SpidrPlugin::onKnnAlgorithmPicked(const int index)
-{
-    _spidrAnalysis.setKnnAlgorithm(index);
-}
-
-void SpidrPlugin::onDistanceMetricPicked(const int index)
-{
-    _spidrAnalysis.setDistanceMetric(index);
-}
-
-void SpidrPlugin::onkernelWeightPicked(const int index)
-{
-    _spidrAnalysis.setKernelWeight(index);
-}
 
 void SpidrPlugin::onNewEmbedding() {
     const std::vector<float>& outputData = _spidrAnalysis.output();
@@ -184,13 +165,13 @@ void SpidrPlugin::onNewEmbedding() {
     _core->notifyDataChanged(_embeddingName);
 }
 
-void SpidrPlugin::initializeTsneSettings() {
-    
-    // Initialize the tSNE computation with the settings from the settings widget
-    _spidrAnalysis.initializeTsneSettings(_settings->numIterations.text().toInt(), \
-                                          _settings->perplexity.text().toInt(), \
-                                          _settings->exaggeration.text().toInt());
+void SpidrPlugin::initializeAnalysisSettings() {
+    // sets all the parameters
+    _spidrAnalysis.initializeAnalysisSettings(_settings->kernelWeight.currentIndex(), _settings->kernelSize.text().toInt(), _settings->histBinSize.text().toInt(), \
+                                              _settings->knnOptions.currentIndex(), _settings->distanceMetric.currentIndex(), \
+                                              _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt());
 }
+
 
 void SpidrPlugin::stopComputation() {
     // Request interruption of the computation

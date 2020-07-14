@@ -24,10 +24,10 @@ FeatureExtraction::FeatureExtraction() :
     _numHistBins(5)
 {
     // square neighborhood
-    _numLocNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
+    _LocNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
     // uniform weighting
     _neighborhoodWeighting = loc_Neigh_Weighting::WEIGHT_UNIF;
-    _neighborhoodWeights.resize(_numLocNeighbors);
+    _neighborhoodWeights.resize(_LocNeighbors);
     std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1);
 }
 
@@ -36,7 +36,7 @@ FeatureExtraction::~FeatureExtraction()
 {
 }
 
-void FeatureExtraction::run() {
+void FeatureExtraction::compute() {
     qDebug() << "Feature extraction: started.";
 
     computeHistogramFeatures();
@@ -45,14 +45,14 @@ void FeatureExtraction::run() {
 
 }
 
-void FeatureExtraction::setupData(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params) {
-    // (Most) parameters are set outside this function
-    params._numHistBins = _numHistBins;
-    
-    // Set neighborhood
-    _numLocNeighbors = params._numLocNeighbors;
-    _neighborhoodSize = (_numLocNeighbors + 1) * (_numLocNeighbors + 1);
+void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params) {
+    // Parameters
+    _numHistBins = params._numHistBins;
+    _LocNeighbors = params._numLocNeighbors;
     _neighborhoodWeighting = params._neighWeighting;
+
+    // Set neighborhood
+    _neighborhoodSize = (2 * _LocNeighbors + 1) * (2 * _LocNeighbors + 1);
     weightNeighborhood(params._neighWeighting);     // sets _neighborhoodWeights
 
     // Data
@@ -69,7 +69,7 @@ void FeatureExtraction::setupData(const std::vector<unsigned int>& pointIds, con
 
     assert(_attribute_data.size() == _numPoints * _numDims);
 
-    qDebug() << "Feature extraction: Num Bins: " << _numHistBins;
+    qDebug() << "Feature extraction: Num neighbors (in each direction): " << _LocNeighbors << "(total neighbors: " << _neighborhoodSize << ") Num Bins: " << _numHistBins << " Neighbor weighting: " << _neighborhoodWeighting;
 }
 
 void FeatureExtraction::computeHistogramFeatures() {
@@ -112,18 +112,18 @@ void FeatureExtraction::initExtraction() {
 void FeatureExtraction::extractFeatures() {
     
     // convolve over all selected data points
-#pragma omp parallel for 
+//#pragma omp parallel for 
     for (int pointID = 0; pointID < _numPoints; pointID++) {
         // get neighborhood of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
 
-        assert(neighborIDs.size() == _numLocNeighbors);
+        assert(neighborIDs.size() == _neighborhoodSize);
 
         // get data for all neighborhood points
         // Padding: if neighbor is outside selection, assign 0 to all dimension values
         std::vector<float> neighborValues;
-        neighborValues.resize(_numLocNeighbors * _numDims);
-        for (unsigned int neighbor = 0; neighbor < _numLocNeighbors; neighbor++) {
+        neighborValues.resize(_neighborhoodSize * _numDims);
+        for (unsigned int neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             for (unsigned int dim = 0; dim < _numDims; dim++) {
                 neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data.at(neighborIDs[neighbor] * _numDims + dim) : 0;
             }
@@ -138,13 +138,13 @@ void FeatureExtraction::extractFeatures() {
 // For now, expect a rectangle selection (lasso selection might cause edge cases that were not thought of)
 // Padding: assign -1 to points outside the selection. Later assign 0 vector to all of them.
 std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
-    std::vector<int> neighborsIDs(_numLocNeighbors, -1);
+    std::vector<int> neighborsIDs(_neighborhoodSize, -1);
     int imWidth = _imgSize.width();
     int rowID = int(pointInd / imWidth);
 
     // left and right neighbors
-    std::vector<int> lrNeighIDs(2 * _neighborhoodSize + 1, 0);
-    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - _neighborhoodSize);
+    std::vector<int> lrNeighIDs(2 * _LocNeighbors + 1, 0);
+    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - _LocNeighbors);
 
     // are left and right out of the picture?
     for (int& n : lrNeighIDs) {
@@ -156,7 +156,7 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
 
     // above and below neighbors
     unsigned int localNeighCount = 0;
-    for (int i = -1 * _neighborhoodSize; i <= (int)_neighborhoodSize; i++) {
+    for (int i = -1 * _LocNeighbors; i <= (int)_LocNeighbors; i++) {
         for (int ID : lrNeighIDs) {
             neighborsIDs[localNeighCount] = ID != -1 ? ID + i * _imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
             localNeighCount++;
@@ -182,7 +182,7 @@ void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<fl
         auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[2 * dim], _minMaxVals[2 * dim + 1]));
         // once this works, check if the following is faster (VS Studio will complain but compile)
         //auto h = boost::histogram::make_histogram_with(std::vector<float>(), boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
-        for (unsigned int neighbor = 0; neighbor < _numLocNeighbors; neighbor++) {
+        for (unsigned int neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             h(neighborValues[neighbor * _numDims + dim], boost::histogram::weight(_neighborhoodWeights[neighbor]));
         }
 

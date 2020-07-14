@@ -18,10 +18,11 @@ DistanceCalculation::~DistanceCalculation()
 {
 }
 
-void DistanceCalculation::setupData(std::vector<float>* histogramFeatures, Parameters& params) {
-    // (Most) Options are set outside this funciton
-    _nn = params._perplexity*params._perplexity_multiplier + 1;
-    params._nn = _nn;
+void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameters& params) {
+    // Parameters
+    _knn_lib = params._aknn_algorithm;
+    _knn_metric = params._aknn_metric;
+    _nn = params._nn;
 
     // Data
     // Input
@@ -34,13 +35,14 @@ void DistanceCalculation::setupData(std::vector<float>* histogramFeatures, Param
     _indices.resize(_numPoints*_nn);
     _distances_squared.resize(_numPoints*_nn);
 
-    assert(_histogramFeatures->size() == _numPoints * _numDims * _numHistBins);
+    assert(_histogramFeatures->size() == (_numPoints * _numDims * _numHistBins));
+    assert(params._nn == (unsigned int)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
-    qDebug() << "Distance calculation: Num data points: " << _numPoints << " Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn;
+    qDebug() << "Distance calculation: Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn << ". Metric: " << _knn_metric;
 
 }
 
-void DistanceCalculation::run() {
+void DistanceCalculation::compute() {
     qDebug() << "Distance calculation: started";
 
     computekNN();
@@ -127,24 +129,12 @@ std::vector<float>* DistanceCalculation::get_knn_distances_squared() {
 }
 
 
-void DistanceCalculation::setKnnAlgorithm(int index)
+void DistanceCalculation::setKnnAlgorithm(knn_library knn)
 {
-    // index corresponds to order in which algorithm were added to widget
-    switch (index)
-    {
-    case 0: _knn_lib = knn_library::KNN_HNSW; break;
-    default: _knn_lib = knn_library::KNN_HNSW;
-    }
+    _knn_lib = knn;
 }
 
-void DistanceCalculation::setDistanceMetric(int index)
+void DistanceCalculation::setDistanceMetric(knn_distance_metric metric)
 {
-    // index corresponds to order in which algorithm were added to widget
-    switch (index)
-    {
-    case 0: _knn_metric = knn_distance_metric::KNN_METRIC_QF; break;
-    //case 1: _knn_metric = knn_distance_metric::KNN_METRIC_EMD; break;
-    case 1: _knn_metric = knn_distance_metric::KNN_METRIC_HEL; break;
-    default: _knn_metric = knn_distance_metric::KNN_METRIC_QF;
-    }
+    _knn_metric = metric;
 }

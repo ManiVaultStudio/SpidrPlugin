@@ -62,7 +62,8 @@ _iterations(1000),
 _numTrees(4),
 _numChecks(1024),
 _exaggerationIter(250),
-_perplexity(30),
+_perplexity(30), 
+_perplexity_multiplier(3),
 _numDimensionsOutput(2),
 _verbose(false),
 _isGradientDescentRunning(false),
@@ -70,7 +71,7 @@ _isTsneRunning(false),
 _isMarkedForDeletion(false),
 _continueFromIteration(0)
 {
-    
+    _nn = _perplexity * _perplexity_multiplier + 1;
 }
 
 TsneComputation::~TsneComputation()
@@ -84,17 +85,31 @@ void TsneComputation::computeGradientDescent()
     embed();
 }
 
-void TsneComputation::initTSNE(const std::vector<int>* knn_indices, const std::vector<float>* knn_distances, Parameters params)
-{
+void TsneComputation::setup(std::vector<int>* knn_indices, std::vector<float>* knn_distances, Parameters params) {
+    // Parameters
+    _iterations = params._numIterations;
+    _perplexity = params._perplexity;
+    _exaggerationIter = params._exaggeration;
     _numPoints = knn_indices->size() / params._nn;
-    qDebug() << "t-SNE computation. Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors";
+    _perplexity_multiplier = params._perplexity_multiplier;
+
+    // Data
+    _knn_indices = knn_indices;
+    _knn_distances = knn_distances;
+
+    qDebug() << "t-SNE computation: Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors. Perplexity: " << _perplexity << ", Iterations: " << _iterations;
+
+}
+
+
+void TsneComputation::initTSNE()
+{
         
     // Computation of the high dimensional similarities
-    qDebug() << "Output allocated.";
     {
         hdi::dr::HDJointProbabilityGenerator<float>::Parameters probGenParams;
         probGenParams._perplexity = _perplexity;
-        probGenParams._perplexity_multiplier = 3;
+        probGenParams._perplexity_multiplier = _perplexity_multiplier;
         probGenParams._num_trees = _numTrees;
         probGenParams._num_checks = _numChecks;
 
@@ -104,12 +119,11 @@ void TsneComputation::initTSNE(const std::vector<int>* knn_indices, const std::v
         _probabilityDistribution.resize(_numPoints);
         qDebug() << "Sparse matrix allocated.";
 
-        qDebug() << "Computing high dimensional probability distributions.. Num data points: " << _numPoints;
         hdi::dr::HDJointProbabilityGenerator<float> probabilityGenerator;
         double t = 0.0;
         {
             hdi::utils::ScopedTimer<double> timer(t);
-            probabilityGenerator.computeGaussianDistributions(*knn_distances, *knn_indices, params._nn, _probabilityDistribution, probGenParams);
+            probabilityGenerator.computeGaussianDistributions(*_knn_distances, *_knn_indices, _nn, _probabilityDistribution, probGenParams);
         }
         qDebug() << "Probability distributions calculated.";
         qDebug() << "================================================================================";
@@ -193,7 +207,8 @@ void TsneComputation::embed()
     qDebug() << "================================================================================";
 }
 
-void TsneComputation::run() {
+void TsneComputation::compute() {
+    initTSNE();
     computeGradientDescent();
 }
 

@@ -49,10 +49,6 @@ private:
 
 signals:
     void dataSetPicked(QString);
-    void knnAlgorithmPicked(int);
-    void distanceMetricPicked(int);
-    void kernelWeightPicked(int);
-    void histBinSizeHeurPicked(int);
 
 public slots:
     void computationStopped();

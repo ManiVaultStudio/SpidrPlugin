@@ -30,9 +30,9 @@ public:
     * @param numDimensions enabled dimensios
     * @param imgSize global image dimensions
     */
-    void setupData(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params);
+    void setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params);
 
-    void run();
+    void compute();
 
 private:
 
@@ -64,7 +64,7 @@ private:
     // Options 
 
     // Number of neighbors including center
-    unsigned int _numLocNeighbors;
+    unsigned int _LocNeighbors;
     // Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom
     unsigned int _neighborhoodSize;
     // Weighting type of neighborhood kernel
