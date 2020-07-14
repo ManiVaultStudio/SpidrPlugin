@@ -49,9 +49,6 @@ private:
 
 signals:
     void dataSetPicked(QString);
-    void knnAlgorithmPicked(int);
-    void distanceMetricPicked(int);
-    void kernelWeightPicked(int);
 
 public slots:
     void computationStopped();
@@ -60,6 +57,8 @@ private slots:
     void onStartToggled(bool pressed);
     void kernelSizeChanged(const QString &value);
     void histBinSizeChanged(const QString &value);
+    void onHistBinSizeChanged(const QString &value);
+    void onHistBinSizeHeurPicked(int value);
     void numIterationsChanged(const QString &value);
     void perplexityChanged(const QString &value);
     void exaggerationChanged(const QString &value);
@@ -77,6 +76,7 @@ public:
 
     QComboBox kernelWeight;
     QLineEdit kernelSize;
+    QComboBox histBinSizeHeur;
     QLineEdit histBinSize;
 
     QLineEdit numIterations;

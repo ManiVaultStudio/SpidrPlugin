@@ -2,6 +2,7 @@
 
 #include "DimensionSelectionWidget.h"
 #include "SpidrPlugin.h"
+#include "FeatureUtils.h"
 
 // Qt header files:
 #include <QDebug>
@@ -14,7 +15,6 @@
 #include <QVBoxLayout>
 
 
-
 SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
 :
 _analysisPlugin(analysisPlugin)
@@ -23,24 +23,29 @@ _analysisPlugin(analysisPlugin)
     setMinimumWidth(minimumWidth);
     setMaximumWidth(2 * minimumWidth);
 
-    knnOptions.addItem("FLANN");
-    //knnOptions.addItem("HNSW");
-    //knnOptions.addItem("ANNOY");
+    knnOptions.addItem("HNSW");
 
-    distanceMetric.addItem("EMD");
+    // add options in the order as defined in enums in utils files
+
     distanceMetric.addItem("QF");
+    //    distanceMetric.addItem("EMD");
+    distanceMetric.addItem("Hellinger");
 
     kernelWeight.addItem("Uniform");
     kernelWeight.addItem("Binomial");
     kernelWeight.addItem("Gaussian");
 
-    connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
-    connect(&knnOptions,    SIGNAL(currentIndexChanged(int)), this, SIGNAL(knnAlgorithmPicked(int)));
-    connect(&distanceMetric,SIGNAL(currentIndexChanged(int)), this, SIGNAL(distanceMetricPicked(int)));
+    histBinSizeHeur.addItem("Manual");  
+    histBinSizeHeur.addItem("Sqrt");
+    histBinSizeHeur.addItem("Sturges");     // TODO: add QToolTip with info text
+    histBinSizeHeur.addItem("Rice");
 
-    connect(&kernelWeight, SIGNAL(currentIndexChanged(int)), this, SIGNAL(kernelWeightPicked(int)));
+    connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
+
     connect(&kernelSize, SIGNAL(textChanged(QString)), SLOT(kernelSizeChanged(QString)));
+    connect(&kernelSize, SIGNAL(textChanged(QString)), this, SLOT(onHistBinSizeChanged(QString)));
     connect(&histBinSize, SIGNAL(textChanged(QString)), SLOT(histBinSizeChanged(QString)));
+    connect(&histBinSizeHeur, SIGNAL(currentIndexChanged(int)), this, SLOT(onHistBinSizeHeurPicked(int)));
 
     connect(&numIterations, SIGNAL(textChanged(QString)), SLOT(numIterationsChanged(QString)));
     connect(&perplexity,    SIGNAL(textChanged(QString)), SLOT(perplexityChanged(QString)));
@@ -63,7 +68,7 @@ _analysisPlugin(analysisPlugin)
     QLabel* iterationLabel = new QLabel("Iteration Count");
     QLabel* perplexityLabel = new QLabel("Perplexity");
     QLabel* knnAlgorithmLabel = new QLabel("KNN Algorithm");
-    QLabel* distanceMetricLabel = new QLabel("Distance Metric");
+    QLabel* distanceMetricLabel = new QLabel("KNN Distance Metric");
     QLabel* exaggerationLabel = new QLabel("Exaggeration");
     QLabel* expDecayLabel = new QLabel("Exponential Decay");
     QLabel* numTreesLabel = new QLabel("Number of Trees");
@@ -71,7 +76,8 @@ _analysisPlugin(analysisPlugin)
 
     QLabel* kernelWeightLabel = new QLabel("Kernel Weighting");
     QLabel* kernelSizeLabel = new QLabel("Kernel Size");
-    QLabel* histBinSizeLabel = new QLabel("Histogram Bins");
+    QLabel* histBinSizeHeurLabel = new QLabel("Histo. Bin Heuristic");
+    QLabel* histBinSizeLabel = new QLabel("Number Bins");
 
     // Set option default values
     numIterations.setFixedWidth(50);
@@ -106,21 +112,32 @@ _analysisPlugin(analysisPlugin)
     startButton.setCheckable(true);
 
     // Add options to their appropriate group box
-    auto* const settingsLayout = new QVBoxLayout();
-    settingsLayout->addWidget(knnAlgorithmLabel);
-    settingsLayout->addWidget(&knnOptions);
-    settingsLayout->addWidget(distanceMetricLabel);
-    settingsLayout->addWidget(&distanceMetric);
-    settingsLayout->addWidget(kernelWeightLabel);
-    settingsLayout->addWidget(&kernelWeight);
-    settingsLayout->addWidget(iterationLabel);
-    settingsLayout->addWidget(&kernelSize);
-    settingsLayout->addWidget(kernelSizeLabel);
-    settingsLayout->addWidget(&histBinSize);
-    settingsLayout->addWidget(histBinSizeLabel);
-    settingsLayout->addWidget(&numIterations);
-    settingsLayout->addWidget(perplexityLabel);
-    settingsLayout->addWidget(&perplexity);
+    auto* const settingsLayout = new QGridLayout();
+
+    settingsLayout->addWidget(knnAlgorithmLabel, 0, 0);
+    settingsLayout->addWidget(&knnOptions, 1, 0);
+
+    settingsLayout->addWidget(distanceMetricLabel, 0, 1);
+    settingsLayout->addWidget(&distanceMetric, 1, 1);
+    
+    settingsLayout->addWidget(kernelWeightLabel, 2, 0);
+    settingsLayout->addWidget(&kernelWeight, 3, 0);
+
+    settingsLayout->addWidget(kernelSizeLabel, 2, 1);
+    settingsLayout->addWidget(&kernelSize, 3, 1);
+
+    settingsLayout->addWidget(histBinSizeHeurLabel, 4, 0);
+    settingsLayout->addWidget(&histBinSizeHeur, 5, 0);
+
+    settingsLayout->addWidget(histBinSizeLabel, 4, 1);
+    settingsLayout->addWidget(&histBinSize, 5, 1);
+
+    settingsLayout->addWidget(iterationLabel, 6, 0);
+    settingsLayout->addWidget(&numIterations, 7, 0);
+    
+    settingsLayout->addWidget(perplexityLabel, 6, 1);
+    settingsLayout->addWidget(&perplexity, 7, 1);    
+        
     settingsBox->setLayout(settingsLayout);
 
     auto* const advancedSettingsLayout = new QGridLayout();
@@ -140,6 +157,7 @@ _analysisPlugin(analysisPlugin)
     addWidget(&_dimensionSelectionWidget);
     addWidget(advancedSettingsBox);
     addWidget(&startButton);
+
 }
 
 void SpidrSettingsWidget::computationStopped()
@@ -220,6 +238,52 @@ void SpidrSettingsWidget::onStartToggled(bool pressed)
     startButton.setText(pressed ? "Stop Computation" : "Start Computation");
     pressed ? _analysisPlugin.startComputation() : _analysisPlugin.stopComputation();;
 }
+
+void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
+    int activeHeur = histBinSizeHeur.currentIndex();
+
+    if (activeHeur == 0) 
+        return;
+    else  {
+        int kernelSize_ = value.toInt();
+        int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
+        int binNum = 0;
+        switch (activeHeur)
+        {
+        case 1: binNum = SqrtBinSize(numLocNeighbors); break;
+        case 2: binNum = SturgesBinSize(numLocNeighbors); break;
+        case 3: binNum = RiceBinSize(numLocNeighbors); break;
+        default:
+            break;
+        }
+        histBinSize.setText(QString::number(binNum));
+        histBinSize.setReadOnly(true);
+
+    }
+
+}
+
+void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
+
+    if (value == 0) {
+        histBinSize.setReadOnly(false);
+    }
+    else if (value > 0) {
+        int kernelSize_ = kernelSize.text().toInt();
+        int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
+        switch (value)
+        {
+        case 1: histBinSize.setText(QString::number(SqrtBinSize(numLocNeighbors))); break;
+        case 2: histBinSize.setText(QString::number(SturgesBinSize(numLocNeighbors))); break;
+        case 3: histBinSize.setText(QString::number(RiceBinSize(numLocNeighbors))); break;
+        default:
+            break;
+        }
+        histBinSize.setReadOnly(true);
+    }
+
+}
+
 
 void SpidrSettingsWidget::kernelSizeChanged(const QString &)
 {

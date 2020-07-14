@@ -16,8 +16,25 @@ if(MSVC)
 endif(MSVC)
 
 find_package(Qt5 COMPONENTS Widgets WebEngineWidgets REQUIRED)
+# use header only libs, thus no components specified
+find_package(Boost REQUIRED) 
 
-set(SOURCES
+set(PLUGIN
+    src/SpidrPlugin.h
+    src/SpidrPlugin.cpp
+    src/SpidrPlugin.json
+    src/SpidrAnalysis.h
+    src/SpidrAnalysis.cpp
+	src/FeatureExtraction.h
+	src/FeatureExtraction.cpp
+	src/DistanceCalculation.h
+	src/DistanceCalculation.cpp
+    src/TsneComputation.h
+    src/TsneComputation.cpp
+	src/AnalysisParameters.h
+)
+
+set(DIMENSIONSELECTIONHOLDER
     src/ModelResetter.h
     src/ModelResetter.cpp
     src/DimensionSelectionHolder.h
@@ -26,32 +43,31 @@ set(SOURCES
     src/DimensionSelectionItemModel.cpp
     src/DimensionSelectionProxyModel.h
     src/DimensionSelectionProxyModel.cpp
-    src/DimensionSelectionWidget.h
-    src/DimensionSelectionWidget.cpp
-    src/SpidrPlugin.h
-    src/SpidrPlugin.cpp
-    src/SpidrPlugin.json
-    src/SpidrSettingsWidget.h
-    src/SpidrSettingsWidget.cpp
-    src/TsneAnalysis.h
-    src/TsneAnalysis.cpp
-    src/TsneData.h
-	src/FeatureExtraction.h
-	src/FeatureExtraction.cpp
-	src/DistanceCalculation.h
-	src/DistanceCalculation.cpp
 )
 
-source_group( Plugin FILES ${SOURCES})
+file(GLOB UTILS src/*Utils.*)
+file(GLOB WIDGETS src/*Widget.*)
+file(GLOB UIS ui/*.ui)
+file(GLOB JSON src/*.json)
 
-set(UI_FILES
-    ui/DimensionSelectionWidget.ui
-)
+set(SOURCES ${PLUGIN} ${UTILS} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
+set(AUX ${JSON})
 
-QT5_WRAP_UI(UI_HEADERS ${UI_FILES})
+source_group(Plugin FILES ${PLUGIN})
+source_group(DimensionSelectionHolder FILES ${DIMENSIONSELECTIONHOLDER})
+source_group(Utils FILES ${UTILS})
+source_group(Widgets FILES ${WIDGETS})
+source_group(UI FILES ${UIS})
+source_group(Aux FILES ${AUX})
+
+QT5_WRAP_UI(UI_HEADERS ${UIS})
+
+add_library(${PROJECT} SHARED ${SOURCES} ${UIS} ${AUX})
 
 include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
 include_directories ("lib/HDI/include")
+include_directories ("lib/hnswlib/")
+include_directories(${Boost_INCLUDE_DIRS})
 
 if(MSVC)
     include_directories ("lib/Flann/Win/include")
@@ -65,13 +81,22 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     include_directories ("lib/Flann/Linux/include")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
-add_library(${PROJECT} SHARED ${SOURCES} ${UI_FILES})
-
 target_compile_definitions(${PROJECT} PRIVATE QT_MESSAGELOGCONTEXT)
 
 # Request C++17, in order to use std::for_each_n with std::execution::par_unseq.
 set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 17)
 
+find_package(OpenMP REQUIRED)
+
+if(OPENMP_FOUND)
+	message (STATUS "OpenMP found ${OpenMP_CXX_LIB_NAMES}")
+	target_link_libraries(${PROJECT} OpenMP::OpenMP_CXX)
+else()
+    message(WARNING, "OpenMP not found!")    
+endif()
+
+
+target_link_libraries(${PROJECT} ${Boost_LIBRARIES})
 target_link_libraries(${PROJECT} Qt5::Widgets)
 target_link_libraries(${PROJECT} Qt5::WebEngineWidgets)
 target_link_libraries(${PROJECT} "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
