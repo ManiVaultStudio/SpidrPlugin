@@ -5,6 +5,11 @@
 #include <QSize>
 
 
+/*!
+ * Stores all parameters used in the Spatial Analysis.
+ * 
+ * Used to set parameters for FeatureExtraction, DistanceCalculation and TsneComputatio 
+ */
 class Parameters {
 public:
     Parameters() :
@@ -16,20 +21,20 @@ public:
 
 public:
     // data
-    unsigned int        _numPoints;             // 
-    unsigned int        _numDims;               // 
-    QSize               _imgSize;               // 
+    unsigned int        _numPoints;             /*!<> */
+    unsigned int        _numDims;               /*!<> */
+    QSize               _imgSize;               /*!<> */
     // features
-    loc_Neigh_Weighting _neighWeighting;        //
-    unsigned int        _numLocNeighbors;       //
-    unsigned int        _numHistBins;           // 
+    loc_Neigh_Weighting _neighWeighting;        /*!<> */
+    unsigned int        _numLocNeighbors;       /*!<> */
+    unsigned int        _numHistBins;           /*!<> */
     // distance
     unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1
-    knn_library         _aknn_algorithm;        // 
-    knn_distance_metric _aknn_metric;           //
+    knn_library         _aknn_algorithm;        /*!<> */
+    knn_distance_metric _aknn_metric;           /*!<> */
     // embeddings
     float               _perplexity;            //! Perplexity value in evert distribution.
     int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
-    int                 _numIterations;         //
-    int                 _exaggeration;          //
+    int                 _numIterations;         /*!<> */
+    int                 _exaggeration;          /*!<> */
 };

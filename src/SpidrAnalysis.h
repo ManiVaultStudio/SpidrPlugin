@@ -12,6 +12,10 @@
 
 #include <vector>
 
+/*!
+ * 
+ * 
+ */
 class SpidrAnalysis : public QThread
 {
     Q_OBJECT
@@ -19,9 +23,21 @@ public:
     SpidrAnalysis(QObject* parent);
     ~SpidrAnalysis() override;
 
+    /*!
+     * 
+     * 
+     * \param attribute_data
+     * \param pointIDsGlobal
+     * \param numDimensions
+     * \param imgSize
+     */
     void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, unsigned int numDimensions, QSize imgSize);
 
     // release openGL context of the t-SNE computation
+    /*!
+     * 
+     * 
+     */
     void stopComputation();
 
     // Setter
@@ -34,6 +50,18 @@ public:
     void setNumIterations(const unsigned  index);
     void setExaggeration(const unsigned  index);
 
+    /*!
+     * 
+     * 
+     * \param kernelInd
+     * \param numLocNeighbors
+     * \param numHistBins
+     * \param aknnAlgInd
+     * \param aknnMetInd
+     * \param numIterations
+     * \param perplexity
+     * \param exaggeration
+     */
     void initializeAnalysisSettings(const int kernelInd, unsigned int numLocNeighbors, unsigned int numHistBins, \
                                     const int aknnAlgInd, const int aknnMetInd, \
                                     int numIterations, int perplexity, int exaggeration);
@@ -41,6 +69,11 @@ public:
     // Getter
     const unsigned int getNumPoints();
     bool embeddingIsRunning();
+    /*!
+     * 
+     * 
+     * \return 
+     */
     const std::vector<float> &output();
     const Parameters getParameters();
 
@@ -48,21 +81,24 @@ signals:
     void embeddingComputationStopped();
     void newEmbedding();
 
-
 private:
     void run() override;
-
+    
+    /*!
+     * 
+     * 
+     */
     void spatialAnalysis();
 
     // worker classes
-    FeatureExtraction _featExtraction;
-    DistanceCalculation _distCalc;
-    TsneComputation _tsne;
+    FeatureExtraction _featExtraction;          /*!<> */
+    DistanceCalculation _distCalc;              /*!<> */
+    TsneComputation _tsne;                      /*!<> */
     
     // data and setting
-    std::vector<float> _attribute_data;
-    std::vector<unsigned int> _pointIDsGlobal;
-    Parameters _params;
+    std::vector<float> _attribute_data;         /*!<> */
+    std::vector<unsigned int> _pointIDsGlobal;  /*!<> */
+    Parameters _params;                         /*!<> */
 };
 
 

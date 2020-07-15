@@ -6,23 +6,34 @@
 #include <thread>
 #include <atomic>
 
+/*!
+ * 
+ * 
+ */
 enum class knn_library : unsigned int
 {
-    KNN_HNSW = 0,
+    KNN_HNSW = 0,       /*!<> */
 };
 
-
+/*!
+ * 
+ * 
+ */
 enum class knn_distance_metric : unsigned int
 {
-    KNN_METRIC_QF = 0,
-    KNN_METRIC_EMD = 1,
-    KNN_METRIC_HEL = 2,
+    KNN_METRIC_QF = 0,      /*!<> */
+    KNN_METRIC_EMD = 1,     /*!<> */
+    KNN_METRIC_HEL = 2,     /*!<> */
 };
 
+/*!
+ * 
+ * 
+ */
 enum class ground_dist : unsigned int
 {
-    SIM_EUC = 0,
-    SIM_EXP = 1,
+    SIM_EUC = 0,    /*!<> */
+    SIM_EXP = 1,    /*!<> */
 };
 
 namespace hnswlib {

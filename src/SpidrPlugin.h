@@ -20,6 +20,10 @@ using namespace hdps::gui;
 // View
 // =============================================================================
 
+/*!
+ * 
+ * 
+ */
 class SpidrPlugin : public QObject, public AnalysisPlugin
 {
     Q_OBJECT   
@@ -45,8 +49,11 @@ public slots:
     void onNewEmbedding();
 
 private:
+    /*!
+     * 
+     * 
+     */
     void initializeAnalysisSettings();
-
 
     /**
     * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions 
@@ -56,12 +63,21 @@ private:
     * @param numDimensions Will contain the number of enabled dimensions 
     * @param data Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
     */
+    /*!
+     * 
+     * 
+     * \param dataName
+     * \param pointIDsGlobal
+     * \param attribute_data
+     * \param numDims
+     * \param imgSize
+     */
     void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize);
 
-    SpidrAnalysis _spidrAnalysis;
-    std::unique_ptr<SpidrSettingsWidget> _settings;
-    QString _embeddingName;
-    QThread workerThread;
+    SpidrAnalysis _spidrAnalysis;                       /*!<> */
+    std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */
+    QString _embeddingName;                             /*!<> */
+    QThread workerThread;                               /*!<> */
 };
 
 // =============================================================================

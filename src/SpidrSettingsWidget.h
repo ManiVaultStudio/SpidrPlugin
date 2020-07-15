@@ -26,6 +26,10 @@ class SpidrPlugin;
 /**
  * Main settings widget
  */
+/*!
+ * 
+ * 
+ */
 class SpidrSettingsWidget : public SettingsWidget
 {
     Q_OBJECT

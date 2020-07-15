@@ -74,6 +74,8 @@ void DistanceCalculation::computekNN() {
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
 
+        qDebug() << "Distance calculation: Build akNN Index";
+
         hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default HNSW values for M, ef_construction random_seed
 
         // add data points: each data point holds _numDims*_numHistBins values
@@ -90,6 +92,8 @@ void DistanceCalculation::computekNN() {
             appr_alg.addPoint((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype) i);
         });
         //appr_alg.checkIntegrity();
+
+        qDebug() << "Distance calculation: Search akNN Index";
 
         // query dataset
 #pragma omp parallel for

@@ -11,6 +11,10 @@
 
 class Parameters;
 
+/*!
+ * 
+ * 
+ */
 class TsneComputation : public QObject
 {
     Q_OBJECT
@@ -30,12 +34,34 @@ public:
     inline int perplexity() { return _perplexity; }
     inline int numDimensionsOutput() { return _numDimensionsOutput; }
 
+    /*!
+     * 
+     * 
+     * \param knn_indices
+     * \param knn_distances
+     * \param params
+     */
     void setup(std::vector<int>* knn_indices, std::vector<float>* knn_distances, Parameters params);
+    
+    /*!
+     * 
+     * 
+     */
     void initTSNE();
     void stopGradientDescent();
     void markForDeletion();
 
+    /*!
+     * !
+     * 
+     */
     void compute();
+
+    /*!
+     * 
+     * 
+     * \return 
+     */
     const std::vector<float>& output();
 
     inline bool isTsneRunning() { return _isTsneRunning; }
@@ -60,20 +86,20 @@ private:
     hdi::data::Embedding<float> _embedding;
 
     // Data
-    const std::vector<int>* _knn_indices;
-    const std::vector<float>* _knn_distances;
-    unsigned int _numPoints;
-    std::vector<float> _outputData;
+    const std::vector<int>* _knn_indices;               /*!<> */
+    const std::vector<float>* _knn_distances;           /*!<> */
+    unsigned int _numPoints;                            /*!<> */
+    std::vector<float> _outputData;                     /*!<> */
 
     // Options
-    int _iterations;
+    int _iterations;                                    /*!<> */
     int _numTrees;
     int _numChecks;
     int _exaggerationIter;
-    int _perplexity;
+    int _perplexity;                                    /*!<> */
     int _perplexity_multiplier;
     int _numDimensionsOutput;
-    int _nn;
+    int _nn;                                            /*!<> */
 
     // Flags
     bool _verbose;
