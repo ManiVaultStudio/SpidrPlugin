@@ -2,16 +2,28 @@
 
 #include <AnalysisPlugin.h>
 
-#include "TsneAnalysis.h"
+#include <memory>
+
+#include <QtCore>
+#include <QSize>
+
+#include "SpidrAnalysis.h"
+#include "PointData.h"
+
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
 using namespace hdps::gui;
 
+
 // =============================================================================
 // View
 // =============================================================================
 
+/*!
+ * 
+ * 
+ */
 class SpidrPlugin : public QObject, public AnalysisPlugin
 {
     Q_OBJECT   
@@ -34,16 +46,38 @@ public:
 
 public slots:
     void dataSetPicked(const QString& name);
-    void onKnnAlgorithmPicked(const int index);
-    void onDistanceMetricPicked(const int index);
     void onNewEmbedding();
 
 private:
-    void initializeTsne();
+    /*!
+     * 
+     * 
+     */
+    void initializeAnalysisSettings();
 
-    TsneAnalysis _tsne;
-    std::unique_ptr<SpidrSettingsWidget> _settings;
-    QString _embeddingName;
+    /**
+    * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions 
+    * @param dataName Name of data set as defined in hdps core
+    * @param imgSize Will contain the size of the image (width and height)
+    * @param pointIDsGlobal Will contain IDs of selected points in the data set
+    * @param numDimensions Will contain the number of enabled dimensions 
+    * @param data Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
+    */
+    /*!
+     * 
+     * 
+     * \param dataName
+     * \param pointIDsGlobal
+     * \param attribute_data
+     * \param numDims
+     * \param imgSize
+     */
+    void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize);
+
+    SpidrAnalysis _spidrAnalysis;                       /*!<> */
+    std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */
+    QString _embeddingName;                             /*!<> */
+    QThread workerThread;                               /*!<> */
 };
 
 // =============================================================================

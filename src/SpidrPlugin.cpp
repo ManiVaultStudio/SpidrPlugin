@@ -1,14 +1,14 @@
 #include "SpidrPlugin.h"
 #include "SpidrSettingsWidget.h"
 
-#include "PointData.h"
-
 #include <QtCore>
+#include <QSize>
 #include <QtDebug>
 
-Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
+#include <utility>      // std::as_const
+#include <vector>       // std::vector
 #include <windows.h>
-
+Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 #include <set>
 
 // =============================================================================
@@ -18,7 +18,8 @@ Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 using namespace hdps;
 SpidrPlugin::SpidrPlugin()
 :
-AnalysisPlugin("Spidr")
+AnalysisPlugin("Spidr"),
+_spidrAnalysis(this)
 {
 }
 
@@ -31,11 +32,12 @@ void SpidrPlugin::init()
 {
     _settings = std::make_unique<SpidrSettingsWidget>(*this);
 
+    // Connet settings
     connect(_settings.get(), &SpidrSettingsWidget::dataSetPicked, this, &SpidrPlugin::dataSetPicked);
-    connect(_settings.get(), &SpidrSettingsWidget::knnAlgorithmPicked, this, &SpidrPlugin::onKnnAlgorithmPicked);
-    connect(_settings.get(), &SpidrSettingsWidget::distanceMetricPicked, this, &SpidrPlugin::onDistanceMetricPicked);
-    connect(&_tsne, &TsneAnalysis::computationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
-    connect(&_tsne, SIGNAL(newEmbedding()), this, SLOT(onNewEmbedding()));
+
+    // Connect embedding
+    connect(&_spidrAnalysis, &SpidrAnalysis::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
+    connect(&_spidrAnalysis, &SpidrAnalysis::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
 }
 
 void SpidrPlugin::dataAdded(const QString name)
@@ -84,98 +86,112 @@ void SpidrPlugin::dataSetPicked(const QString& name)
     _settings->dataChanged(points);
 }
 
-void SpidrPlugin::onKnnAlgorithmPicked(const int index)
-{
-    _tsne.setKnnAlgorithm(index);
-}
-
-void SpidrPlugin::onDistanceMetricPicked(const int index)
-{
-    _tsne.setDistanceMetric(index);
-}
-
 void SpidrPlugin::startComputation()
 {
-    initializeTsne();
+    // Get the data
+    qDebug() << "SpidrPlugin: Read data ";
 
-    // Run the computation
-    QString setName = _settings->dataOptions.currentText();
-    const Points& points = _core->requestData<Points>(setName);
+    std::vector<unsigned int> pointIDsGlobal;
+    std::vector<float> attribute_data;        // Create list of data from the enabled dimensions
+    QSize imgSize;
+    unsigned int numDims;
+    QString dataName = _settings->dataOptions.currentText();
+    retrieveData(dataName, pointIDsGlobal, attribute_data, numDims, imgSize);
+
+    // Create a new data set and hand it to the hdps core
+    qDebug() << "SpidrPlugin: Create new data set for embedding";
+
+    _embeddingName = _core->createDerivedData("Points", "Embedding", dataName);
+    Points& embedding = _core->requestData<Points>(_embeddingName);
+    embedding.setData(nullptr, 0, 2);
+    _core->notifyDataAdded(_embeddingName);
+
+    // Setup worker classes with data and parameters
+    qDebug() << "SpidrPlugin: Initialize settings";
+
+     
+    _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize);
+    initializeAnalysisSettings();
+
+    // Start spatial analysis
+    _spidrAnalysis.start();
+
+}
+
+void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize) {
+    // For now, only handle underived data until Points implementation 
+    // provides functionality to seamlessly obtain global IDs from derived data
+    Points& points = _core->requestData<Points>(dataName);
+    if (points.isDerivedData())
+        exit(-1);
+
+    imgSize = points.getProperty("ImageSize", QSize()).toSize();
 
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 
-    unsigned int numDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
+    // Get number of enabled dimensions
+    numDims = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
-    // Create list of data from the enabled dimensions
-    std::vector<float> data;
-
-    auto selection = points.indices;
-
+    // Get indices of selected points
+    pointIDsGlobal = points.indices;
+    // If points represent all data set, select them all
     if (points.isFull()) {
         std::vector<std::uint32_t> all(points.getNumPoints());
         std::iota(std::begin(all), std::end(all), 0);
 
-        selection = all;
+        pointIDsGlobal = all;
     }
 
-    data.reserve(selection.size() * numDimensions);
-
-    for (const auto& pointId : selection)
+    // For all selected points, retrieve values from each dimension
+    attribute_data.reserve(pointIDsGlobal.size() * numDims);
+    for (const auto& pointId : pointIDsGlobal)
     {
-        for (int dimensionId = 0; dimensionId < points.getNumDimensions(); dimensionId++)
+        for (unsigned int dimensionId = 0; dimensionId < points.getNumDimensions(); dimensionId++)
         {
             if (enabledDimensions[dimensionId]) {
                 const auto index = pointId * points.getNumDimensions() + dimensionId;
-                data.push_back(points[index]);
+                attribute_data.push_back(points[index]);
             }
         }
     }
 
-    _embeddingName = _core->createDerivedData("Points", "Embedding", points.getName());
-    Points& embedding = _core->requestData<Points>(_embeddingName);
-    
-    embedding.setData(nullptr, 0, 2);
-    _core->notifyDataAdded(_embeddingName);
-
-    // Compute t-SNE with the given data
-    _tsne.initTSNE(data, numDimensions);
-
-    _tsne.start();
 }
 
+
 void SpidrPlugin::onNewEmbedding() {
-    const TsneData& outputData = _tsne.output();
+    const std::vector<float>& outputData = _spidrAnalysis.output();
     Points& embedding = _core->requestData<Points>(_embeddingName);
     
-    embedding.setData(outputData.getData().data(), outputData.getNumPoints(), 2);
+    embedding.setData(outputData.data(), _spidrAnalysis.getNumPoints(), 2);
 
     _core->notifyDataChanged(_embeddingName);
 }
 
-void SpidrPlugin::initializeTsne() {
-    // Initialize the tSNE computation with the settings from the settings widget
-    _tsne.setIterations(_settings->numIterations.text().toInt());
-    _tsne.setPerplexity(_settings->perplexity.text().toInt());
-    _tsne.setExaggerationIter(_settings->exaggeration.text().toInt());
-    _tsne.setNumTrees(_settings->numTrees.text().toInt());
-    _tsne.setNumChecks(_settings->numChecks.text().toInt());
+void SpidrPlugin::initializeAnalysisSettings() {
+    // sets all the parameters
+    _spidrAnalysis.initializeAnalysisSettings(_settings->kernelWeight.currentIndex(), _settings->kernelSize.text().toInt(), _settings->histBinSize.text().toInt(), \
+                                              _settings->knnOptions.currentIndex(), _settings->distanceMetric.currentIndex(), \
+                                              _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt());
 }
 
+
 void SpidrPlugin::stopComputation() {
-    if (_tsne.isRunning())
+    // Request interruption of the computation
+    if (_spidrAnalysis.isRunning())
     {
-        // Request interruption of the computation
-        _tsne.stopGradientDescent();
-        _tsne.exit();
+        // release openGL context 
+        _spidrAnalysis.stopComputation();
+        _spidrAnalysis.exit();
 
         // Wait until the thread has terminated (max. 3 seconds)
-        if (!_tsne.wait(3000))
+        if (!_spidrAnalysis.wait(3000))
         {
-            qDebug() << "tSNE computation thread did not close in time, terminating...";
-            _tsne.terminate();
-            _tsne.wait();
+            qDebug() << "Spatial Analysis computation thread did not close in time, terminating...";
+            _spidrAnalysis.terminate();
+            _spidrAnalysis.wait();
         }
-        qDebug() << "tSNE computation stopped.";
+        qDebug() << "Spatial Analysis computation stopped.";
+
     }
 }
 

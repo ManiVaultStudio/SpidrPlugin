@@ -1,54 +1,74 @@
 #pragma once
 
-#include "TsneData.h"
-
 #include "hdi/dimensionality_reduction/hd_joint_probability_generator.h"
 #include "hdi/dimensionality_reduction/sparse_tsne_user_def_probabilities.h"
 #include "hdi/dimensionality_reduction/gradient_descent_tsne_texture.h"
 
-#include <QThread>
+#include <QObject>
 
 #include <vector>
 #include <string>
 
-class TsneAnalysis : public QThread
+class Parameters;
+
+/*!
+ * 
+ * 
+ */
+class TsneComputation : public QObject
 {
     Q_OBJECT
 public:
-    TsneAnalysis();
-    ~TsneAnalysis() override;
+    TsneComputation();
+    ~TsneComputation() override;
 
-    void setKnnAlgorithm(int algorithm);
-    void setDistanceMetric(int metric);
     void setVerbose(bool verbose);
     void setIterations(int iterations);
-    void setNumTrees(int numTrees);
-    void setNumChecks(int numChecks);
     void setExaggerationIter(int exaggerationIter);
     void setPerplexity(int perplexity);
     void setNumDimensionsOutput(int numDimensionsOutput);
 
     inline bool verbose() { return _verbose; }
     inline int iterations() { return _iterations; }
-    inline int numTrees() { return _numTrees; }
-    inline int numChecks() { return _numChecks; }
     inline int exaggerationIter() { return _exaggerationIter; }
     inline int perplexity() { return _perplexity; }
     inline int numDimensionsOutput() { return _numDimensionsOutput; }
 
-    void initTSNE(const std::vector<float>& data, const int numDimensions);
+    /*!
+     * 
+     * 
+     * \param knn_indices
+     * \param knn_distances
+     * \param params
+     */
+    void setup(std::vector<int>* knn_indices, std::vector<float>* knn_distances, Parameters params);
+    
+    /*!
+     * 
+     * 
+     */
+    void initTSNE();
     void stopGradientDescent();
     void markForDeletion();
 
-    const TsneData& output();
+    /*!
+     * !
+     * 
+     */
+    void compute();
+
+    /*!
+     * 
+     * 
+     * \return 
+     */
+    const std::vector<float>& output();
 
     inline bool isTsneRunning() { return _isTsneRunning; }
     inline bool isGradientDescentRunning() { return _isGradientDescentRunning; }
     inline bool isMarkedForDeletion() { return _isMarkedForDeletion; }
 
 private:
-    void run() override;
-
     void computeGradientDescent();
     void initGradientDescent();
     void embed();
@@ -60,24 +80,26 @@ signals:
 
 private:
     // TSNE structures
-    hdi::utils::knn_library _knnLibrary = hdi::utils::KNN_FLANN;
-    hdi::utils::knn_distance_metric _knnDistanceMetric = hdi::utils::KNN_METRIC_EUCLIDEAN;
     hdi::dr::HDJointProbabilityGenerator<float>::sparse_scalar_matrix_type _probabilityDistribution;
     hdi::dr::SparseTSNEUserDefProbabilities<float> _A_tSNE;
     hdi::dr::GradientDescentTSNETexture _GPGPU_tSNE;
     hdi::data::Embedding<float> _embedding;
 
     // Data
-    TsneData _inputData;
-    TsneData _outputData;
+    const std::vector<int>* _knn_indices;               /*!<> */
+    const std::vector<float>* _knn_distances;           /*!<> */
+    unsigned int _numPoints;                            /*!<> */
+    std::vector<float> _outputData;                     /*!<> */
 
     // Options
-    int _iterations;
+    int _iterations;                                    /*!<> */
     int _numTrees;
     int _numChecks;
     int _exaggerationIter;
-    int _perplexity;
+    int _perplexity;                                    /*!<> */
+    int _perplexity_multiplier;
     int _numDimensionsOutput;
+    int _nn;                                            /*!<> */
 
     // Flags
     bool _verbose;
