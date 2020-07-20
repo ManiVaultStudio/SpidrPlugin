@@ -25,9 +25,9 @@ public:
      */
     std::vector<float>* output();
 
-    void setNumLocNeighbors(unsigned int size);
+    void setNumLocNeighbors(size_t size);
     void setNeighborhoodWeighting(loc_Neigh_Weighting weighting);
-    void setNumHistBins(unsigned int size);
+    void setNumHistBins(size_t size);
     //void setNumHistBins(heuristic heu);
 
     loc_Neigh_Weighting getNeighborhoodWeighting();
@@ -46,7 +46,7 @@ public:
      * \param attribute_data
      * \param params
      */
-    void setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params);
+    void setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, const Parameters& params);
 
     /*!
      * 
@@ -79,7 +79,7 @@ private:
      * \param pointInd
      * \return 
      */
-    std::vector<int> neighborhoodIndices(unsigned int pointInd);
+    std::vector<int> neighborhoodIndices(size_t pointInd);
 
     /*!
      * 
@@ -87,7 +87,7 @@ private:
      * \param pointInd
      * \param neighborValues
      */
-    void calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues);
+    void calculateHistogram(size_t pointInd, std::vector<float> neighborValues);
 
 private:
 
@@ -102,23 +102,23 @@ private:
     // Options 
 
     // Number of neighbors including center
-    unsigned int _locNeighbors;                     /*!<> */
+    size_t       _locNeighbors;                     /*!<> */
     // Width of the kernel (2* _locNeighbors +1)
-    unsigned int _kernelWidth;                      /*!<> */
+    size_t       _kernelWidth;                      /*!<> */
     // Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom
-    unsigned int _neighborhoodSize;                 /*!<> */
+    size_t       _neighborhoodSize;                 /*!<> */
     // Weighting type of neighborhood kernel
     loc_Neigh_Weighting _neighborhoodWeighting;     /*!<> */
     // Weightings of neighborhood kernel
     std::vector<float> _neighborhoodWeights;        /*!<> */
     // Number of bins in each histogram
-    unsigned int _numHistBins;                      /*!<> */
+    size_t       _numHistBins;                      /*!<> */
 
     // Data
     // Input
     QSize _imgSize;                                 /*!<> */
-    unsigned int _numDims;                          /*!<> */
-    unsigned int _numPoints;                        /*!<> */
+    size_t       _numDims;                          /*!<> */
+    size_t       _numPoints;                        /*!<> */
     std::vector<unsigned int> _pointIds;            /*!<> */
     std::vector<float> _attribute_data;             /*!<> */
     // Extrema for each dimension/channel, i.e. [min_Ch0, max_Ch0, min_Ch1, max_Ch1, ...]

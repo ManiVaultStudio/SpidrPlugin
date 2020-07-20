@@ -12,7 +12,7 @@
  * 
  * 
  */
-enum class knn_library : unsigned int
+enum class knn_library : size_t
 {
     KNN_HNSW = 0,       /*!<> */
 };
@@ -21,7 +21,7 @@ enum class knn_library : unsigned int
  * 
  * 
  */
-enum class knn_distance_metric : unsigned int
+enum class knn_distance_metric : size_t
 {
     KNN_METRIC_QF = 0,      /*!<> */
     KNN_METRIC_EMD = 1,     /*!<> */
@@ -32,7 +32,7 @@ enum class knn_distance_metric : unsigned int
  * 
  * 
  */
-enum class ground_dist : unsigned int
+enum class ground_dist : size_t
 {
     SIM_EUC = 0,    /*!<> */
     SIM_EXP = 1,    /*!<> */
@@ -118,21 +118,24 @@ namespace hnswlib {
         float* pVect1 = (float*)pVect1v;
         float* pVect2 = (float*)pVect2v;
 
-        space_params_QF* sparam = (space_params_QF*)qty_ptr;
+        const space_params_QF* sparam = (space_params_QF*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t nbin = sparam->bin;
+        const size_t* pWeight = sparam->A.data();
 
         float res = 0;
         // add the histogram distance for each dimension
-        for (size_t d = 0; d < sparam->dim; d++) {
-            for (size_t i = 0; i < sparam->bin; i++) {
+        for (size_t d = 0; d < ndim; d++) {
+            for (size_t i = 0; i < nbin; i++) {
                 float t1 = *(pVect1 + i) - *(pVect2 + i);
-                for (size_t j = 0; j < sparam->bin; j++) {
+                for (size_t j = 0; j < nbin; j++) {
                     float t2 = *(pVect1 + j) - *(pVect2 + j);
-                    res += *(sparam->A.data() + i * sparam->bin + j) * t1 * t2;
+                    res += *(pWeight + i * nbin + j) * t1 * t2;
                 }
             }
             // point to next dimension
-            pVect1 += sparam->bin;
-            pVect2 += sparam->bin;
+            pVect1 += nbin;
+            pVect2 += nbin;
         }
 
         return res;
@@ -172,8 +175,8 @@ namespace hnswlib {
                 }
             }
             else if (ground_type == ground_dist::SIM_EXP) {
-                for (size_t i = 0; i < bin; i++) {
-                    for (size_t j = 0; j < bin; j++) {
+                for (int i = 0; i < bin; i++) {
+                    for (int j = 0; j < bin; j++) {
                         bin_diff = (i - j);
                         bin_diff_2 = bin_diff * bin_diff;
                         A[i * bin + j] = ::std::exp(-1 * ground_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
@@ -216,12 +219,14 @@ namespace hnswlib {
         float *pVect1 = (float *)pVect1v;
         float *pVect2 = (float *)pVect2v;
        
-        space_params_Hel sparam = *((space_params_Hel*)qty_ptr);
+        const space_params_Hel* sparam = (space_params_Hel*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t nbin = sparam->bin;
 
         float res = 0;
         // add the histogram distance for each dimension
-        for (size_t d = 0; d < sparam.dim; d++) {
-            for (size_t i = 0; i < sparam.bin; i++) {
+        for (size_t d = 0; d < ndim; d++) {
+            for (size_t i = 0; i < nbin; i++) {
                 float t = ::std::sqrt(*pVect1) - ::std::sqrt(*pVect2);
                 pVect1++;
                 pVect2++;

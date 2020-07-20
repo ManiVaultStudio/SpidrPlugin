@@ -21,15 +21,15 @@ public:
 
 public:
     // data
-    unsigned int        _numPoints;             /*!<> */
-    unsigned int        _numDims;               /*!<> */
+    size_t              _numPoints;             /*!<> */
+    size_t              _numDims;               /*!<> */
     QSize               _imgSize;               /*!<> */
     // features
     loc_Neigh_Weighting _neighWeighting;        /*!<> */
-    unsigned int        _numLocNeighbors;       /*!<> */
-    unsigned int        _numHistBins;           /*!<> */
+    size_t              _numLocNeighbors;       /*!<> */
+    size_t              _numHistBins;           /*!<> */
     // distance
-    unsigned int        _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1
+    size_t              _nn;                    // number of nearest neighbors, determined by _perplexity*_perplexity_multiplier + 1
     knn_library         _aknn_algorithm;        /*!<> */
     knn_distance_metric _aknn_metric;           /*!<> */
     // embeddings

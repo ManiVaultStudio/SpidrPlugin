@@ -136,7 +136,7 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
     pointIDsGlobal = points.indices;
     // If points represent all data set, select them all
     if (points.isFull()) {
-        std::vector<std::uint32_t> all(points.getNumPoints());
+        std::vector<unsigned int> all(points.getNumPoints());
         std::iota(std::begin(all), std::end(all), 0);
 
         pointIDsGlobal = all;
@@ -151,7 +151,7 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
     {
         for (const auto& pointId : pointIDsGlobal)
         {
-            for (int dimensionId = 0; dimensionId < numDim; dimensionId++)
+            for (unsigned int dimensionId = 0; dimensionId < numDim; dimensionId++)
             {
                 if (enabledDimensions[dimensionId]) {
                     const auto index = pointId * numDim + dimensionId;

@@ -31,7 +31,7 @@ public:
      * \param numDimensions
      * \param imgSize
      */
-    void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, unsigned int numDimensions, QSize imgSize);
+    void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize);
 
     // release openGL context of the t-SNE computation
     /*!
@@ -42,8 +42,8 @@ public:
 
     // Setter
     void setKernelWeight(const int index);
-    void setNumLocNeighbors(const int index);
-    void setNumHistBins(const unsigned int index);
+    void setNumLocNeighbors(const size_t index);
+    void setNumHistBins(const size_t index);
     void setKnnAlgorithm(const int index);
     void setDistanceMetric(const int index);
     void setPerplexity(const unsigned  index);
@@ -62,12 +62,12 @@ public:
      * \param perplexity
      * \param exaggeration
      */
-    void initializeAnalysisSettings(const int kernelInd, unsigned int numLocNeighbors, unsigned int numHistBins, \
+    void initializeAnalysisSettings(const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins, \
                                     const int aknnAlgInd, const int aknnMetInd, \
-                                    int numIterations, int perplexity, int exaggeration);
+                                    const int numIterations, const int perplexity, const int exaggeration);
 
     // Getter
-    const unsigned int getNumPoints();
+    const size_t getNumPoints();
     bool embeddingIsRunning();
     /*!
      * 

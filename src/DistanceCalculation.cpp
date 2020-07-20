@@ -36,9 +36,9 @@ void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameter
     _distances_squared.resize(_numPoints*_nn);
 
     assert(_histogramFeatures->size() == (_numPoints * _numDims * _numHistBins));
-    assert(params._nn == (unsigned int)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
+    assert(params._nn == (size_t)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
-    qDebug() << "Distance calculation: Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn << ". Metric: " << (unsigned int)_knn_metric;
+    qDebug() << "Distance calculation: Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
 
 }
 
