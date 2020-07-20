@@ -1,6 +1,8 @@
 #pragma once
 #include "hnswlib/hnswlib.h"
 
+#include <QDebug>
+
 #include <cmath>     // std::sqrt, exp
 #include <vector>
 #include <thread>
@@ -146,6 +148,8 @@ namespace hnswlib {
     public:
         // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
         QFSpace(size_t dim, size_t bin, ground_dist ground_type = ground_dist::SIM_EUC, float ground_weight = 1) {
+            qDebug() << "Distance Calculation: Prepare QFSpace";
+
             fstdistfunc_ = QFSqr;
             data_size_ = dim * bin * sizeof(float);
 
@@ -178,7 +182,6 @@ namespace hnswlib {
             }
         
             params_ = { dim, bin, A};
-
         }
 
         size_t get_data_size() {
@@ -239,6 +242,8 @@ namespace hnswlib {
 
     public:
         HellingerSpace(size_t dim, size_t bin) {
+            qDebug() << "Distance Calculation: Prepare HellingerSpace";
+
             fstdistfunc_ = HelSqr;
             params_ = { dim, bin };
             data_size_ = dim * bin * sizeof(float);

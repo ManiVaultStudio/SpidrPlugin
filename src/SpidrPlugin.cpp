@@ -144,16 +144,22 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
 
     // For all selected points, retrieve values from each dimension
     attribute_data.reserve(pointIDsGlobal.size() * numDims);
-    for (const auto& pointId : pointIDsGlobal)
+    
+    const auto numDim = points.getNumDimensions();
+    
+    points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, numDim](auto beginOfData, auto endOfData)
     {
-        for (unsigned int dimensionId = 0; dimensionId < points.getNumDimensions(); dimensionId++)
+        for (const auto& pointId : pointIDsGlobal)
         {
-            if (enabledDimensions[dimensionId]) {
-                const auto index = pointId * points.getNumDimensions() + dimensionId;
-                attribute_data.push_back(points[index]);
+            for (int dimensionId = 0; dimensionId < numDim; dimensionId++)
+            {
+                if (enabledDimensions[dimensionId]) {
+                    const auto index = pointId * numDim + dimensionId;
+                    attribute_data.push_back(beginOfData[index]);
+                }
             }
         }
-    }
+    });
 
 }
 
