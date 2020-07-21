@@ -188,7 +188,7 @@ namespace hdps
 
         void CopyModelToClipboard(const QAbstractItemModel& model)
         {
-            
+
             QString result;
             const auto quote = QChar::fromLatin1('"');
             const auto tabChar = QChar::fromLatin1('\t');
@@ -255,7 +255,7 @@ namespace hdps
             _ui.label->setText(QObject::tr("%1 available, %2 visible, %3 selected").
                 arg(numberOfDimensions).
                 arg(numberOfVisibleDimensions).
-                arg(holder.getNumberOfSelectedDimensions()) );
+                arg(holder.getNumberOfSelectedDimensions()));
         }
 
         void updateSlider()
@@ -315,7 +315,7 @@ namespace hdps
                 // Reduce height of cells by 33%. The cells were really too high, originally!
                 header->setSectionResizeMode(QHeaderView::Fixed);
                 const auto originalDefaultSectionSize = header->defaultSectionSize();
-                header->setDefaultSectionSize((2 * originalDefaultSectionSize)/3);
+                header->setDefaultSectionSize((2 * originalDefaultSectionSize) / 3);
             }
 
             if (QHeaderView *const header = _ui.tableView->horizontalHeader(); header != nullptr)
@@ -353,85 +353,89 @@ namespace hdps
 
                     time.start();
                     const auto& pointData = *_pointData;
-                    const auto numberOfDimensions = pointData.getNumDimensions();
-                    const auto numberOfPoints = pointData.getNumPoints();
 
-                    constexpr static auto quiet_NaN = std::numeric_limits<double>::quiet_NaN();
-
-                    if (numberOfPoints == 0)
+                    pointData.visitFromBeginToEnd([&statistics, &pointData](auto beginOfData, auto endOfData)
                     {
-                        statistics.resize(numberOfDimensions, { quiet_NaN, quiet_NaN, quiet_NaN, quiet_NaN });
-                    }
-                    else
-                    {
-                        statistics.resize(numberOfDimensions);
-                        const auto* const statisticsData = statistics.data();
+                        const auto numberOfDimensions = pointData.getNumDimensions();
+                        const auto numberOfPoints = pointData.getNumPoints();
 
-                        if (numberOfPoints == 1)
+                        constexpr static auto quiet_NaN = std::numeric_limits<double>::quiet_NaN();
+
+                        if (numberOfPoints == 0)
                         {
-                            (void)std::for_each_n(std::execution::par_unseq, statistics.begin(), numberOfDimensions,
-                                [statisticsData, &pointData](auto& statisticsPerDimension)
-                            {
-                                const auto i = &statisticsPerDimension - statisticsData;
-                                
-                                const auto dataValue = pointData[i];
-                                statisticsPerDimension = { {dataValue, dataValue}, {quiet_NaN, quiet_NaN} };
-                            });
+                            statistics.resize(numberOfDimensions, { quiet_NaN, quiet_NaN, quiet_NaN, quiet_NaN });
                         }
                         else
                         {
-                            (void)std::for_each_n(std::execution::par_unseq, statistics.begin(), numberOfDimensions,
-                                [statisticsData, &pointData, numberOfDimensions, numberOfPoints](auto& statisticsPerDimension)
+                            statistics.resize(numberOfDimensions);
+                            const auto* const statisticsData = statistics.data();
+
+                            if (numberOfPoints == 1)
                             {
-                                const std::unique_ptr<double[]> data(new double[numberOfPoints]);
+                                (void)std::for_each_n(std::execution::par_unseq, statistics.begin(), numberOfDimensions,
+                                    [statisticsData, beginOfData](auto& statisticsPerDimension)
                                 {
                                     const auto i = &statisticsPerDimension - statisticsData;
 
+                                    const double dataValue = beginOfData[i];
+                                    statisticsPerDimension = { {dataValue, dataValue}, {quiet_NaN, quiet_NaN} };
+                                });
+                            }
+                            else
+                            {
+                                (void)std::for_each_n(std::execution::par_unseq, statistics.begin(), numberOfDimensions,
+                                    [statisticsData, numberOfDimensions, numberOfPoints, beginOfData](auto& statisticsPerDimension)
+                                {
+                                    const std::unique_ptr<double[]> data(new double[numberOfPoints]);
+                                    {
+                                        const auto i = &statisticsPerDimension - statisticsData;
+
+                                        for (unsigned j{}; j < numberOfPoints; ++j)
+                                        {
+                                            data[j] = beginOfData[j * numberOfDimensions + i];
+                                        }
+                                    }
+
+                                    double sum{};
+                                    unsigned numberOfNonZeroValues{};
+
                                     for (unsigned j{}; j < numberOfPoints; ++j)
                                     {
-                                        data[j] = pointData[j * numberOfDimensions + i];
+                                        const auto value = data[j];
+
+                                        if (value != 0.0)
+                                        {
+                                            sum += value;
+                                            ++numberOfNonZeroValues;
+                                        }
                                     }
-                                }
+                                    const auto mean = sum / numberOfPoints;
 
-                                double sum{};
-                                unsigned numberOfNonZeroValues{};
+                                    double sumOfSquares{};
 
-                                for (unsigned j{}; j < numberOfPoints; ++j)
-                                {
-                                    const auto value = data[j];
-
-                                    if (value != 0.0)
+                                    for (unsigned j{}; j < numberOfPoints; ++j)
                                     {
-                                        sum += value;
-                                        ++numberOfNonZeroValues;
+                                        const auto value = data[j] - mean;
+                                        sumOfSquares += value * value;
                                     }
-                                }
-                                const auto mean = sum / numberOfPoints;
 
-                                double sumOfSquares{};
+                                    static_assert(quiet_NaN != quiet_NaN);
 
-                                for (unsigned j{}; j < numberOfPoints; ++j)
-                                {
-                                    const auto value = data[j] - mean;
-                                    sumOfSquares += value * value;
-                                }
-
-                                static_assert(quiet_NaN != quiet_NaN);
-
-                                statisticsPerDimension = StatisticsPerDimension
-                                {
+                                    statisticsPerDimension = StatisticsPerDimension
                                     {
-                                        mean,
-                                        (numberOfNonZeroValues == 0) ? quiet_NaN : (sum / numberOfNonZeroValues)
-                                    },
-                                    {
-                                        std::sqrt(sumOfSquares / (numberOfPoints - 1)),
-                                        (numberOfNonZeroValues == 0) ? quiet_NaN : std::sqrt(sumOfSquares / numberOfNonZeroValues)
-                                    }
-                                };
-                            });
+                                        {
+                                            mean,
+                                            (numberOfNonZeroValues == 0) ? quiet_NaN : (sum / numberOfNonZeroValues)
+                                        },
+                                        {
+                                            std::sqrt(sumOfSquares / (numberOfPoints - 1)),
+                                            (numberOfNonZeroValues == 0) ? quiet_NaN : std::sqrt(sumOfSquares / numberOfNonZeroValues)
+                                        }
+                                    };
+                                });
+                            }
                         }
-                    }
+                    });
                     qDebug()
                         << " Duration: " << time.elapsed() << " microsecond(s)";
 
@@ -531,7 +535,7 @@ namespace hdps
             {
                 const auto sliderMaximum = _ui.horizontalSlider->maximum();
 
-                if ((sliderValue >= 0) && (sliderValue <= sliderMaximum) )
+                if ((sliderValue >= 0) && (sliderValue <= sliderMaximum))
                 {
                     const auto& distinctStandardDeviations = _holder.distinctStandardDeviationsWithAndWithoutZero[_holder._ignoreZeroValues ? 1 : 0];
                     const auto numberOfDistinctStandardDeviations = distinctStandardDeviations.size();

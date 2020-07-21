@@ -18,7 +18,7 @@ void SpidrAnalysis::run() {
     spatialAnalysis();
 }
 
-void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, unsigned int numDimensions, QSize imgSize) {
+void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize) {
     // Set data
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
@@ -31,9 +31,9 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
 }
 
-void SpidrAnalysis::initializeAnalysisSettings(const int kernelInd, unsigned int numLocNeighbors, unsigned int numHistBins,\
+void SpidrAnalysis::initializeAnalysisSettings(const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins,\
                                                const int aknnAlgInd, const int aknnMetInd, \
-                                               int numIterations, int perplexity, int exaggeration) {
+                                               const int numIterations, const int perplexity, const int exaggeration) {
     // initialize Feature Extraction Settings
     setKernelWeight(kernelInd);
     setNumLocNeighbors(numLocNeighbors);
@@ -80,11 +80,11 @@ void SpidrAnalysis::setKernelWeight(const int index) {
     }
 }
 
-void SpidrAnalysis::setNumLocNeighbors(const int num) {
+void SpidrAnalysis::setNumLocNeighbors(const size_t num) {
     _params._numLocNeighbors = num;
 }
 
-void SpidrAnalysis::setNumHistBins(const unsigned int num) {
+void SpidrAnalysis::setNumHistBins(const size_t num) {
     _params._numHistBins = num;
 }
 
@@ -120,7 +120,7 @@ void SpidrAnalysis::setExaggeration(const unsigned num) {
     _params._exaggeration = num;
 }
 
-const unsigned int SpidrAnalysis::getNumPoints() {
+const size_t SpidrAnalysis::getNumPoints() {
     return _pointIDsGlobal.size();
 }
 

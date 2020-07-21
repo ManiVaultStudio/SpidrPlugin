@@ -88,7 +88,7 @@ private:
     // Data
     const std::vector<int>* _knn_indices;               /*!<> */
     const std::vector<float>* _knn_distances;           /*!<> */
-    unsigned int _numPoints;                            /*!<> */
+    size_t _numPoints;                            /*!<> */
     std::vector<float> _outputData;                     /*!<> */
 
     // Options

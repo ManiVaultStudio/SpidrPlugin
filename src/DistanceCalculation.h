@@ -7,8 +7,8 @@
 #include <QSize>
 
 class Parameters;
-enum class knn_library : unsigned int;
-enum class knn_distance_metric : unsigned int;
+enum class knn_library : size_t;
+enum class knn_distance_metric : size_t;
 
 /*!
  * 
@@ -62,9 +62,9 @@ private:
 
     // Data
     // Input
-    unsigned int _numDims;                          /*!<> */
-    unsigned int _numPoints;                        /*!<> */
-    unsigned int _numHistBins;                      // don't set this from the widget input. Instead you the value set in the feature extraction
+    size_t _numDims;                                /*!<> */
+    size_t _numPoints;                              /*!<> */
+    size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
     const std::vector<float>* _histogramFeatures;   /*!<> */
 
     // Output

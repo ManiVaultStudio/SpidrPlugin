@@ -45,7 +45,7 @@ void FeatureExtraction::compute() {
 
 }
 
-void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, Parameters& params) {
+void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, const Parameters& params) {
     // Parameters
     _numHistBins = params._numHistBins;
     _locNeighbors = params._numLocNeighbors;
@@ -114,7 +114,7 @@ void FeatureExtraction::extractFeatures() {
     
     // convolve over all selected data points
 #pragma omp parallel for 
-    for (int pointID = 0; pointID < _numPoints; pointID++) {
+    for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
         // get neighborhood of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
 
@@ -138,7 +138,7 @@ void FeatureExtraction::extractFeatures() {
 
 // For now, expect a rectangle selection (lasso selection might cause edge cases that were not thought of)
 // Padding: assign -1 to points outside the selection. Later assign 0 vector to all of them.
-std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
+std::vector<int> FeatureExtraction::neighborhoodIndices(size_t pointInd) {
     std::vector<int> neighborsIDs(_neighborhoodSize, -1);
     int imWidth = _imgSize.width();
     int rowID = int(pointInd / imWidth);
@@ -175,22 +175,22 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(unsigned int pointInd) {
     return neighborsIDs;
 }
 
-void FeatureExtraction::calculateHistogram(unsigned int pointInd, std::vector<float> neighborValues) {
+void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> neighborValues) {
 
     // 1D histograms for each dimension
     // save the histogram in _histogramFeatures
-    for (unsigned int dim = 0; dim < _numDims; dim++) {
+    for (size_t dim = 0; dim < _numDims; dim++) {
         auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[2 * dim], _minMaxVals[2 * dim + 1]));
         // once this works, check if the following is faster (VS Studio will complain but compile)
         //auto h = boost::histogram::make_histogram_with(std::vector<float>(), boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
-        for (unsigned int neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
+        for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             h(neighborValues[neighbor * _numDims + dim], boost::histogram::weight(_neighborhoodWeights[neighbor]));
         }
 
         assert(h.rank() == 1); // 1D hist
         assert(h.axis().size() == _numHistBins);
 
-        for (unsigned int bin = 0; bin < _numHistBins; bin++) {
+        for (size_t bin = 0; bin < _numHistBins; bin++) {
             _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + bin] = h.at(bin);
         }
         // the max value is stored in the overflow bin
@@ -217,13 +217,13 @@ void FeatureExtraction::setNeighborhoodWeighting(loc_Neigh_Weighting weighting) 
     weightNeighborhood(weighting);
 }
 
-void FeatureExtraction::setNumLocNeighbors(unsigned int size) {
+void FeatureExtraction::setNumLocNeighbors(size_t size) {
     _locNeighbors = size;
     _kernelWidth = (2 * size) + 1;
     _neighborhoodSize = _kernelWidth * _kernelWidth;
 }
 
-void FeatureExtraction::setNumHistBins(unsigned int size) {
+void FeatureExtraction::setNumHistBins(size_t size) {
     _numHistBins = size;
 }
 
