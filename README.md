@@ -2,7 +2,7 @@
 
 To clone the repo and some dependencies (hnsw lib):
 
-```git clone --recurse-submodule https://github.com/alxvth/SpidrPlugin.git```
+```git clone --recurse-submodule https://github.com/hdps/SpidrPlugin.git```
 
 Build with the same generator as the HDPS core.
 
