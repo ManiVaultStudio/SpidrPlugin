@@ -7,6 +7,8 @@
 
 #include <QDebug>
 
+#include <chrono>
+
 DistanceCalculation::DistanceCalculation() :
     _knn_lib(knn_library::KNN_HNSW),
     _knn_metric(knn_distance_metric::KNN_METRIC_QF)
@@ -88,10 +90,15 @@ void DistanceCalculation::computekNN() {
 
         int num_threads = std::thread::hardware_concurrency();
 
+        auto start = std::chrono::steady_clock::now();
+
         hnswlib::ParallelFor(0, _numPoints, num_threads, [&](size_t i, size_t threadId) {
             appr_alg.addPoint((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype) i);
         });
         //appr_alg.checkIntegrity();
+
+        auto end = std::chrono::steady_clock::now();
+        qDebug() << "Distance calculation: Build duration (sec): " << ((float) std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
 
         qDebug() << "Distance calculation: Search akNN Index";
 

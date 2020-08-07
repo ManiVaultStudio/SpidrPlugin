@@ -16,7 +16,7 @@ if(MSVC)
 endif(MSVC)
 
 find_package(Qt5 COMPONENTS Widgets WebEngineWidgets REQUIRED)
-# use header only libs, thus no components specified
+# use header-only libs, thus no components specified
 find_package(Boost REQUIRED) 
 
 set(PLUGIN
@@ -71,6 +71,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 if(MSVC)
     include_directories ("lib/Flann/Win/include")
+	ADD_DEFINITIONS(/arch:AVX)
 endif(MSVC)
 
 if(APPLE)

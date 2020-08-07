@@ -11,5 +11,5 @@ Not all dependencies are included in this repo, some need to be downloaded/insta
 Make sure to adjust your system variables respectively:
 - HDPS core, follow instructions [here](https://github.com/hdps/core)
 - Qt 5.14
-- Boost (headers-only)
+- Boost (headers-only, define the system variable BOOST_INCLUDEDIR for cmake to find it automatically)
 - OpenMP
