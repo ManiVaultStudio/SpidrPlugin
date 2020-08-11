@@ -116,5 +116,3 @@ unsigned int RiceBinSize(unsigned int numItems) {
     return int(2 * std::ceil(std::pow(numItems, 1.0/3)));
 }
 
-
-

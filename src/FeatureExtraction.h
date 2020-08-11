@@ -89,6 +89,15 @@ private:
      */
     void calculateHistogram(size_t pointInd, std::vector<float> neighborValues);
 
+    /*! Calculate Local Indicator of Spatial Association features for each item
+     *  Compute Local Moran's I. Sets _LISAFeature member var.
+     *
+     * \param pointInd
+     * \param neighborValues
+    */ 
+    void calculateLISA(size_t pointInd, std::vector<float> neighborValues);
+
+
 private:
 
     /*!
@@ -121,12 +130,17 @@ private:
     size_t       _numPoints;                        /*!<> */
     std::vector<unsigned int> _pointIds;            /*!<> */
     std::vector<float> _attribute_data;             /*!<> */
-    // Extrema for each dimension/channel, i.e. [min_Ch0, max_Ch0, min_Ch1, max_Ch1, ...]
-    std::vector<float> _minMaxVals;                 /*!<> */
+    std::vector<float> _minMaxVals;                 /*!< Extrema for each dimension/channel, i.e. [min_Ch0, max_Ch0, min_Ch1, max_Ch1, ...] */
+    std::vector<float> _meanVals;                   /*!< Avg for each dimension/channel, i.e. [mean_Ch0, meam_Ch1, ...] */
+    std::vector<float> _varVals;                    /*!< Variance estimate for each dimension/channel, i.e. [mean_Ch0, meam_Ch1, ...] */
 
     // Output
-    // Histogram features for each item. 
-    // In case of 1D histograms for each data point there are _inputData.getNumDimensions() histograms with _numHistBins values, i.e. size _numPoints * _numDims * _numHistBins
-    std::vector<float> _histogramFeatures;          /*!<> */
+    //! Histogram features for each item.
+    /*! In case of 1D histograms for each data point there are _inputData.getNumDimensions() histograms 
+    with _numHistBins values, i.e. size _numPoints * _numDims * _numHistBins  */
+    std::vector<float> _histogramFeatures;
+
+    //! Local Indicator of Spatial Association features for each item.
+    std::vector<float> _LISAFeature;
 
 };

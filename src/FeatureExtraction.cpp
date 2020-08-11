@@ -64,10 +64,6 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
     _numDims = params._numDims;
     _attribute_data = attribute_data;
 
-    // Output
-    _histogramFeatures.resize(_numPoints * _numDims * _numHistBins);
-    std::fill(_histogramFeatures.begin(), _histogramFeatures.end(), -1);
-
     assert(_attribute_data.size() == _numPoints * _numDims);
 
     qDebug() << "Feature extraction: Num neighbors (in each direction): " << _locNeighbors << "(total neighbors: " << _neighborhoodSize << ") Num Bins: " << _numHistBins << " Neighbor weighting: " << (unsigned int)_neighborhoodWeighting;
@@ -85,28 +81,9 @@ void FeatureExtraction::computeHistogramFeatures() {
 }
 
 void FeatureExtraction::initExtraction() {
-    // Init
-    // a.o.: find min and max for each channel
-    _minMaxVals.resize(2 * _numDims, 0);
 
-    // for each dimension iterate over all values
-    // remember data stucture (point1 d0, point1 d1,... point1 dn, point2 d0, point2 d1, ...)
-    for (unsigned int dimCount = 0; dimCount < _numDims; dimCount++) {
-        // init min and max
-        float currentVal = _attribute_data.at(dimCount);
-        _minMaxVals.at(2 * dimCount) = currentVal;
-        _minMaxVals.at(2 * dimCount + 1) = currentVal;
-
-        for (unsigned int pointCount = 0; pointCount < _numPoints; pointCount++) {
-            currentVal = _attribute_data.at(pointCount * _numDims + dimCount);
-            // min
-            if (currentVal < _minMaxVals.at(2 * dimCount))
-                _minMaxVals.at(2 * dimCount) = currentVal;
-            // max
-            else if (currentVal > _minMaxVals.at(2 * dimCount + 1))
-                _minMaxVals.at(2 * dimCount + 1) = currentVal;
-        }
-    }
+    // find min and max for each channel
+    _minMaxVals = CalcMinMaxPerChannel(_numPoints, _numDims, _attribute_data);
 
 }
 
@@ -116,7 +93,7 @@ void FeatureExtraction::extractFeatures() {
 #pragma omp parallel for 
     for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
         // get neighborhood of the current point
-        std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
+        std::vector<int> neighborIDs = neighborhoodIndices(_pointIds[pointID]);
 
         assert(neighborIDs.size() == _neighborhoodSize);
 
@@ -126,12 +103,12 @@ void FeatureExtraction::extractFeatures() {
         neighborValues.resize(_neighborhoodSize * _numDims);
         for (unsigned int neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             for (unsigned int dim = 0; dim < _numDims; dim++) {
-                neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data.at(neighborIDs[neighbor] * _numDims + dim) : 0;
+                neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data[neighborIDs[neighbor] * _numDims + dim] : 0;
             }
         }
 
         // calculate histograms, save histos in _histogramFeatures
-        calculateHistogram(_pointIds.at(pointID), neighborValues);
+        calculateHistogram(_pointIds[pointID], neighborValues);
     }
 
 }
@@ -176,6 +153,11 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(size_t pointInd) {
 }
 
 void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_minMaxVals.size() == 2*_numDims);
+    assert(_neighborhoodWeights.size() == _neighborhoodSize);
+
+    _histogramFeatures.resize(_numPoints * _numDims * _numHistBins);
+    std::fill(_histogramFeatures.begin(), _histogramFeatures.end(), -1);
 
     // 1D histograms for each dimension
     // save the histogram in _histogramFeatures
@@ -191,15 +173,33 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
         assert(h.axis().size() == _numHistBins);
 
         for (size_t bin = 0; bin < _numHistBins; bin++) {
-            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + bin] = h.at(bin);
+            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + bin] = h[bin];
         }
         // the max value is stored in the overflow bin
-        if (h.at(_numHistBins) != 0) {
-            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + _numHistBins - 1] += h.at(_numHistBins);
+        if (h[_numHistBins] != 0) {
+            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + _numHistBins - 1] += h[_numHistBins];
         }
     }
 
 }
+
+void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_meanVals.size() == _numDims);
+    assert(_varVals.size() == _numDims);
+    assert(_neighborhoodWeights.size() == _neighborhoodSize);
+
+    _LISAFeature.resize(_numPoints * _numDims);
+
+    for (size_t dim = 0; dim < _numDims; dim++) {
+        float neigh_diff_from_mean_sum = 0;
+        for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
+            neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
+        }
+        float diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
+        _LISAFeature[pointInd * _numDims + dim] = diff_from_mean * neigh_diff_from_mean_sum / _varVals[dim];
+    }
+}
+
 
 void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
     _neighborhoodWeights.resize(_neighborhoodSize);
