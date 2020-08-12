@@ -31,10 +31,11 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
 }
 
-void SpidrAnalysis::initializeAnalysisSettings(const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins,\
+void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins,\
                                                const int aknnAlgInd, const int aknnMetInd, \
                                                const int numIterations, const int perplexity, const int exaggeration) {
     // initialize Feature Extraction Settings
+    setFeatureType(aknnMetInd);
     setKernelWeight(kernelInd);
     setNumLocNeighbors(numLocNeighbors);
     setNumHistBins(numHistBins);
@@ -42,7 +43,7 @@ void SpidrAnalysis::initializeAnalysisSettings(const int kernelInd, const size_t
     // initialize Distance Calculation Settings
     setKnnAlgorithm(aknnAlgInd);
     setDistanceMetric(aknnMetInd);
-    _params._nn = (perplexity * _params._perplexity_multiplier) + 1;
+    // number of nn is dertermined by perplexity, set in setPerplexity
 
     // Initialize the tSNE computation
     setNumIterations(numIterations);
@@ -69,15 +70,12 @@ void SpidrAnalysis::spatialAnalysis() {
     _tsne.compute();
 }
 
+void SpidrAnalysis::setFeatureType(const int index) {
+    _params._featureType = static_cast<feature_type> (index);
+}
 
 void SpidrAnalysis::setKernelWeight(const int index) {
-    switch (index)
-    {
-    case 0: _params._neighWeighting = loc_Neigh_Weighting::WEIGHT_UNIF; break;
-    case 1: _params._neighWeighting = loc_Neigh_Weighting::WEIGHT_BINO; break;
-    case 2: _params._neighWeighting = loc_Neigh_Weighting::WEIGHT_GAUS; break;
-    default: _params._neighWeighting = loc_Neigh_Weighting::WEIGHT_UNIF; break;
-    }
+    _params._neighWeighting = static_cast<loc_Neigh_Weighting> (index);
 }
 
 void SpidrAnalysis::setNumLocNeighbors(const size_t num) {
@@ -89,35 +87,24 @@ void SpidrAnalysis::setNumHistBins(const size_t num) {
 }
 
 void SpidrAnalysis::setKnnAlgorithm(const int index) {
-    // index corresponds to order in which algorithm were added to widget
-    switch (index)
-    {
-    case 0: _params._aknn_algorithm = knn_library::KNN_HNSW; break;
-    default: _params._aknn_algorithm = knn_library::KNN_HNSW;
-    }
+    _params._aknn_algorithm = static_cast<knn_library> (index);
 }
 
 void SpidrAnalysis::setDistanceMetric(const int index) {
-    // index corresponds to order in which algorithm were added to widget
-    switch (index)
-    {
-    case 0: _params._aknn_metric = knn_distance_metric::KNN_METRIC_QF; break;
-        //case 1: _knn_metric = knn_distance_metric::KNN_METRIC_EMD; break;
-    case 1: _params._aknn_metric = knn_distance_metric::KNN_METRIC_HEL; break;
-    default: _params._aknn_metric = knn_distance_metric::KNN_METRIC_QF;
-    }
+    _params._aknn_metric = static_cast<knn_distance_metric> (index);
 }
 
-void SpidrAnalysis::setPerplexity(const unsigned num) {
-    _params._perplexity = num;
+void SpidrAnalysis::setPerplexity(const unsigned perplexity) {
+    _params._perplexity = perplexity;
+    _params._nn = (perplexity * _params._perplexity_multiplier) + 1;
 }
 
 void SpidrAnalysis::setNumIterations(const unsigned num) {
     _params._numIterations = num;
 }
 
-void SpidrAnalysis::setExaggeration(const unsigned num) {
-    _params._exaggeration = num;
+void SpidrAnalysis::setExaggeration(const unsigned exag) {
+    _params._exaggeration = exag;
 }
 
 const size_t SpidrAnalysis::getNumPoints() {

@@ -63,6 +63,7 @@ private slots:
     void histBinSizeChanged(const QString &value);
     void onHistBinSizeChanged(const QString &value);
     void onHistBinSizeHeurPicked(int value);
+    void onDistanceMetricPicked(int value);
     void numIterationsChanged(const QString &value);
     void perplexityChanged(const QString &value);
     void exaggerationChanged(const QString &value);

@@ -9,6 +9,16 @@
 #include <execution>    // par_unseq
 #include <numeric>      //iota
 
+/*! Types of neighborhood features
+ *
+ */
+enum class feature_type : unsigned int
+{
+    TEXTURE_HIST_1D = 0,    /*!< Histograms of data point neighborhood */
+    LISA = 1,               /*!< Local Indicator of Spatial Associations */
+};
+
+
 /*!
  * 
  * 
@@ -151,17 +161,16 @@ std::vector<float> CalcMinMaxPerChannel(size_t numPoints, size_t numDims, const 
 template<typename T>
 std::vector<float> CalcMeanPerChannel(size_t numPoints, size_t numDims, const std::vector<T>& attribute_data) {
     std::vector<float> meanVals(numDims, 0);
-    std::vector<int> dimCounter(numDims);
-    std::iota(dimCounter.begin(), dimCounter.end(), 0);
 
-    std::for_each_n(std::execution::par_unseq, dimCounter.begin(), numDims, [numPoints, numDims, attribute_data](T& dimCount) {
+#pragma omp parallel for 
+    for (int dimCount = 0; dimCount < (int)numDims; dimCount++) {
         float sum = 0;
         for (unsigned int pointCount = 0; pointCount < numPoints; pointCount++) {
             sum += attribute_data[pointCount * numDims + dimCount];
         }
 
         meanVals[dimCount] = sum / numPoints;
-    });
+    }
 
     return meanVals;
 }
@@ -177,10 +186,9 @@ std::vector<float> CalcMeanPerChannel(size_t numPoints, size_t numDims, const st
 template<typename T>
 std::vector<float> CalcVarEstimate(size_t numPoints, size_t numDims, const std::vector<T>& attribute_data, const std::vector<float> &meanVals) {
     std::vector<float> varVals(numDims, 0);
-    std::vector<int> dimCounter(numDims);
-    std::iota(dimCounter.begin(), dimCounter.end(), 0);
 
-    std::for_each_n(std::execution::par_unseq, dimCounter.begin(), numDims, [numPoints, numDims, attribute_data](T& dimCount) {
+#pragma omp parallel for 
+    for (int dimCount = 0; dimCount < (int)numDims; dimCount++) {
         float sum = 0;
         float temp_diff = 0;
         for (unsigned int pointCount = 0; pointCount < numPoints; pointCount++) {
@@ -189,7 +197,8 @@ std::vector<float> CalcVarEstimate(size_t numPoints, size_t numDims, const std::
         }
 
         varVals[dimCount] = sum / numPoints;
-    });
+
+    }
 
     return varVals;
 }

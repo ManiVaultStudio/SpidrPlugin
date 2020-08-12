@@ -13,7 +13,7 @@
 #include <QMessageBox>
 #include <QScrollArea>
 #include <QVBoxLayout>
-
+#include <QStandardItemModel> 
 
 SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
 :
@@ -26,10 +26,13 @@ _analysisPlugin(analysisPlugin)
     knnOptions.addItem("HNSW");
 
     // add options in the order as defined in enums in utils files
-
-    distanceMetric.addItem("QF");
-    //    distanceMetric.addItem("EMD");
-    distanceMetric.addItem("Hellinger");
+    // when adding more adapt SpiderPlugin::initializeAnalysisSettings
+    distanceMetric.addItem("Quadratic form (TH)");
+    distanceMetric.addItem("Earth Mover (TH)"); 
+    dynamic_cast<QStandardItemModel *>(distanceMetric.model())->item(1)->setEnabled(false);
+    distanceMetric.addItem("Hellinger (TH)");
+    distanceMetric.addItem("Euclidean (LISA)");
+    distanceMetric.setToolTip("TH: Texture Histogram \nLISA: Local Indicator of Spatial Association");
 
     kernelWeight.addItem("Uniform");
     kernelWeight.addItem("Binomial");
@@ -37,10 +40,13 @@ _analysisPlugin(analysisPlugin)
 
     histBinSizeHeur.addItem("Manual");  
     histBinSizeHeur.addItem("Sqrt");
-    histBinSizeHeur.addItem("Sturges");     // TODO: add QToolTip with info text
+    histBinSizeHeur.addItem("Sturges");
     histBinSizeHeur.addItem("Rice");
+    histBinSizeHeur.setToolTip("Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))");
 
     connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
+    
+    connect(&distanceMetric, SIGNAL(currentIndexChanged(int)), this, SLOT(onDistanceMetricPicked(int)));
 
     connect(&kernelSize, SIGNAL(textChanged(QString)), SLOT(kernelSizeChanged(QString)));
     connect(&kernelSize, SIGNAL(textChanged(QString)), this, SLOT(onHistBinSizeChanged(QString)));
@@ -261,6 +267,17 @@ void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
 
     }
 
+}
+
+void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
+    if (value >= 3) {
+        histBinSizeHeur.setEnabled(false);
+        histBinSize.setEnabled(false);
+    }
+    else {
+        histBinSizeHeur.setEnabled(true);
+        histBinSize.setEnabled(true);
+    }
 }
 
 void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {

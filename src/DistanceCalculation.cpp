@@ -21,6 +21,8 @@ DistanceCalculation::~DistanceCalculation()
 }
 
 void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameters& params) {
+    _featureType = params._featureType;
+
     // Parameters
     _knn_lib = params._aknn_algorithm;
     _knn_metric = params._aknn_metric;
@@ -31,16 +33,23 @@ void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameter
     _numPoints = params._numPoints;
     _numDims = params._numDims;
     _numHistBins = params._numHistBins;
-    _histogramFeatures = histogramFeatures;
+    _dataFeatures = histogramFeatures;
 
     // Output
     _indices.resize(_numPoints*_nn);
     _distances_squared.resize(_numPoints*_nn);
 
-    assert(_histogramFeatures->size() == (_numPoints * _numDims * _numHistBins));
     assert(params._nn == (size_t)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
-    qDebug() << "Distance calculation: Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    if (_featureType == feature_type::TEXTURE_HIST_1D)
+    {
+        assert(_dataFeatures->size() == (_numPoints * _numDims * _numHistBins));
+        qDebug() << "Distance calculation: Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    }
+    else if (_featureType == feature_type::LISA) {
+        assert(_dataFeatures->size() == (_numPoints * _numDims));
+        qDebug() << "Distance calculation: Feature values per point: " << _numDims << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    }
 
 }
 
@@ -70,10 +79,15 @@ void DistanceCalculation::computekNN() {
             qDebug() << "Distance calculation: HellingerSpace for metric definition";
             space = new hnswlib::HellingerSpace(_numDims, _numHistBins);
         }
+        else if (_knn_metric == knn_distance_metric::KNN_METRIC_EUC)
+        {
+            qDebug() << "Distance calculation: EuclidenSpace for metric definition";
+            space = new hnswlib::L2Space(_numDims);
+        }
         else
         {
-            qDebug() << "Distance calculation: ERROR: Distance metric unknown. Using default metric: QFSpace.";
-            space = new hnswlib::QFSpace(_numDims, _numHistBins);
+            qDebug() << "Distance calculation: ERROR: Distance metric unknown.";
+            return;
         }
 
         qDebug() << "Distance calculation: Build akNN Index";
@@ -92,8 +106,11 @@ void DistanceCalculation::computekNN() {
 
         auto start = std::chrono::steady_clock::now();
 
+        // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
+        size_t indMultiplier = _numDims * _numHistBins ? (_featureType == feature_type::TEXTURE_HIST_1D) : _numDims;
+
         hnswlib::ParallelFor(0, _numPoints, num_threads, [&](size_t i, size_t threadId) {
-            appr_alg.addPoint((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype) i);
+            appr_alg.addPoint((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
         });
         //appr_alg.checkIntegrity();
 
@@ -107,7 +124,7 @@ void DistanceCalculation::computekNN() {
         for (int i = 0; i < _numPoints; ++i)
         {
             // find nearest neighbors
-            auto top_candidates = appr_alg.searchKnn((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype)_nn);
+            auto top_candidates = appr_alg.searchKnn((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype)_nn);
             while (top_candidates.size() > _nn) {
                 top_candidates.pop();
             }

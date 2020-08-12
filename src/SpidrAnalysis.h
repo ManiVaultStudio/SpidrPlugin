@@ -41,6 +41,7 @@ public:
     void stopComputation();
 
     // Setter
+    void setFeatureType(const int index);
     void setKernelWeight(const int index);
     void setNumLocNeighbors(const size_t index);
     void setNumHistBins(const size_t index);
@@ -50,9 +51,10 @@ public:
     void setNumIterations(const unsigned  index);
     void setExaggeration(const unsigned  index);
 
-    /*!
+    /*! Set the parameters of the entire Analysis
+     * Use the input from e.g a GUI
      * 
-     * 
+     * \param featType
      * \param kernelInd
      * \param numLocNeighbors
      * \param numHistBins
@@ -62,7 +64,7 @@ public:
      * \param perplexity
      * \param exaggeration
      */
-    void initializeAnalysisSettings(const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins, \
+    void initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins, \
                                     const int aknnAlgInd, const int aknnMetInd, \
                                     const int numIterations, const int perplexity, const int exaggeration);
 

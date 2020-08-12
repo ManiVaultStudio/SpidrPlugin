@@ -24,14 +24,14 @@ enum class knn_library : size_t
 };
 
 /*!
- * 
- * 
- */
+ * The numerical value corresponds to the order in which each option is added to the GUI in SpidrSettingsWidget
+  */
 enum class knn_distance_metric : size_t
 {
-    KNN_METRIC_QF = 0,      /*!<> */
-    KNN_METRIC_EMD = 1,     /*!<> */
-    KNN_METRIC_HEL = 2,     /*!<> */
+    KNN_METRIC_QF = 0,      /*!< Quadratic form distance */
+    KNN_METRIC_EMD = 1,     /*!< Earth mover distance*/
+    KNN_METRIC_HEL = 2,     /*!< Hellinger distance */
+    KNN_METRIC_EUC = 3,     /*!< Euclidean distance - not suitable for histogram features */
 };
 
 /*!
