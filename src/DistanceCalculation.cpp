@@ -107,7 +107,7 @@ void DistanceCalculation::computekNN() {
         auto start = std::chrono::steady_clock::now();
 
         // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
-        size_t indMultiplier = _numDims * _numHistBins ? (_featureType == feature_type::TEXTURE_HIST_1D) : _numDims;
+        size_t indMultiplier = (_featureType == feature_type::TEXTURE_HIST_1D) ? (_numDims * _numHistBins) : _numDims;
 
         hnswlib::ParallelFor(0, _numPoints, num_threads, [&](size_t i, size_t threadId) {
             appr_alg.addPoint((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);

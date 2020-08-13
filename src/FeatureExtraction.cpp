@@ -71,8 +71,10 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
     qDebug() << "Feature extraction: Num neighbors (in each direction): " << _locNeighbors << "(total neighbors: " << _neighborhoodSize << ") Neighbor weighting: " << (unsigned int)_neighborhoodWeighting;
     if (_featType == feature_type::TEXTURE_HIST_1D)
         qDebug() << "Feature extraction: Type 1d texture histogram, Num Bins: " << _numHistBins;
-    else
+    else if(_featType == feature_type::LISA)
         qDebug() << "Feature extraction: LISA";
+    else
+        qDebug() << "Feature extraction: unknown feature type";
 }
 
 void FeatureExtraction::computeHistogramFeatures() {
@@ -133,6 +135,8 @@ void FeatureExtraction::extractFeatures() {
             // calculate local indicator of spatial association, save histos in _LISAFeature
             calculateLISA(_pointIds[pointID], neighborValues);
         }
+        else
+            qDebug() << "Feature extraction: unknown feature Type";
 
     }
 }
@@ -160,7 +164,7 @@ std::vector<int> FeatureExtraction::neighborhoodIndices(size_t pointInd) {
     unsigned int localNeighCount = 0;
     for (int i = -1 * _locNeighbors; i <= (int)_locNeighbors; i++) {
         for (int ID : lrNeighIDs) {
-            neighborsIDs[localNeighCount] = ID != -1 ? ID + i * _imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
+            neighborsIDs[localNeighCount] = (ID != -1) ? ID + i * _imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
             localNeighCount++;
         }
     }

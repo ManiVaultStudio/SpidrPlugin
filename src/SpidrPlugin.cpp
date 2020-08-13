@@ -173,7 +173,7 @@ void SpidrPlugin::onNewEmbedding() {
 }
 
 void SpidrPlugin::initializeAnalysisSettings() {
-    const int featType = 0 ? (_settings->distanceMetric.currentIndex() <= 2) : 1;   // 0: TH, 1: LISA
+    const int featType = (_settings->distanceMetric.currentIndex() <= 2) ? 0 : 1;   // 0: TH, 1: LISA
 
     // set all the parameters
     _spidrAnalysis.initializeAnalysisSettings(featType, _settings->kernelWeight.currentIndex(), _settings->kernelSize.text().toInt(),  \

@@ -35,7 +35,7 @@ void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int ker
                                                const int aknnAlgInd, const int aknnMetInd, \
                                                const int numIterations, const int perplexity, const int exaggeration) {
     // initialize Feature Extraction Settings
-    setFeatureType(aknnMetInd);
+    setFeatureType(featType);
     setKernelWeight(kernelInd);
     setNumLocNeighbors(numLocNeighbors);
     setNumHistBins(numHistBins);
