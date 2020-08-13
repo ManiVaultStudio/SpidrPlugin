@@ -8,12 +8,13 @@
 
 #include <QDebug>       // qDebug
 #include <iterator>     // std::advance
-#include <algorithm>    // std::for_each, std::fill, std::find
+#include <algorithm>    // std::fill, std::find
 #include <execution>    // std::execution::par_unseq
 #include <vector>       // std::vector, std::begin, std::end
 #include <array>        // std::array
 #include <numeric>      // std::iota
 #include <utility>      // std::forward
+#include <chrono>       // std::chrono
 
 // Boost might be more useful for higher dimensional histograms
 // but it's convinient for now
@@ -21,7 +22,8 @@
 
 FeatureExtraction::FeatureExtraction() :
     _neighborhoodSize(1),
-    _numHistBins(5)
+    _numHistBins(5),
+    _stopFeatureComputation(false)
 {
     // square neighborhood
     _locNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
@@ -37,11 +39,11 @@ FeatureExtraction::~FeatureExtraction()
 }
 
 void FeatureExtraction::compute() {
-    qDebug() << "Feature extraction: started.";
+    qDebug() << "Feature extraction: started";
 
     computeHistogramFeatures();
 
-    qDebug() << "Feature extraction: finished.";
+    qDebug() << "Feature extraction: finished";
 
 }
 
@@ -73,6 +75,8 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
         qDebug() << "Feature extraction: Type 1d texture histogram, Num Bins: " << _numHistBins;
     else if(_featType == feature_type::LISA)
         qDebug() << "Feature extraction: LISA";
+    else if (_featType == feature_type::GEARYC)
+        qDebug() << "Feature extraction: local Geary's C";
     else
         qDebug() << "Feature extraction: unknown feature type";
 }
@@ -81,21 +85,26 @@ void FeatureExtraction::computeHistogramFeatures() {
     // init, i.e. identify min and max per dimension for histogramming
     initExtraction();
 
+    auto start = std::chrono::steady_clock::now();
     // convolution over all points to create histograms
     extractFeatures();
+    auto end = std::chrono::steady_clock::now();
+    qDebug() << "Feature extraction: extraction duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
 
     // if there is a -1 in the features, this value was not set at all
     assert(std::find(_outFeatures.begin(), _outFeatures.end(), -1) == _outFeatures.end());
 }
 
 void FeatureExtraction::initExtraction() {
+    qDebug() << "Feature extraction: init feature extraction";
 
     if (_featType == feature_type::TEXTURE_HIST_1D) {
-        // find min and max for each channel
+        // find min and max for each channel, resize the output larger due to vector features
         _minMaxVals = CalcMinMaxPerChannel(_numPoints, _numDims, _attribute_data);
         _outFeatures.resize(_numPoints * _numDims * _numHistBins);
     }
-    else if (_featType == feature_type::LISA) {
+    else if ((_featType == feature_type::LISA) | (_featType == feature_type::GEARYC)) {
+        // find mean and varaince for each channel
         _meanVals = CalcMeanPerChannel(_numPoints, _numDims, _attribute_data);
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
         _outFeatures.resize(_numPoints * _numDims);
@@ -107,9 +116,10 @@ void FeatureExtraction::initExtraction() {
 }
 
 void FeatureExtraction::extractFeatures() {
-    
+    qDebug() << "Feature extraction: extract features";
+
     // convolve over all selected data points
-#pragma omp parallel for 
+    #pragma omp parallel for
     for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
         // get neighborhood ids of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds[pointID]);
@@ -128,16 +138,20 @@ void FeatureExtraction::extractFeatures() {
 
         // calculate feature for neighborhood
         if (_featType == feature_type::TEXTURE_HIST_1D) {
-            // calculate histograms, save histos in _histogramFeatures
+            // calculate histograms
             calculateHistogram(_pointIds[pointID], neighborValues);
         }
         else if (_featType == feature_type::LISA) {
-            // calculate local indicator of spatial association, save histos in _LISAFeature
+            // calculate local indicator of spatial association
             calculateLISA(_pointIds[pointID], neighborValues);
+        }
+        else if (_featType == feature_type::GEARYC) {
+            // calculate local Geary's C
+            calculateGearysC(_pointIds[pointID], neighborValues);
         }
         else
             qDebug() << "Feature extraction: unknown feature Type";
-
+        
     }
 }
 
@@ -209,7 +223,6 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
 }
 
 void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighborValues) {
-    assert(_meanVals.size() == _numDims);
     assert(_varVals.size() == _numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
@@ -223,6 +236,21 @@ void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighb
     }
 }
 
+void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_meanVals.size() == _numDims);
+    assert(_varVals.size() == _numDims);
+    assert(_neighborhoodWeights.size() == _neighborhoodSize);
+
+    for (size_t dim = 0; dim < _numDims; dim++) {
+        float diff_from_neigh_sum = 0;
+        float diff_from_neigh = 0;
+        for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
+            diff_from_neigh = _attribute_data[pointInd * _numDims + dim] - neighborValues[neighbor * _numDims + dim];
+            diff_from_neigh_sum += _neighborhoodWeights[neighbor] * (diff_from_neigh * diff_from_neigh);
+        }
+        _outFeatures[pointInd * _numDims + dim] = diff_from_neigh_sum / _varVals[dim];
+    }
+}
 
 void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
     _neighborhoodWeights.resize(_neighborhoodSize);
@@ -259,4 +287,14 @@ loc_Neigh_Weighting FeatureExtraction::getNeighborhoodWeighting()
 std::vector<float>* FeatureExtraction::output()
 {
     return &_outFeatures;
+}
+
+void FeatureExtraction::stopFeatureCopmutation()
+{
+    _stopFeatureComputation = false;
+}
+
+bool FeatureExtraction::requestedStop()
+{
+    return _stopFeatureComputation;
 }

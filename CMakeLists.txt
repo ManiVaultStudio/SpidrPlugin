@@ -72,6 +72,8 @@ include_directories(${Boost_INCLUDE_DIRS})
 if(MSVC)
     include_directories ("lib/Flann/Win/include")
 	ADD_DEFINITIONS(/arch:AVX)
+	add_definitions(-DUSE_SSE)
+	add_definitions(-DUSE_AVX)
 endif(MSVC)
 
 if(APPLE)

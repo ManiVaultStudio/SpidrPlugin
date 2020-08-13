@@ -29,6 +29,8 @@ public:
     void setNumLocNeighbors(size_t size);
     void setNeighborhoodWeighting(loc_Neigh_Weighting weighting);
     void setNumHistBins(size_t size);
+    void stopFeatureCopmutation();
+    bool requestedStop();
 
     loc_Neigh_Weighting getNeighborhoodWeighting();
 
@@ -76,7 +78,7 @@ private:
 
     /*! Calculate Texture histograms
      * For each dimension compute a 1D histogram of the neighborhood values for pointID.
-     * Sets _histogramFeatures.
+     * Sets _outFeatures.
      * 
      * \param pointInd
      * \param neighborValues
@@ -85,14 +87,22 @@ private:
 
     /*! Calculate Local Indicator of Spatial Association features for each item
      * Compute Local Moran's I of the neighborhood values for pointID. 
-     * Sets _LISAFeature member var.
-     * 
+     * Sets _outFeatures.
+     * See doi:10.1111/j.1538-4632.1995.tb00338.x
      * \param pointInd
      * \param neighborValues
     */ 
     void calculateLISA(size_t pointInd, std::vector<float> neighborValues);
 
-
+    /*! Calculate Geary's C features for each item
+     * Compute Geary's C of the neighborhood values for pointID.
+     * Sets _outFeatures.
+     * See doi:10.1111/j.1538-4632.1995.tb00338.x
+     * \param pointInd
+     * \param neighborValues
+    */
+    void calculateGearysC(size_t pointInd, std::vector<float> neighborValues);
+    
 private:
 
     /*!
@@ -102,6 +112,9 @@ private:
      */
     void weightNeighborhood(loc_Neigh_Weighting weighting);
 
+    void(FeatureExtraction::*featFunct)(size_t, std::vector<float>);
+
+    bool _stopFeatureComputation;                   /*!< Stops the computation (breaks the openmp parallel loop) */
 
     // Options 
     feature_type _featType;                         /*!< Type of feature to extract */

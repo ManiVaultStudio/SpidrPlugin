@@ -32,7 +32,7 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
 }
 
 void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins,\
-                                               const int aknnAlgInd, const int aknnMetInd, \
+                                               const int aknnAlgInd, const int aknnMetric, \
                                                const int numIterations, const int perplexity, const int exaggeration) {
     // initialize Feature Extraction Settings
     setFeatureType(featType);
@@ -42,7 +42,7 @@ void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int ker
 
     // initialize Distance Calculation Settings
     setKnnAlgorithm(aknnAlgInd);
-    setDistanceMetric(aknnMetInd);
+    setDistanceMetric(aknnMetric);
     // number of nn is dertermined by perplexity, set in setPerplexity
 
     // Initialize the tSNE computation
@@ -120,6 +120,7 @@ const std::vector<float>& SpidrAnalysis::output() {
 }
 
 void SpidrAnalysis::stopComputation() {
+    _featExtraction.stopFeatureCopmutation();
     _tsne.stopGradientDescent();
 }
 

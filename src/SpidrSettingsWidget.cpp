@@ -10,6 +10,8 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QVariant>
+#include <QPoint>
 #include <QMessageBox>
 #include <QScrollArea>
 #include <QVBoxLayout>
@@ -26,13 +28,15 @@ _analysisPlugin(analysisPlugin)
     knnOptions.addItem("HNSW");
 
     // add options in the order as defined in enums in utils files
-    // when adding more adapt SpiderPlugin::initializeAnalysisSettings
-    distanceMetric.addItem("Quadratic form (TH)");
-    distanceMetric.addItem("Earth Mover (TH)"); 
+    // data values (QPoint) store feature_type (FeatureUtils) and knn_distance_metric (KNNUtils) values as x and y 
+    // this is used as a nice way to cast this information internally in SpidrAnalysis
+    distanceMetric.addItem("Quadratic form (TH)", QVariant(QPoint(0, 0)));
+    distanceMetric.addItem("Earth Mover (TH)", QVariant(QPoint(0, 1)));
     dynamic_cast<QStandardItemModel *>(distanceMetric.model())->item(1)->setEnabled(false);
-    distanceMetric.addItem("Hellinger (TH)");
-    distanceMetric.addItem("Euclidean (LISA)");
-    distanceMetric.setToolTip("TH: Texture Histogram \nLISA: Local Indicator of Spatial Association");
+    distanceMetric.addItem("Hellinger (TH)", QVariant(QPoint(0, 2)));
+    distanceMetric.addItem("Euclidean (LISA)", QVariant(QPoint(1, 3)));
+    distanceMetric.addItem("Euclidean (GC)", QVariant(QPoint(2, 3)));
+    distanceMetric.setToolTip("TH: Texture Histogram \nLISA: Local Indicator of Spatial Association\n GC: local Geary's C");
 
     kernelWeight.addItem("Uniform");
     kernelWeight.addItem("Binomial");

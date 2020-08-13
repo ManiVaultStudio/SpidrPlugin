@@ -71,17 +71,17 @@ void DistanceCalculation::computekNN() {
         hnswlib::SpaceInterface<float> *space = NULL;
         if (_knn_metric == knn_distance_metric::KNN_METRIC_QF)
         {
-            qDebug() << "Distance calculation: QFSpace for metric definition";
+            qDebug() << "Distance calculation: QFSpace as vector feature";
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_HEL)
         {
-            qDebug() << "Distance calculation: HellingerSpace for metric definition";
+            qDebug() << "Distance calculation: HellingerSpace as vector feature metric";
             space = new hnswlib::HellingerSpace(_numDims, _numHistBins);
         }
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_EUC)
         {
-            qDebug() << "Distance calculation: EuclidenSpace for metric definition";
+            qDebug() << "Distance calculation: EuclidenSpace as scalar feature metric";
             space = new hnswlib::L2Space(_numDims);
         }
         else

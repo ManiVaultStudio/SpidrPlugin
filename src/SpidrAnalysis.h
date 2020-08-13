@@ -9,6 +9,7 @@
 
 #include <QThread>
 #include <QSize>
+#include <QVariant>
 
 #include <vector>
 
@@ -65,7 +66,7 @@ public:
      * \param exaggeration
      */
     void initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins, \
-                                    const int aknnAlgInd, const int aknnMetInd, \
+                                    const int aknnAlgInd, const int aknnMetric, \
                                     const int numIterations, const int perplexity, const int exaggeration);
 
     // Getter
