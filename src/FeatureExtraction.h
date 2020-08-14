@@ -96,8 +96,14 @@ private:
     */
     void calculateGearysC(size_t pointInd, std::vector<float> neighborValues);
 
-    /*!
-     * 
+    /*! Sets the Feature per element to all its neighbors
+     * The neighborhood is a square and centered around each item respectively
+     * Padding is done by setting out-of-boundary values to 0
+     * \param weighting
+     */
+    void calculateAllNeighborhoods(size_t pointInd, std::vector<float> neighborValues);
+
+    /*! Inits the neighborhood weighting
      * 
      * \param weighting
      */

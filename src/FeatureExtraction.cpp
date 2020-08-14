@@ -8,7 +8,7 @@
 
 #include <QDebug>       // qDebug
 #include <iterator>     // std::advance
-#include <algorithm>    // std::fill, std::find
+#include <algorithm>    // std::fill, std::find, std::swap_ranges
 #include <execution>    // std::execution::par_unseq
 #include <vector>       // std::vector, std::begin, std::end
 #include <array>        // std::array
@@ -109,6 +109,8 @@ void FeatureExtraction::initExtraction() {
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
         _outFeatures.resize(_numPoints * _numDims);
     }
+    else if (_featType == feature_type::PCOL)
+        _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
 
     // this is basically for easier debugging to see if all features are assigned a valid value
     // (currently only positive feature values are valid)
@@ -125,6 +127,8 @@ void FeatureExtraction::extractFeatures() {
         featFunct = &FeatureExtraction::calculateLISA;
     else if (_featType == feature_type::GEARYC)
         featFunct = &FeatureExtraction::calculateGearysC;
+    else if (_featType == feature_type::PCOL)
+        featFunct = &FeatureExtraction::calculateAllNeighborhoods;
     else
         qDebug() << "Feature extraction: unknown feature Type";
 
@@ -144,6 +148,7 @@ void FeatureExtraction::extractFeatures() {
 }
 
 void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_outFeatures.size() == _numPoints * _numDims * _numHistBins);
     assert(_minMaxVals.size() == 2*_numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
@@ -172,6 +177,7 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
 }
 
 void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_outFeatures.size() == _numPoints * _numDims);
     assert(_varVals.size() == _numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
@@ -186,6 +192,7 @@ void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighb
 }
 
 void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_outFeatures.size() == _numPoints * _numDims);
     assert(_meanVals.size() == _numDims);
     assert(_varVals.size() == _numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
@@ -199,6 +206,13 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
         }
         _outFeatures[pointInd * _numDims + dim] = diff_from_neigh_sum / _varVals[dim];
     }
+}
+
+void FeatureExtraction::calculateAllNeighborhoods(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_outFeatures.size() == _numPoints * _numDims * _neighborhoodSize);
+
+    // copy neighborValues into _outFeatures
+    std::swap_ranges(neighborValues.begin(), neighborValues.end(), _outFeatures.begin() + (pointInd * _numDims * _neighborhoodSize));
 }
 
 void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
