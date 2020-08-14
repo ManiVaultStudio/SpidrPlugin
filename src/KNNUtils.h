@@ -7,8 +7,6 @@
 #define PORTABLE_ALIGN32hnsw __declspec(align(32))
 #endif
 
-// #include "FeatureUtils.h"
-
 #include <QDebug>
 
 #include <cmath>     // std::sqrt, exp
@@ -34,6 +32,7 @@ enum class knn_distance_metric : size_t
     KNN_METRIC_EMD = 1,     /*!< Earth mover distance*/
     KNN_METRIC_HEL = 2,     /*!< Hellinger distance */
     KNN_METRIC_EUC = 3,     /*!< Euclidean distance - not suitable for histogram features */
+    KNN_METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
 };
 
 /*!
@@ -332,7 +331,6 @@ namespace hnswlib {
 
         DISTFUNC<float> fstdistfunc_;
         size_t data_size_;
-        size_t dim_;
 
         space_params_Hel params_;
 
@@ -358,6 +356,91 @@ namespace hnswlib {
         }
 
         ~HellingerSpace() {}
+    };
+
+
+
+    // ---------------
+    //    Point collection distance
+    // ---------------
+
+    // data struct for distance calculation in PointCollectionSpace
+    struct space_params_Col {
+        size_t dim;
+        size_t neighborhoodSize;
+        DISTFUNC<float> L2distfunc_;
+    };
+
+    static float
+        ColDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float *pVect1 = (float *)pVect1v;   // points to data item
+        float *pVect2 = (float *)pVect2v;   // points to data item
+
+        const space_params_Col* sparam = (space_params_Col*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t neighborhoodSize = sparam->neighborhoodSize;
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        float res = 0;
+        float minDist = 0;
+        float tmpDist = 0;
+
+        // Euclidean dist between all neighbor pairs
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2
+        // Sum over all the min dists
+        for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+            minDist = FLT_MAX;
+            for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
+                tmpDist = L2distfunc_( (pVect1 +(n1*ndim)), (pVect2 + (n2*ndim)), &ndim);
+
+                if (tmpDist < minDist)
+                    minDist = tmpDist;
+            }
+            res += minDist;
+        }
+
+        return (res);
+    }
+
+    class PointCollectionSpace : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+
+        space_params_Col params_;
+
+    public:
+        PointCollectionSpace(size_t dim, size_t neighborhoodSize) {
+            fstdistfunc_ = ColDist;
+            data_size_ = dim * sizeof(float);
+
+            params_ = { dim, neighborhoodSize, L2Sqr };
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                params_.L2distfunc_ = L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                params_.L2distfunc_ = L2SqrSIMD4Ext;
+            else if (dim > 16)
+                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return &params_;
+        }
+
+        ~PointCollectionSpace() {}
     };
 
 }

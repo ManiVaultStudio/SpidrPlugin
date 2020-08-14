@@ -27,6 +27,7 @@ void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameter
     _knn_lib = params._aknn_algorithm;
     _knn_metric = params._aknn_metric;
     _nn = params._nn;
+    _neighborhoodSize = (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1); // square neighborhood with _numLocNeighbors to each side from the center
 
     // Data
     // Input
@@ -46,9 +47,13 @@ void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameter
         assert(_dataFeatures->size() == (_numPoints * _numDims * _numHistBins));
         qDebug() << "Distance calculation: Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
     }
-    else if (_featureType == feature_type::LISA) {
+    else if ((_featureType == feature_type::LISA) | (_featureType == feature_type::GEARYC)) {
         assert(_dataFeatures->size() == (_numPoints * _numDims));
         qDebug() << "Distance calculation: Feature values per point: " << _numDims << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    }
+    else if (_featureType == feature_type::PCOL) {
+        assert(_dataFeatures->size() == (_numPoints * _numDims * _neighborhoodSize));
+        qDebug() << "Distance calculation: Feature values per point: " << _numDims * _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
     }
 
 }
@@ -83,6 +88,11 @@ void DistanceCalculation::computekNN() {
         {
             qDebug() << "Distance calculation: EuclidenSpace as scalar feature metric";
             space = new hnswlib::L2Space(_numDims);
+        }
+        else if (_knn_metric == knn_distance_metric::KNN_METRIC_PCOL)
+        {
+            qDebug() << "Distance calculation: EuclidenSpace as scalar feature metric";
+            space = new hnswlib::PointCollectionSpace(_numDims, _neighborhoodSize);
         }
         else
         {

@@ -77,6 +77,8 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
         qDebug() << "Feature extraction: LISA";
     else if (_featType == feature_type::GEARYC)
         qDebug() << "Feature extraction: local Geary's C";
+    else if (_featType == feature_type::PCOL)
+        qDebug() << "Feature extraction: Collection of points (neighborhood)";
     else
         qDebug() << "Feature extraction: unknown feature type";
 }

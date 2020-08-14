@@ -61,13 +61,14 @@ private:
     knn_library _knn_lib;                           /*!<> */
     knn_distance_metric _knn_metric;                /*!<> */
     unsigned int _nn;                               /*!<> */
+    size_t _neighborhoodSize;                       /*!< might be used for some distance metrics */
 
     // Data
     // Input
     size_t _numDims;                                /*!<> */
     size_t _numPoints;                              /*!<> */
     size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
-    const std::vector<float>* _dataFeatures;   /*!<> */
+    const std::vector<float>* _dataFeatures;        /*!<> */
 
     // Output
     std::vector<int> _indices;                      /*!<> */

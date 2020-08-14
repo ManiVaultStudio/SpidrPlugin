@@ -36,7 +36,8 @@ _analysisPlugin(analysisPlugin)
     distanceMetric.addItem("Hellinger (TH)", QVariant(QPoint(0, 2)));
     distanceMetric.addItem("Euclidean (LISA)", QVariant(QPoint(1, 3)));
     distanceMetric.addItem("Euclidean (GC)", QVariant(QPoint(2, 3)));
-    distanceMetric.setToolTip("TH: Texture Histogram \nLISA: Local Indicator of Spatial Association\n GC: local Geary's C");
+    distanceMetric.addItem("Euclidean (PCD)", QVariant(QPoint(3, 4)));
+    distanceMetric.setToolTip("TH: Texture Histogram \nLISA: Local Indicator of Spatial Association\n GC: local Geary's C\n CD: Point Collection Distance");
 
     kernelWeight.addItem("Uniform");
     kernelWeight.addItem("Binomial");
@@ -274,13 +275,27 @@ void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
 }
 
 void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
-    if (value >= 3) {
+    
+    if (value >= 5) {   // not available for PCD
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
+
+        kernelWeight.setEnabled(false);
+        kernelSize.setEnabled(false);
+    }
+    else if (value >= 3) {   // not available for LISA and GC
+        histBinSizeHeur.setEnabled(false);
+        histBinSize.setEnabled(false);
+
+        kernelWeight.setEnabled(true);
+        kernelSize.setEnabled(true);
     }
     else {
         histBinSizeHeur.setEnabled(true);
         histBinSize.setEnabled(true);
+
+        kernelWeight.setEnabled(true);
+        kernelSize.setEnabled(true);
     }
 }
 
