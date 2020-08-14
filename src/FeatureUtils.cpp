@@ -116,3 +116,52 @@ unsigned int RiceBinSize(unsigned int numItems) {
     return int(2 * std::ceil(std::pow(numItems, 1.0/3)));
 }
 
+std::vector<int> neighborhoodIndices(const unsigned int pointInd, const size_t locNeighbors, const QSize imgSize, const std::vector<unsigned int>& pointIds) {
+    size_t kernelWidth = (2 * locNeighbors) + 1;
+    size_t neighborhoodSize = kernelWidth * kernelWidth;
+    std::vector<int> neighborsIDs(neighborhoodSize, -1);
+    int imWidth = imgSize.width();
+    int rowID = int(pointInd / imWidth);
+
+    // left and right neighbors
+    std::vector<int> lrNeighIDs(kernelWidth, 0);
+    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - locNeighbors);
+
+    // are left and right out of the picture?
+    for (int& n : lrNeighIDs) {
+        if (n < rowID * imWidth)
+            n = -1;
+        else if (n >= (rowID + 1) * imWidth)
+            n = -1;
+    }
+
+    // above and below neighbors
+    unsigned int localNeighCount = 0;
+    for (int i = -1 * locNeighbors; i <= (int)locNeighbors; i++) {
+        for (int ID : lrNeighIDs) {
+            neighborsIDs[localNeighCount] = (ID != -1) ? ID + i * imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
+            localNeighCount++;
+        }
+    }
+
+    // Check if neighborhood IDs are in selected points
+    for (int& ID : neighborsIDs) {
+        // if neighbor is not in neighborhood, assign -1
+        if (std::find(pointIds.begin(), pointIds.end(), ID) == pointIds.end()) {
+            ID = -1;
+        }
+    }
+
+    return neighborsIDs;
+}
+
+std::vector<float> getNeighborhoodValues(const std::vector<int>& neighborIDs, const std::vector<float>& attribute_data, const size_t neighborhoodSize, const size_t numDims) {
+    std::vector<float> neighborValues;
+    neighborValues.resize(neighborhoodSize * numDims);
+    for (unsigned int neighbor = 0; neighbor < neighborhoodSize; neighbor++) {
+        for (unsigned int dim = 0; dim < numDims; dim++) {
+            neighborValues[neighbor * numDims + dim] = (neighborIDs[neighbor] != -1) ? attribute_data[neighborIDs[neighbor] * numDims + dim] : 0;
+        }
+    }
+    return neighborValues;
+}

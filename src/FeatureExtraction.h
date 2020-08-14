@@ -53,6 +53,7 @@ private:
 
     /**
     * Calculates histgram features
+    * basically calls initExtraction and extractFeatures
     */
     void computeHistogramFeatures();
 
@@ -67,14 +68,6 @@ private:
      * Sets the output variables.
      */
     void extractFeatures();
-
-    /*!
-     * 
-     * 
-     * \param pointInd
-     * \return 
-     */
-    std::vector<int> neighborhoodIndices(size_t pointInd);
 
     /*! Calculate Texture histograms
      * For each dimension compute a 1D histogram of the neighborhood values for pointID.
@@ -102,8 +95,6 @@ private:
      * \param neighborValues
     */
     void calculateGearysC(size_t pointInd, std::vector<float> neighborValues);
-    
-private:
 
     /*!
      * 
@@ -112,9 +103,13 @@ private:
      */
     void weightNeighborhood(loc_Neigh_Weighting weighting);
 
+    /*! Pointer to function that computer features
+     * E.g. calculateHistogram or calculateLISA. 
+     * It set in extractFeatures().
+     */
     void(FeatureExtraction::*featFunct)(size_t, std::vector<float>);
 
-    bool _stopFeatureComputation;                   /*!< Stops the computation (breaks the openmp parallel loop) */
+    bool _stopFeatureComputation;                   /*!< Stops the computation (TODO: breaks the openmp parallel loop) */
 
     // Options 
     feature_type _featType;                         /*!< Type of feature to extract */

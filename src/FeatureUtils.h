@@ -119,6 +119,28 @@ unsigned int SturgesBinSize(unsigned int numItems);
  */
 unsigned int RiceBinSize(unsigned int numItems);
 
+/*! Get neighborhood point ids for one data item
+ * For now, expect a rectangle selection (lasso selection might cause edge cases that were not thought of)
+ * Padding: assign -1 to points outside the selection. Later assign 0 vector to all of them.
+ * \param pointInd
+ * \param locNeighbors
+ * \param imgSize
+ * \param pointIds
+ * \return 
+ */
+std::vector<int> neighborhoodIndices(const unsigned int pointInd, const size_t locNeighbors, const QSize imgSize, const std::vector<unsigned int>& pointIds);
+
+/*! Get data for all neighborhood point ids
+ * Padding: if neighbor is outside selection, assign 0 to all dimension values
+ * 
+ * \param neighborIDs
+ * \param _attribute_data
+ * \param _neighborhoodSize
+ * \param _numDims
+ * \return 
+ */
+std::vector<float> getNeighborhoodValues(const std::vector<int>& neighborIDs, const std::vector<float>& attribute_data, const size_t neighborhoodSize, const size_t numDims);
+
 /*! Calculate the minimum and maximum value for each channel
  *
  * \param numPoints

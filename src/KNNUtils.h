@@ -7,6 +7,8 @@
 #define PORTABLE_ALIGN32hnsw __declspec(align(32))
 #endif
 
+// #include "FeatureUtils.h"
+
 #include <QDebug>
 
 #include <cmath>     // std::sqrt, exp

@@ -118,80 +118,29 @@ void FeatureExtraction::initExtraction() {
 void FeatureExtraction::extractFeatures() {
     qDebug() << "Feature extraction: extract features";
 
+    // select feature extraction methood
+    if (_featType == feature_type::TEXTURE_HIST_1D)
+        featFunct = &FeatureExtraction::calculateHistogram;  // will be called as calculateHistogram(_pointIds[pointID], neighborValues);
+    else if (_featType == feature_type::LISA)
+        featFunct = &FeatureExtraction::calculateLISA;
+    else if (_featType == feature_type::GEARYC)
+        featFunct = &FeatureExtraction::calculateGearysC;
+    else
+        qDebug() << "Feature extraction: unknown feature Type";
+
     // convolve over all selected data points
     #pragma omp parallel for
     for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
         // get neighborhood ids of the current point
-        std::vector<int> neighborIDs = neighborhoodIndices(_pointIds[pointID]);
-
+        std::vector<int> neighborIDs = neighborhoodIndices(_pointIds[pointID], _locNeighbors, _imgSize, _pointIds);
         assert(neighborIDs.size() == _neighborhoodSize);
 
-        // get data for all neighborhood point ids
-        // Padding: if neighbor is outside selection, assign 0 to all dimension values
-        std::vector<float> neighborValues;
-        neighborValues.resize(_neighborhoodSize * _numDims);
-        for (unsigned int neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
-            for (unsigned int dim = 0; dim < _numDims; dim++) {
-                neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data[neighborIDs[neighbor] * _numDims + dim] : 0;
-            }
-        }
+        // get neighborhood values of the current point
+        std::vector<float> neighborValues = getNeighborhoodValues(neighborIDs, _attribute_data, _neighborhoodSize, _numDims);
 
-        // calculate feature for neighborhood
-        if (_featType == feature_type::TEXTURE_HIST_1D) {
-            // calculate histograms
-            calculateHistogram(_pointIds[pointID], neighborValues);
-        }
-        else if (_featType == feature_type::LISA) {
-            // calculate local indicator of spatial association
-            calculateLISA(_pointIds[pointID], neighborValues);
-        }
-        else if (_featType == feature_type::GEARYC) {
-            // calculate local Geary's C
-            calculateGearysC(_pointIds[pointID], neighborValues);
-        }
-        else
-            qDebug() << "Feature extraction: unknown feature Type";
-        
+        // calculate feature(s) for neighborhood
+        (this->*featFunct)(_pointIds[pointID], neighborValues);  // function pointer defined above
     }
-}
-
-// For now, expect a rectangle selection (lasso selection might cause edge cases that were not thought of)
-// Padding: assign -1 to points outside the selection. Later assign 0 vector to all of them.
-std::vector<int> FeatureExtraction::neighborhoodIndices(size_t pointInd) {
-    std::vector<int> neighborsIDs(_neighborhoodSize, -1);
-    int imWidth = _imgSize.width();
-    int rowID = int(pointInd / imWidth);
-
-    // left and right neighbors
-    std::vector<int> lrNeighIDs(2 * _locNeighbors + 1, 0);
-    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - _locNeighbors);
-
-    // are left and right out of the picture?
-    for (int& n : lrNeighIDs) {
-        if (n < rowID * imWidth)
-            n = -1;
-        else if (n >= (rowID + 1) * imWidth)
-            n = -1;
-    }
-
-    // above and below neighbors
-    unsigned int localNeighCount = 0;
-    for (int i = -1 * _locNeighbors; i <= (int)_locNeighbors; i++) {
-        for (int ID : lrNeighIDs) {
-            neighborsIDs[localNeighCount] = (ID != -1) ? ID + i * _imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
-            localNeighCount++;
-        }
-    }
-
-    // Check if neighborhood IDs are in selected points
-    for (int& ID : neighborsIDs) {
-        // if neighbor is not in neighborhood, assign -1
-        if (std::find(_pointIds.begin(), _pointIds.end(), ID) == _pointIds.end()) {
-            ID = -1;
-        }
-    }
-
-    return neighborsIDs;
 }
 
 void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> neighborValues) {
