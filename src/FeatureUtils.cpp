@@ -5,7 +5,7 @@ template<typename T>
 std::vector<float> NormVector(std::vector<T> vec, float normVal) {
     std::vector<float> normedVec(vec.size(), 0);
     for (unsigned int i = 0; i < vec.size(); i++) {
-        normedVec.at(i) = vec.at(i) / normVal;
+        normedVec[i] = vec[i] / normVal;
     }
     return normedVec;
 }
@@ -15,7 +15,7 @@ std::vector<unsigned int> PascalsTriangleRow(const unsigned int n) {
     unsigned int entry = 1;
     for (unsigned int i = 1; i < n + 1; i++) {
         entry = (unsigned int)(entry * (n + 1 - i) / i);
-        row.at(i) = entry;
+        row[i] = entry;
     }
     return row;
 }
@@ -35,12 +35,12 @@ std::vector<float> BinomialKernel2D(const unsigned int width, norm_vec norm) {
     // outter product
     for (unsigned int row = 0; row < width; row++) {
         for (unsigned int col = 0; col < width; col++) {
-            bino2D.at(row*width + col) = bino1D.at(row) * bino1D.at(col);
+            bino2D[row*width + col] = bino1D[row] * bino1D[col];
 
             // helper for normalization
-            sum += +bino2D.at(row*width + col);
-            if (bino2D.at(row*width + col) > (float)max)
-                max = bino2D.at(row*width + col);
+            sum += +bino2D[row*width + col];
+            if (bino2D[row*width + col] > (float)max)
+                max = bino2D[row*width + col];
         }
     }
 
@@ -62,7 +62,7 @@ std::vector<float> GaussianKernel1D(const unsigned int width, const float sd) {
     std::vector<float> kernel(width, 0);
     int coutner = 0;
     for (int i = (-1 * ((int)width - 1) / 2); i <= ((int)width - 1) / 2; i++) {
-        kernel.at(coutner) = std::exp(-1 * (i*i) / (2 * sd * sd));
+        kernel[coutner] = std::exp(-1 * (i*i) / (2 * sd * sd));
         coutner++;
     }
     return kernel;
@@ -86,12 +86,12 @@ std::vector<float> GaussianKernel2D(const unsigned int width, const float sd, no
     // outter product
     for (unsigned int row = 0; row < width; row++) {
         for (unsigned int col = 0; col < width; col++) {
-            gauss2D.at(row*width + col) = gauss1D.at(row) *  gauss1D.at(col);
+            gauss2D[row*width + col] = gauss1D[row] *  gauss1D[col];
 
             // helper for normalization
-            sum += +gauss2D.at(row*width + col);
-            if (gauss2D.at(row*width + col) > (float)max)
-                max = gauss2D.at(row*width + col);
+            sum += +gauss2D[row*width + col];
+            if (gauss2D[row*width + col] > (float)max)
+                max = gauss2D[row*width + col];
         }
     }
 
