@@ -359,7 +359,6 @@ namespace hnswlib {
     };
 
 
-
     // ---------------
     //    Point collection distance
     // ---------------
@@ -367,7 +366,7 @@ namespace hnswlib {
     // data struct for distance calculation in PointCollectionSpace
     struct space_params_Col {
         size_t dim;
-        size_t neighborhoodSize;
+        size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
         DISTFUNC<float> L2distfunc_;
     };
 
@@ -398,7 +397,6 @@ namespace hnswlib {
             }
             res += minDist;
         }
-
         return (res);
     }
 

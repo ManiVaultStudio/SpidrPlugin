@@ -53,7 +53,6 @@ _analysisPlugin(analysisPlugin)
     
     connect(&distanceMetric, SIGNAL(currentIndexChanged(int)), this, SLOT(onDistanceMetricPicked(int)));
 
-    connect(&kernelSize, SIGNAL(textChanged(QString)), SLOT(kernelSizeChanged(QString)));
     connect(&kernelSize, SIGNAL(textChanged(QString)), this, SLOT(onHistBinSizeChanged(QString)));
     connect(&histBinSize, SIGNAL(textChanged(QString)), SLOT(histBinSizeChanged(QString)));
     connect(&histBinSizeHeur, SIGNAL(currentIndexChanged(int)), this, SLOT(onHistBinSizeHeurPicked(int)));
@@ -106,8 +105,8 @@ _analysisPlugin(analysisPlugin)
     expDecay.setValidator(new QIntValidator(1, 10000, this));
     numTrees.setValidator(new QIntValidator(1, 10000, this));
     numChecks.setValidator(new QIntValidator(1, 10000, this));
-    kernelSize.setValidator(new QIntValidator(1, 10000, this));
-    histBinSize.setValidator(new QIntValidator(1, 10000, this));
+    kernelSize.setRange(1, 10000);
+    histBinSize.setRange(1, 10000);
 
     numIterations.setText("1000");
     perplexity.setText("30");
@@ -115,8 +114,8 @@ _analysisPlugin(analysisPlugin)
     expDecay.setText("70");
     numTrees.setText("4");
     numChecks.setText("1024");
-    kernelSize.setText("1");
-    histBinSize.setText("5");
+    kernelSize.setValue(1);
+    histBinSize.setValue(5);
 
     startButton.setText("Start Computation");
     startButton.setFixedSize(QSize(150, 50));
@@ -267,7 +266,7 @@ void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
         default:
             break;
         }
-        histBinSize.setText(QString::number(binNum));
+        histBinSize.setValue(binNum);
         histBinSize.setReadOnly(true);
 
     }
@@ -281,21 +280,18 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
         histBinSize.setEnabled(false);
 
         kernelWeight.setEnabled(false);
-        kernelSize.setEnabled(false);
     }
     else if (value >= 3) {   // not available for LISA and GC
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
 
         kernelWeight.setEnabled(true);
-        kernelSize.setEnabled(true);
     }
     else {
         histBinSizeHeur.setEnabled(true);
         histBinSize.setEnabled(true);
 
         kernelWeight.setEnabled(true);
-        kernelSize.setEnabled(true);
     }
 }
 
@@ -309,9 +305,9 @@ void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
         int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
         switch (value)
         {
-        case 1: histBinSize.setText(QString::number(SqrtBinSize(numLocNeighbors))); break;
-        case 2: histBinSize.setText(QString::number(SturgesBinSize(numLocNeighbors))); break;
-        case 3: histBinSize.setText(QString::number(RiceBinSize(numLocNeighbors))); break;
+        case 1: histBinSize.setValue(SqrtBinSize(numLocNeighbors)); break;
+        case 2: histBinSize.setValue(SturgesBinSize(numLocNeighbors)); break;
+        case 3: histBinSize.setValue(RiceBinSize(numLocNeighbors)); break;
         default:
             break;
         }
@@ -320,16 +316,6 @@ void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
 
 }
 
-
-void SpidrSettingsWidget::kernelSizeChanged(const QString &)
-{
-    checkInputStyle(kernelSize);
-}
-
-void SpidrSettingsWidget::histBinSizeChanged(const QString &)
-{
-    checkInputStyle(histBinSize);
-}
 
 void SpidrSettingsWidget::numIterationsChanged(const QString &)
 {

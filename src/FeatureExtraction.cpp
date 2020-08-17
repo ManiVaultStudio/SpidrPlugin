@@ -16,6 +16,10 @@
 #include <utility>      // std::forward
 #include <chrono>       // std::chrono
 
+// for debugging
+#include <algorithm> // for copy
+#include <iterator> // for ostream_iterator
+
 // Boost might be more useful for higher dimensional histograms
 // but it's convinient for now
 #include <boost/histogram.hpp>
@@ -135,7 +139,7 @@ void FeatureExtraction::extractFeatures() {
         qDebug() << "Feature extraction: unknown feature Type";
 
     // convolve over all selected data points
-    #pragma omp parallel for
+//    #pragma omp parallel for
     for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
         // get neighborhood ids of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds[pointID], _locNeighbors, _imgSize, _pointIds);

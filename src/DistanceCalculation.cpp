@@ -104,20 +104,27 @@ void DistanceCalculation::computekNN() {
 
         hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default HNSW values for M, ef_construction random_seed
 
-        // add data points: each data point holds _numDims*_numHistBins values
-        //appr_alg.addPoint((void*)_histogramFeatures->data(), (std::size_t) 0);
-//#pragma omp parallel for
-        //for (int i = 1; i < _numPoints; ++i)
-        //{
-        //    appr_alg.addPoint((void*)(_histogramFeatures->data() + (i*_numDims*_numHistBins)), (hnswlib::labeltype) i);
-        //}
-
         int num_threads = std::thread::hardware_concurrency();
 
         auto start = std::chrono::steady_clock::now();
 
         // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
-        size_t indMultiplier = (_featureType == feature_type::TEXTURE_HIST_1D) ? (_numDims * _numHistBins) : _numDims;
+        size_t indMultiplier = 0;
+        switch (_featureType) {
+        case feature_type::TEXTURE_HIST_1D: indMultiplier = _numDims * _numHistBins; break;
+        case feature_type::LISA:            // same as Geary's C
+        case feature_type::GEARYC:          indMultiplier = _numDims; break;
+        case feature_type::PCOL:            indMultiplier = _numDims * _neighborhoodSize; break;
+        }
+        
+        // add data points: each data point holds _numDims*_numHistBins values
+        appr_alg.addPoint((void*)_dataFeatures->data(), (std::size_t) 0);
+
+        // This loop is for debugging, when you want to sequentially add points
+        //for (int i = 1; i < _numPoints; ++i)
+        //{
+        //    appr_alg.addPoint((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
+        //}
 
         hnswlib::ParallelFor(0, _numPoints, num_threads, [&](size_t i, size_t threadId) {
             appr_alg.addPoint((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
