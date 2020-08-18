@@ -18,6 +18,7 @@ endif(MSVC)
 find_package(Qt5 COMPONENTS Widgets WebEngineWidgets REQUIRED)
 # use header-only libs, thus no components specified
 find_package(Boost REQUIRED) 
+find_package(Eigen3 3.3 REQUIRED)
 
 set(PLUGIN
     src/SpidrPlugin.h
@@ -100,6 +101,7 @@ endif()
 
 
 target_link_libraries(${PROJECT} ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT} Eigen3::Eigen)
 target_link_libraries(${PROJECT} Qt5::Widgets)
 target_link_libraries(${PROJECT} Qt5::WebEngineWidgets)
 target_link_libraries(${PROJECT} "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")

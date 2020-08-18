@@ -275,17 +275,27 @@ void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
 
 void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
     
-    if (value >= 5) {   // not available for PCD
+    // if the metric works on vector features
+    // provide options for the vector size
+    // also, check if neighborhood weighting is 
+    // available for the specific feature
+    if (value >= 5) {   
+        // PCD
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
 
         kernelWeight.setEnabled(false);
     }
-    else if (value >= 3) {   // not available for LISA and GC
+    else if (value >= 3) {   
+        // also LISA and GC
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
 
         kernelWeight.setEnabled(true);
+    }
+    else if (value == 2) {
+        // only EMD (as is implemented)
+        kernelWeight.setEnabled(false);
     }
     else {
         histBinSizeHeur.setEnabled(true);
@@ -293,6 +303,9 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
 
         kernelWeight.setEnabled(true);
     }
+
+
+
 }
 
 void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
