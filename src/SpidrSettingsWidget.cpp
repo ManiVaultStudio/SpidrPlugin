@@ -32,7 +32,7 @@ _analysisPlugin(analysisPlugin)
     // this is used as a nice way to cast this information internally in SpidrAnalysis
     distanceMetric.addItem("Quadratic form (TH)", QVariant(QPoint(0, 0)));
     distanceMetric.addItem("Earth Mover (TH)", QVariant(QPoint(0, 1)));
-    dynamic_cast<QStandardItemModel *>(distanceMetric.model())->item(1)->setEnabled(false);
+    //dynamic_cast<QStandardItemModel *>(distanceMetric.model())->item(1)->setEnabled(false);
     distanceMetric.addItem("Hellinger (TH)", QVariant(QPoint(0, 2)));
     distanceMetric.addItem("Euclidean (LISA)", QVariant(QPoint(1, 3)));
     distanceMetric.addItem("Euclidean (GC)", QVariant(QPoint(2, 3)));
@@ -293,7 +293,7 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
 
         kernelWeight.setEnabled(true);
     }
-    else if (value == 2) {
+    else if (value == 1) {
         // only EMD (as is implemented)
         kernelWeight.setEnabled(false);
     }
@@ -303,9 +303,6 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
 
         kernelWeight.setEnabled(true);
     }
-
-
-
 }
 
 void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {

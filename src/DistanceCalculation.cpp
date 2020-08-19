@@ -79,6 +79,11 @@ void DistanceCalculation::computekNN() {
             qDebug() << "Distance calculation: QFSpace as vector feature";
             space = new hnswlib::QFSpace(_numDims, _numHistBins);
         }
+        else if (_knn_metric == knn_distance_metric::KNN_METRIC_EMD)
+        {
+            qDebug() << "Distance calculation: EMDSpace as vector feature";
+            space = new hnswlib::EMDSpace(_numDims, _numHistBins);
+        }
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_HEL)
         {
             qDebug() << "Distance calculation: HellingerSpace as vector feature metric";
@@ -129,7 +134,6 @@ void DistanceCalculation::computekNN() {
         hnswlib::ParallelFor(0, _numPoints, num_threads, [&](size_t i, size_t threadId) {
             appr_alg.addPoint((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
         });
-        //appr_alg.checkIntegrity();
 
         auto end = std::chrono::steady_clock::now();
         qDebug() << "Distance calculation: Build duration (sec): " << ((float) std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;

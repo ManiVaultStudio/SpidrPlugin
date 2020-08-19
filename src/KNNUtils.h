@@ -9,6 +9,8 @@
 
 #include <QDebug>
 
+#include <omp.h>
+
 #include <cmath>     // std::sqrt, exp
 #include <vector>
 #include <thread>
@@ -136,6 +138,7 @@ namespace hnswlib {
         float res = 0;
         // add the histogram distance for each dimension
         for (size_t d = 0; d < ndim; d++) {
+            // QF distance = sum_ij ( a_ij * (x_i-y_i) * (x_j-y_j) )
             for (size_t i = 0; i < nbin; i++) {
                 float t1 = *(pVect1 + i) - *(pVect2 + i);
                 for (size_t j = 0; j < nbin; j++) {
@@ -458,51 +461,57 @@ namespace hnswlib {
     };
 
     static float
-        EMD(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        EMD_sinkhorn(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
         float* pVect1 = (float*)pVect1v;
         float* pVect2 = (float*)pVect2v;
 
-        const space_params_EMD* sparam = (space_params_EMD*)qty_ptr;
+        space_params_EMD* sparam = (space_params_EMD*)qty_ptr;      // no const because of pWeight
         const size_t ndim = sparam->dim;
         const size_t nbin = sparam->bin;
         const float eps = sparam->eps;
         const float gamma = sparam->gamma;
-        const float* pWeight = sparam->A.data();
+        float* pWeight = sparam->A.data();                          // no const because of Eigen::Map
 
         float res = 0;
-
-        Eigen::VectorXf a = Eigen::Map<Eigen::VectorXf>(pVect1, nbin);
-        Eigen::VectorXf b = Eigen::Map<Eigen::VectorXf>(pVect2, nbin);
-
-        Eigen::VectorXf u = Eigen::VectorXf::Ones(a.size());
-        Eigen::VectorXf v = Eigen::VectorXf::Ones(b.size());
-
-        // for comparing differences between each sinkhorn iteration
-        Eigen::VectorXf u_temp = u;
-        Eigen::VectorXf v_temp = v;
 
         // ground distances and kernel
         Eigen::MatrixXf M = Eigen::Map<Eigen::MatrixXf>(pWeight, nbin, nbin);
         Eigen::MatrixXf K = (-1 * M / gamma).array().exp();
         Eigen::MatrixXf K_t = K.transpose();
 
-        // sinkhorn iterations (fixpoint iteration)
-        float iter_diff = 0;
-        do {
-            // update u, then v
-            u = a.cwiseQuotient(K * v);
-            v = b.cwiseQuotient(K_t * u);
+#pragma omp parallel
+        for (size_t d = 0; d < ndim; d++) {
 
-            iter_diff = ((u - u_temp).squaredNorm() + (v - v_temp).squaredNorm()) / 2;
-            u_temp = u;
-            v_temp = v;
+            Eigen::VectorXf a = Eigen::Map<Eigen::VectorXf>(pVect1 + (d*nbin), nbin);
+            Eigen::VectorXf b = Eigen::Map<Eigen::VectorXf>(pVect2 + (d*nbin), nbin);
 
-        } while (iter_diff > eps);
+            assert(a.sum() == b.sum());     // the current implementation only works for histograms that contain the same number of entries (balanced form of Wasserstein distance)
 
-        // calculate divergence (inner product of ground distance and transportation matrix)
-        Eigen::MatrixXf P = u.asDiagonal() * K * v.asDiagonal();
-        float res = (M.cwiseProduct(P)).sum();	// implicit conversion to scalar only works for MatrixXd
+            Eigen::VectorXf u = Eigen::VectorXf::Ones(a.size());
+            Eigen::VectorXf v = Eigen::VectorXf::Ones(b.size());
 
+            // for comparing differences between each sinkhorn iteration
+            Eigen::VectorXf u_old = u;
+            Eigen::VectorXf v_old = v;
+
+            // sinkhorn iterations (fixpoint iteration)
+            float iter_diff = 0;
+            do {
+                // update u, then v
+                u = a.cwiseQuotient(K * v);
+                v = b.cwiseQuotient(K_t * u);
+
+                iter_diff = ((u - u_old).squaredNorm() + (v - v_old).squaredNorm()) / 2;
+                u_old = u;
+                v_old = v;
+
+            } while (iter_diff > eps);
+
+            // calculate divergence (inner product of ground distance and transportation matrix)
+            Eigen::MatrixXf P = u.asDiagonal() * K * v.asDiagonal();
+#pragma omp atomic
+            res += (M.cwiseProduct(P)).sum();
+        }
 
         return res;
     }
@@ -511,14 +520,14 @@ namespace hnswlib {
 
         DISTFUNC<float> fstdistfunc_;
         size_t data_size_;
-        space_params_QF params_;
+        space_params_EMD params_;
 
     public:
         // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
         EMDSpace(size_t dim, size_t bin) {
-            qDebug() << "Distance Calculation: Prepare QFSpace";
+            qDebug() << "Distance Calculation: Prepare EMDSpace";
 
-            fstdistfunc_ = EMD;
+            fstdistfunc_ = EMD_sinkhorn;
 
             data_size_ = dim * bin * sizeof(float);
 
@@ -529,7 +538,10 @@ namespace hnswlib {
                 for (int j = 0; j < (int)bin; j++)
                     A[i * bin + j] = std::abs(i - j);// +1;
 
-            params_ = { dim, bin, A };
+            float eps = 0.1;
+            float gamma = 0.5;
+
+            params_ = { dim, bin, A, eps, gamma };
         }
 
         size_t get_data_size() {

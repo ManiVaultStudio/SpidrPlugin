@@ -139,7 +139,7 @@ void FeatureExtraction::extractFeatures() {
         qDebug() << "Feature extraction: unknown feature Type";
 
     // convolve over all selected data points
-//    #pragma omp parallel for
+#pragma omp parallel for
     for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
         // get neighborhood ids of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds[pointID], _locNeighbors, _imgSize, _pointIds);
@@ -159,25 +159,33 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
     // 1D histograms for each dimension
-    // save the histogram in _histogramFeatures
     for (size_t dim = 0; dim < _numDims; dim++) {
         auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[2 * dim], _minMaxVals[2 * dim + 1]));
-        // once this works, check if the following is faster (VS Studio will complain but compile)
-        //auto h = boost::histogram::make_histogram_with(std::vector<float>(), boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             h(neighborValues[neighbor * _numDims + dim], boost::histogram::weight(_neighborhoodWeights[neighbor]));
         }
 
-        assert(h.rank() == 1); // 1D hist
-        assert(h.axis().size() == _numHistBins);
+        assert(h.rank() == 1);                      // 1D hist
+        assert(h.axis().size() == _numHistBins);    // right number of bins
+        assert((_neighborhoodWeighting == loc_Neigh_Weighting::WEIGHT_UNIF) && ((int)std::accumulate(h.begin(), h.end(), 0) == _neighborhoodSize)); // check if uniformity works
 
+        // save the histogram in _outFeatures 
+        // data layout for points p, dimension d and bin b: [p0d0b0, p0d0b1, p0d0b2, ..., p0d1b0, p0d1b2, ..., p1d0b0, p0d0b1, ...]
         for (size_t bin = 0; bin < _numHistBins; bin++) {
             _outFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + bin] = h[bin];
         }
-        // the max value is stored in the overflow bin
-        if (h[_numHistBins] != 0) {
-            _outFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + _numHistBins - 1] += h[_numHistBins];
+
+        // values below min are stored in the underflow bin 
+        // (they might be below min because they were set to 0 due to being outside the image/selection, i.e. padding reasons)
+        if (h.at(-1) != 0) {
+            _outFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + 0] += h.at(-1);
         }
+
+        // the max value is stored in the overflow bin
+        if (h.at(_numHistBins) != 0) {
+            _outFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + _numHistBins - 1] += h.at(_numHistBins);
+        }
+
     }
 
 }
