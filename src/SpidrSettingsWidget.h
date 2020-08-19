@@ -11,6 +11,7 @@
 #include <QComboBox>
 #include <QGridLayout>
 #include <QLineEdit>
+#include <QSpinBox>
 #include <QLabel>
 #include <QObject>
 #include <QPushButton>
@@ -59,10 +60,9 @@ public slots:
 
 private slots:
     void onStartToggled(bool pressed);
-    void kernelSizeChanged(const QString &value);
-    void histBinSizeChanged(const QString &value);
     void onHistBinSizeChanged(const QString &value);
     void onHistBinSizeHeurPicked(int value);
+    void onDistanceMetricPicked(int value);
     void numIterationsChanged(const QString &value);
     void perplexityChanged(const QString &value);
     void exaggerationChanged(const QString &value);
@@ -79,9 +79,9 @@ public:
     QComboBox distanceMetric;
 
     QComboBox kernelWeight;
-    QLineEdit kernelSize;
+    QSpinBox  kernelSize;
     QComboBox histBinSizeHeur;
-    QLineEdit histBinSize;
+    QSpinBox  histBinSize;
 
     QLineEdit numIterations;
     QLineEdit perplexity;

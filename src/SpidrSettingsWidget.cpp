@@ -10,10 +10,12 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QVariant>
+#include <QPoint>
 #include <QMessageBox>
 #include <QScrollArea>
 #include <QVBoxLayout>
-
+#include <QStandardItemModel> 
 
 SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
 :
@@ -26,10 +28,16 @@ _analysisPlugin(analysisPlugin)
     knnOptions.addItem("HNSW");
 
     // add options in the order as defined in enums in utils files
-
-    distanceMetric.addItem("QF");
-    //    distanceMetric.addItem("EMD");
-    distanceMetric.addItem("Hellinger");
+    // data values (QPoint) store feature_type (FeatureUtils) and knn_distance_metric (KNNUtils) values as x and y 
+    // this is used as a nice way to cast this information internally in SpidrAnalysis
+    distanceMetric.addItem("Quadratic form (TH)", QVariant(QPoint(0, 0)));
+    distanceMetric.addItem("Earth Mover (TH)", QVariant(QPoint(0, 1)));
+    //dynamic_cast<QStandardItemModel *>(distanceMetric.model())->item(1)->setEnabled(false);
+    distanceMetric.addItem("Hellinger (TH)", QVariant(QPoint(0, 2)));
+    distanceMetric.addItem("Euclidean (LISA)", QVariant(QPoint(1, 3)));
+    distanceMetric.addItem("Euclidean (GC)", QVariant(QPoint(2, 3)));
+    distanceMetric.addItem("Euclidean (PCD)", QVariant(QPoint(3, 4)));
+    distanceMetric.setToolTip("TH: Texture Histogram \nLISA: Local Indicator of Spatial Association\n GC: local Geary's C\n CD: Point Collection Distance");
 
     kernelWeight.addItem("Uniform");
     kernelWeight.addItem("Binomial");
@@ -37,12 +45,14 @@ _analysisPlugin(analysisPlugin)
 
     histBinSizeHeur.addItem("Manual");  
     histBinSizeHeur.addItem("Sqrt");
-    histBinSizeHeur.addItem("Sturges");     // TODO: add QToolTip with info text
+    histBinSizeHeur.addItem("Sturges");
     histBinSizeHeur.addItem("Rice");
+    histBinSizeHeur.setToolTip("Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))");
 
     connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
+    
+    connect(&distanceMetric, SIGNAL(currentIndexChanged(int)), this, SLOT(onDistanceMetricPicked(int)));
 
-    connect(&kernelSize, SIGNAL(textChanged(QString)), SLOT(kernelSizeChanged(QString)));
     connect(&kernelSize, SIGNAL(textChanged(QString)), this, SLOT(onHistBinSizeChanged(QString)));
     connect(&histBinSize, SIGNAL(textChanged(QString)), SLOT(histBinSizeChanged(QString)));
     connect(&histBinSizeHeur, SIGNAL(currentIndexChanged(int)), this, SLOT(onHistBinSizeHeurPicked(int)));
@@ -95,8 +105,8 @@ _analysisPlugin(analysisPlugin)
     expDecay.setValidator(new QIntValidator(1, 10000, this));
     numTrees.setValidator(new QIntValidator(1, 10000, this));
     numChecks.setValidator(new QIntValidator(1, 10000, this));
-    kernelSize.setValidator(new QIntValidator(1, 10000, this));
-    histBinSize.setValidator(new QIntValidator(1, 10000, this));
+    kernelSize.setRange(1, 10000);
+    histBinSize.setRange(1, 10000);
 
     numIterations.setText("1000");
     perplexity.setText("30");
@@ -104,8 +114,8 @@ _analysisPlugin(analysisPlugin)
     expDecay.setText("70");
     numTrees.setText("4");
     numChecks.setText("1024");
-    kernelSize.setText("1");
-    histBinSize.setText("5");
+    kernelSize.setValue(1);
+    histBinSize.setValue(5);
 
     startButton.setText("Start Computation");
     startButton.setFixedSize(QSize(150, 50));
@@ -256,11 +266,43 @@ void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
         default:
             break;
         }
-        histBinSize.setText(QString::number(binNum));
+        histBinSize.setValue(binNum);
         histBinSize.setReadOnly(true);
 
     }
 
+}
+
+void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
+    
+    // if the metric works on vector features
+    // provide options for the vector size
+    // also, check if neighborhood weighting is 
+    // available for the specific feature
+    if (value >= 5) {   
+        // PCD
+        histBinSizeHeur.setEnabled(false);
+        histBinSize.setEnabled(false);
+
+        kernelWeight.setEnabled(false);
+    }
+    else if (value >= 3) {   
+        // also LISA and GC
+        histBinSizeHeur.setEnabled(false);
+        histBinSize.setEnabled(false);
+
+        kernelWeight.setEnabled(true);
+    }
+    else if (value == 1) {
+        // only EMD (as is implemented)
+        kernelWeight.setEnabled(false);
+    }
+    else {
+        histBinSizeHeur.setEnabled(true);
+        histBinSize.setEnabled(true);
+
+        kernelWeight.setEnabled(true);
+    }
 }
 
 void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
@@ -273,9 +315,9 @@ void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
         int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
         switch (value)
         {
-        case 1: histBinSize.setText(QString::number(SqrtBinSize(numLocNeighbors))); break;
-        case 2: histBinSize.setText(QString::number(SturgesBinSize(numLocNeighbors))); break;
-        case 3: histBinSize.setText(QString::number(RiceBinSize(numLocNeighbors))); break;
+        case 1: histBinSize.setValue(SqrtBinSize(numLocNeighbors)); break;
+        case 2: histBinSize.setValue(SturgesBinSize(numLocNeighbors)); break;
+        case 3: histBinSize.setValue(RiceBinSize(numLocNeighbors)); break;
         default:
             break;
         }
@@ -284,16 +326,6 @@ void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
 
 }
 
-
-void SpidrSettingsWidget::kernelSizeChanged(const QString &)
-{
-    checkInputStyle(kernelSize);
-}
-
-void SpidrSettingsWidget::histBinSizeChanged(const QString &)
-{
-    checkInputStyle(histBinSize);
-}
 
 void SpidrSettingsWidget::numIterationsChanged(const QString &)
 {

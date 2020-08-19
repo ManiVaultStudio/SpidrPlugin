@@ -16,8 +16,9 @@ if(MSVC)
 endif(MSVC)
 
 find_package(Qt5 COMPONENTS Widgets WebEngineWidgets REQUIRED)
-# use header only libs, thus no components specified
+# use header-only libs, thus no components specified
 find_package(Boost REQUIRED) 
+find_package(Eigen3 3.3 REQUIRED)
 
 set(PLUGIN
     src/SpidrPlugin.h
@@ -71,6 +72,9 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 if(MSVC)
     include_directories ("lib/Flann/Win/include")
+	ADD_DEFINITIONS(/arch:AVX)
+	add_definitions(-DUSE_SSE)
+	add_definitions(-DUSE_AVX)
 endif(MSVC)
 
 if(APPLE)
@@ -97,6 +101,7 @@ endif()
 
 
 target_link_libraries(${PROJECT} ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT} Eigen3::Eigen)
 target_link_libraries(${PROJECT} Qt5::Widgets)
 target_link_libraries(${PROJECT} Qt5::WebEngineWidgets)
 target_link_libraries(${PROJECT} "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")

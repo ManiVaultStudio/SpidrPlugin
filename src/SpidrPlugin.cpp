@@ -109,7 +109,6 @@ void SpidrPlugin::startComputation()
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
 
-     
     _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize);
     initializeAnalysisSettings();
 
@@ -174,9 +173,11 @@ void SpidrPlugin::onNewEmbedding() {
 }
 
 void SpidrPlugin::initializeAnalysisSettings() {
-    // sets all the parameters
-    _spidrAnalysis.initializeAnalysisSettings(_settings->kernelWeight.currentIndex(), _settings->kernelSize.text().toInt(), _settings->histBinSize.text().toInt(), \
-                                              _settings->knnOptions.currentIndex(), _settings->distanceMetric.currentIndex(), \
+    const int featType = (_settings->distanceMetric.currentIndex() <= 2) ? 0 : 1;   // 0: vector (TH), 1: scalar (e.g. LISA, Geary's C)
+
+    // set all the parameters
+    _spidrAnalysis.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentIndex(), _settings->kernelSize.text().toInt(),  \
+                                              _settings->histBinSize.text().toInt(), _settings->knnOptions.currentIndex(), _settings->distanceMetric.currentData().toPoint().y(), \
                                               _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt());
 }
 

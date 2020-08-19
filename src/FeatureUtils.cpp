@@ -5,7 +5,7 @@ template<typename T>
 std::vector<float> NormVector(std::vector<T> vec, float normVal) {
     std::vector<float> normedVec(vec.size(), 0);
     for (unsigned int i = 0; i < vec.size(); i++) {
-        normedVec.at(i) = vec.at(i) / normVal;
+        normedVec[i] = vec[i] / normVal;
     }
     return normedVec;
 }
@@ -15,7 +15,7 @@ std::vector<unsigned int> PascalsTriangleRow(const unsigned int n) {
     unsigned int entry = 1;
     for (unsigned int i = 1; i < n + 1; i++) {
         entry = (unsigned int)(entry * (n + 1 - i) / i);
-        row.at(i) = entry;
+        row[i] = entry;
     }
     return row;
 }
@@ -35,12 +35,12 @@ std::vector<float> BinomialKernel2D(const unsigned int width, norm_vec norm) {
     // outter product
     for (unsigned int row = 0; row < width; row++) {
         for (unsigned int col = 0; col < width; col++) {
-            bino2D.at(row*width + col) = bino1D.at(row) * bino1D.at(col);
+            bino2D[row*width + col] = bino1D[row] * bino1D[col];
 
             // helper for normalization
-            sum += +bino2D.at(row*width + col);
-            if (bino2D.at(row*width + col) > (float)max)
-                max = bino2D.at(row*width + col);
+            sum += +bino2D[row*width + col];
+            if (bino2D[row*width + col] > (float)max)
+                max = bino2D[row*width + col];
         }
     }
 
@@ -62,7 +62,7 @@ std::vector<float> GaussianKernel1D(const unsigned int width, const float sd) {
     std::vector<float> kernel(width, 0);
     int coutner = 0;
     for (int i = (-1 * ((int)width - 1) / 2); i <= ((int)width - 1) / 2; i++) {
-        kernel.at(coutner) = std::exp(-1 * (i*i) / (2 * sd * sd));
+        kernel[coutner] = std::exp(-1 * (i*i) / (2 * sd * sd));
         coutner++;
     }
     return kernel;
@@ -86,12 +86,12 @@ std::vector<float> GaussianKernel2D(const unsigned int width, const float sd, no
     // outter product
     for (unsigned int row = 0; row < width; row++) {
         for (unsigned int col = 0; col < width; col++) {
-            gauss2D.at(row*width + col) = gauss1D.at(row) *  gauss1D.at(col);
+            gauss2D[row*width + col] = gauss1D[row] *  gauss1D[col];
 
             // helper for normalization
-            sum += +gauss2D.at(row*width + col);
-            if (gauss2D.at(row*width + col) > (float)max)
-                max = gauss2D.at(row*width + col);
+            sum += +gauss2D[row*width + col];
+            if (gauss2D[row*width + col] > (float)max)
+                max = gauss2D[row*width + col];
         }
     }
 
@@ -116,5 +116,52 @@ unsigned int RiceBinSize(unsigned int numItems) {
     return int(2 * std::ceil(std::pow(numItems, 1.0/3)));
 }
 
+std::vector<int> neighborhoodIndices(const unsigned int pointInd, const size_t locNeighbors, const QSize imgSize, const std::vector<unsigned int>& pointIds) {
+    size_t kernelWidth = (2 * locNeighbors) + 1;
+    size_t neighborhoodSize = kernelWidth * kernelWidth;
+    std::vector<int> neighborsIDs(neighborhoodSize, -1);
+    int imWidth = imgSize.width();
+    int rowID = int(pointInd / imWidth);
 
+    // left and right neighbors
+    std::vector<int> lrNeighIDs(kernelWidth, 0);
+    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - locNeighbors);
 
+    // are left and right out of the picture?
+    for (int& n : lrNeighIDs) {
+        if (n < rowID * imWidth)
+            n = -1;
+        else if (n >= (rowID + 1) * imWidth)
+            n = -1;
+    }
+
+    // above and below neighbors
+    unsigned int localNeighCount = 0;
+    for (int i = -1 * locNeighbors; i <= (int)locNeighbors; i++) {
+        for (int ID : lrNeighIDs) {
+            neighborsIDs[localNeighCount] = (ID != -1) ? ID + i * imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
+            localNeighCount++;
+        }
+    }
+
+    // Check if neighborhood IDs are in selected points
+    for (int& ID : neighborsIDs) {
+        // if neighbor is not in neighborhood, assign -1
+        if (std::find(pointIds.begin(), pointIds.end(), ID) == pointIds.end()) {
+            ID = -1;
+        }
+    }
+
+    return neighborsIDs;
+}
+
+std::vector<float> getNeighborhoodValues(const std::vector<int>& neighborIDs, const std::vector<float>& attribute_data, const size_t neighborhoodSize, const size_t numDims) {
+    std::vector<float> neighborValues;
+    neighborValues.resize(neighborhoodSize * numDims);
+    for (unsigned int neighbor = 0; neighbor < neighborhoodSize; neighbor++) {
+        for (unsigned int dim = 0; dim < numDims; dim++) {
+            neighborValues[neighbor * numDims + dim] = (neighborIDs[neighbor] != -1) ? attribute_data[neighborIDs[neighbor] * numDims + dim] : 0;
+        }
+    }
+    return neighborValues;
+}

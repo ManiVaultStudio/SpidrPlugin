@@ -8,12 +8,17 @@
 
 #include <QDebug>       // qDebug
 #include <iterator>     // std::advance
-#include <algorithm>    // std::for_each, std::fill, std::find
+#include <algorithm>    // std::fill, std::find, std::swap_ranges
 #include <execution>    // std::execution::par_unseq
 #include <vector>       // std::vector, std::begin, std::end
 #include <array>        // std::array
 #include <numeric>      // std::iota
 #include <utility>      // std::forward
+#include <chrono>       // std::chrono
+
+// for debugging
+#include <algorithm> // for copy
+#include <iterator> // for ostream_iterator
 
 // Boost might be more useful for higher dimensional histograms
 // but it's convinient for now
@@ -21,7 +26,8 @@
 
 FeatureExtraction::FeatureExtraction() :
     _neighborhoodSize(1),
-    _numHistBins(5)
+    _numHistBins(5),
+    _stopFeatureComputation(false)
 {
     // square neighborhood
     _locNeighbors = ((_neighborhoodSize * 2) + 1) * ((_neighborhoodSize * 2) + 1);
@@ -37,15 +43,17 @@ FeatureExtraction::~FeatureExtraction()
 }
 
 void FeatureExtraction::compute() {
-    qDebug() << "Feature extraction: started.";
+    qDebug() << "Feature extraction: started";
 
     computeHistogramFeatures();
 
-    qDebug() << "Feature extraction: finished.";
+    qDebug() << "Feature extraction: finished";
 
 }
 
 void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, const Parameters& params) {
+    _featType = params._featureType;
+
     // Parameters
     _numHistBins = params._numHistBins;
     _locNeighbors = params._numLocNeighbors;
@@ -64,141 +72,161 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
     _numDims = params._numDims;
     _attribute_data = attribute_data;
 
-    // Output
-    _histogramFeatures.resize(_numPoints * _numDims * _numHistBins);
-    std::fill(_histogramFeatures.begin(), _histogramFeatures.end(), -1);
-
     assert(_attribute_data.size() == _numPoints * _numDims);
 
-    qDebug() << "Feature extraction: Num neighbors (in each direction): " << _locNeighbors << "(total neighbors: " << _neighborhoodSize << ") Num Bins: " << _numHistBins << " Neighbor weighting: " << (unsigned int)_neighborhoodWeighting;
+    qDebug() << "Feature extraction: Num neighbors (in each direction): " << _locNeighbors << "(total neighbors: " << _neighborhoodSize << ") Neighbor weighting: " << (unsigned int)_neighborhoodWeighting;
+    if (_featType == feature_type::TEXTURE_HIST_1D)
+        qDebug() << "Feature extraction: Type 1d texture histogram, Num Bins: " << _numHistBins;
+    else if(_featType == feature_type::LISA)
+        qDebug() << "Feature extraction: LISA";
+    else if (_featType == feature_type::GEARYC)
+        qDebug() << "Feature extraction: local Geary's C";
+    else if (_featType == feature_type::PCOL)
+        qDebug() << "Feature extraction: Collection of points (neighborhood)";
+    else
+        qDebug() << "Feature extraction: unknown feature type";
 }
 
 void FeatureExtraction::computeHistogramFeatures() {
     // init, i.e. identify min and max per dimension for histogramming
     initExtraction();
 
+    auto start = std::chrono::steady_clock::now();
     // convolution over all points to create histograms
     extractFeatures();
+    auto end = std::chrono::steady_clock::now();
+    qDebug() << "Feature extraction: extraction duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
 
     // if there is a -1 in the features, this value was not set at all
-    assert(std::find(_histogramFeatures.begin(), _histogramFeatures.end(), -1) == _histogramFeatures.end());
+    assert(std::find(_outFeatures.begin(), _outFeatures.end(), -1) == _outFeatures.end());
 }
 
 void FeatureExtraction::initExtraction() {
-    // Init
-    // a.o.: find min and max for each channel
-    _minMaxVals.resize(2 * _numDims, 0);
+    qDebug() << "Feature extraction: init feature extraction";
 
-    // for each dimension iterate over all values
-    // remember data stucture (point1 d0, point1 d1,... point1 dn, point2 d0, point2 d1, ...)
-    for (unsigned int dimCount = 0; dimCount < _numDims; dimCount++) {
-        // init min and max
-        float currentVal = _attribute_data.at(dimCount);
-        _minMaxVals.at(2 * dimCount) = currentVal;
-        _minMaxVals.at(2 * dimCount + 1) = currentVal;
-
-        for (unsigned int pointCount = 0; pointCount < _numPoints; pointCount++) {
-            currentVal = _attribute_data.at(pointCount * _numDims + dimCount);
-            // min
-            if (currentVal < _minMaxVals.at(2 * dimCount))
-                _minMaxVals.at(2 * dimCount) = currentVal;
-            // max
-            else if (currentVal > _minMaxVals.at(2 * dimCount + 1))
-                _minMaxVals.at(2 * dimCount + 1) = currentVal;
-        }
+    if (_featType == feature_type::TEXTURE_HIST_1D) {
+        // find min and max for each channel, resize the output larger due to vector features
+        _minMaxVals = CalcMinMaxPerChannel(_numPoints, _numDims, _attribute_data);
+        _outFeatures.resize(_numPoints * _numDims * _numHistBins);
     }
+    else if ((_featType == feature_type::LISA) | (_featType == feature_type::GEARYC)) {
+        // find mean and varaince for each channel
+        _meanVals = CalcMeanPerChannel(_numPoints, _numDims, _attribute_data);
+        _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
+        _outFeatures.resize(_numPoints * _numDims);
+    }
+    else if (_featType == feature_type::PCOL)
+        _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
 
+    // this is basically for easier debugging to see if all features are assigned a valid value
+    // (currently only positive feature values are valid)
+    std::fill(_outFeatures.begin(), _outFeatures.end(), -1);
 }
 
 void FeatureExtraction::extractFeatures() {
-    
-    // convolve over all selected data points
-#pragma omp parallel for 
-    for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
-        // get neighborhood of the current point
-        std::vector<int> neighborIDs = neighborhoodIndices(_pointIds.at(pointID));
+    qDebug() << "Feature extraction: extract features";
 
+    // select feature extraction methood
+    if (_featType == feature_type::TEXTURE_HIST_1D)
+        featFunct = &FeatureExtraction::calculateHistogram;  // will be called as calculateHistogram(_pointIds[pointID], neighborValues);
+    else if (_featType == feature_type::LISA)
+        featFunct = &FeatureExtraction::calculateLISA;
+    else if (_featType == feature_type::GEARYC)
+        featFunct = &FeatureExtraction::calculateGearysC;
+    else if (_featType == feature_type::PCOL)
+        featFunct = &FeatureExtraction::calculateAllNeighborhoods;
+    else
+        qDebug() << "Feature extraction: unknown feature Type";
+
+    // convolve over all selected data points
+#pragma omp parallel for
+    for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
+        // get neighborhood ids of the current point
+        std::vector<int> neighborIDs = neighborhoodIndices(_pointIds[pointID], _locNeighbors, _imgSize, _pointIds);
         assert(neighborIDs.size() == _neighborhoodSize);
 
-        // get data for all neighborhood points
-        // Padding: if neighbor is outside selection, assign 0 to all dimension values
-        std::vector<float> neighborValues;
-        neighborValues.resize(_neighborhoodSize * _numDims);
-        for (unsigned int neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
-            for (unsigned int dim = 0; dim < _numDims; dim++) {
-                neighborValues[neighbor * _numDims + dim] = (neighborIDs[neighbor] != -1) ? _attribute_data.at(neighborIDs[neighbor] * _numDims + dim) : 0;
-            }
-        }
+        // get neighborhood values of the current point
+        std::vector<float> neighborValues = getNeighborhoodValues(neighborIDs, _attribute_data, _neighborhoodSize, _numDims);
 
-        // calculate histograms, save histos in _histogramFeatures
-        calculateHistogram(_pointIds.at(pointID), neighborValues);
+        // calculate feature(s) for neighborhood
+        (this->*featFunct)(_pointIds[pointID], neighborValues);  // function pointer defined above
     }
-
-}
-
-// For now, expect a rectangle selection (lasso selection might cause edge cases that were not thought of)
-// Padding: assign -1 to points outside the selection. Later assign 0 vector to all of them.
-std::vector<int> FeatureExtraction::neighborhoodIndices(size_t pointInd) {
-    std::vector<int> neighborsIDs(_neighborhoodSize, -1);
-    int imWidth = _imgSize.width();
-    int rowID = int(pointInd / imWidth);
-
-    // left and right neighbors
-    std::vector<int> lrNeighIDs(2 * _locNeighbors + 1, 0);
-    std::iota(lrNeighIDs.begin(), lrNeighIDs.end(), pointInd - _locNeighbors);
-
-    // are left and right out of the picture?
-    for (int& n : lrNeighIDs) {
-        if (n < rowID * imWidth)
-            n = -1;
-        else if (n >= (rowID + 1) * imWidth)
-            n = -1;
-    }
-
-    // above and below neighbors
-    unsigned int localNeighCount = 0;
-    for (int i = -1 * _locNeighbors; i <= (int)_locNeighbors; i++) {
-        for (int ID : lrNeighIDs) {
-            neighborsIDs[localNeighCount] = ID != -1 ? ID + i * _imgSize.width() : -1;  // if left or right is already out of image, above and below will be as well
-            localNeighCount++;
-        }
-    }
-
-    // Check if neighborhood IDs are in selected points
-    for (int& ID : neighborsIDs) {
-        // if neighbor is not in neighborhood, assign -1
-        if (std::find(_pointIds.begin(), _pointIds.end(), ID) == _pointIds.end()) {
-            ID = -1;
-        }
-    }
-
-    return neighborsIDs;
 }
 
 void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_outFeatures.size() == _numPoints * _numDims * _numHistBins);
+    assert(_minMaxVals.size() == 2*_numDims);
+    assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
     // 1D histograms for each dimension
-    // save the histogram in _histogramFeatures
     for (size_t dim = 0; dim < _numDims; dim++) {
         auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[2 * dim], _minMaxVals[2 * dim + 1]));
-        // once this works, check if the following is faster (VS Studio will complain but compile)
-        //auto h = boost::histogram::make_histogram_with(std::vector<float>(), boost::histogram::axis::regular(_numHistBins, _minMaxVals[dim], _minMaxVals[dim + 1]));
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             h(neighborValues[neighbor * _numDims + dim], boost::histogram::weight(_neighborhoodWeights[neighbor]));
         }
 
-        assert(h.rank() == 1); // 1D hist
-        assert(h.axis().size() == _numHistBins);
+        assert(h.rank() == 1);                      // 1D hist
+        assert(h.axis().size() == _numHistBins);    // right number of bins
+        assert((_neighborhoodWeighting == loc_Neigh_Weighting::WEIGHT_UNIF) && ((int)std::accumulate(h.begin(), h.end(), 0) == _neighborhoodSize)); // check if uniformity works
 
+        // save the histogram in _outFeatures 
+        // data layout for points p, dimension d and bin b: [p0d0b0, p0d0b1, p0d0b2, ..., p0d1b0, p0d1b2, ..., p1d0b0, p0d0b1, ...]
         for (size_t bin = 0; bin < _numHistBins; bin++) {
-            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + bin] = h.at(bin);
+            _outFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + bin] = h[bin];
         }
+
+        // values below min are stored in the underflow bin 
+        // (they might be below min because they were set to 0 due to being outside the image/selection, i.e. padding reasons)
+        if (h.at(-1) != 0) {
+            _outFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + 0] += h.at(-1);
+        }
+
         // the max value is stored in the overflow bin
         if (h.at(_numHistBins) != 0) {
-            _histogramFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + _numHistBins - 1] += h.at(_numHistBins);
+            _outFeatures[pointInd * _numDims * _numHistBins + dim * _numHistBins + _numHistBins - 1] += h.at(_numHistBins);
         }
+
     }
 
+}
+
+void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_outFeatures.size() == _numPoints * _numDims);
+    assert(_varVals.size() == _numDims);
+    assert(_neighborhoodWeights.size() == _neighborhoodSize);
+
+    for (size_t dim = 0; dim < _numDims; dim++) {
+        float neigh_diff_from_mean_sum = 0;
+        for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
+            neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
+        }
+        float diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
+        _outFeatures[pointInd * _numDims + dim] = diff_from_mean * neigh_diff_from_mean_sum / _varVals[dim];
+    }
+}
+
+void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_outFeatures.size() == _numPoints * _numDims);
+    assert(_meanVals.size() == _numDims);
+    assert(_varVals.size() == _numDims);
+    assert(_neighborhoodWeights.size() == _neighborhoodSize);
+
+    for (size_t dim = 0; dim < _numDims; dim++) {
+        float diff_from_neigh_sum = 0;
+        float diff_from_neigh = 0;
+        for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
+            diff_from_neigh = _attribute_data[pointInd * _numDims + dim] - neighborValues[neighbor * _numDims + dim];
+            diff_from_neigh_sum += _neighborhoodWeights[neighbor] * (diff_from_neigh * diff_from_neigh);
+        }
+        _outFeatures[pointInd * _numDims + dim] = diff_from_neigh_sum / _varVals[dim];
+    }
+}
+
+void FeatureExtraction::calculateAllNeighborhoods(size_t pointInd, std::vector<float> neighborValues) {
+    assert(_outFeatures.size() == _numPoints * _numDims * _neighborhoodSize);
+
+    // copy neighborValues into _outFeatures
+    std::swap_ranges(neighborValues.begin(), neighborValues.end(), _outFeatures.begin() + (pointInd * _numDims * _neighborhoodSize));
 }
 
 void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
@@ -235,5 +263,15 @@ loc_Neigh_Weighting FeatureExtraction::getNeighborhoodWeighting()
 
 std::vector<float>* FeatureExtraction::output()
 {
-    return &_histogramFeatures;
+    return &_outFeatures;
+}
+
+void FeatureExtraction::stopFeatureCopmutation()
+{
+    _stopFeatureComputation = false;
+}
+
+bool FeatureExtraction::requestedStop()
+{
+    return _stopFeatureComputation;
 }

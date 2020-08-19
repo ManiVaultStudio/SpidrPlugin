@@ -1,12 +1,23 @@
 #pragma once
-#include "hnswlib/hnswlib.h"
+#include "hnswlib/hnswlib.h"    // defines USE_SSE and USE_AVX and includes intrinsics
+
+#if defined(__GNUC__)
+#define PORTABLE_ALIGN32hnsw __attribute__((aligned(32)))
+#else
+#define PORTABLE_ALIGN32hnsw __declspec(align(32))
+#endif
 
 #include <QDebug>
+
+#include <omp.h>
 
 #include <cmath>     // std::sqrt, exp
 #include <vector>
 #include <thread>
 #include <atomic>
+
+#include <Eigen/Dense>
+#include <Eigen/Core>
 
 /*!
  * 
@@ -18,14 +29,15 @@ enum class knn_library : size_t
 };
 
 /*!
- * 
- * 
- */
+ * The numerical value corresponds to the order in which each option is added to the GUI in SpidrSettingsWidget
+  */
 enum class knn_distance_metric : size_t
 {
-    KNN_METRIC_QF = 0,      /*!<> */
-    KNN_METRIC_EMD = 1,     /*!<> */
-    KNN_METRIC_HEL = 2,     /*!<> */
+    KNN_METRIC_QF = 0,      /*!< Quadratic form distance */
+    KNN_METRIC_EMD = 1,     /*!< Earth mover distance*/
+    KNN_METRIC_HEL = 2,     /*!< Hellinger distance */
+    KNN_METRIC_EUC = 3,     /*!< Euclidean distance - not suitable for histogram features */
+    KNN_METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
 };
 
 /*!
@@ -103,14 +115,14 @@ namespace hnswlib {
 
 
     // ---------------
-    // Quadratic form
+    // Quadratic form for 1D Histograms
     // ---------------
 
     // data struct for distance calculation in QFSpace
     struct space_params_QF {
         size_t dim;
         size_t bin;
-        ::std::vector<size_t> A;
+        ::std::vector<float> A;
     };
 
     static float
@@ -121,11 +133,12 @@ namespace hnswlib {
         const space_params_QF* sparam = (space_params_QF*)qty_ptr;
         const size_t ndim = sparam->dim;
         const size_t nbin = sparam->bin;
-        const size_t* pWeight = sparam->A.data();
+        const float* pWeight = sparam->A.data();
 
         float res = 0;
         // add the histogram distance for each dimension
         for (size_t d = 0; d < ndim; d++) {
+            // QF distance = sum_ij ( a_ij * (x_i-y_i) * (x_j-y_j) )
             for (size_t i = 0; i < nbin; i++) {
                 float t1 = *(pVect1 + i) - *(pVect2 + i);
                 for (size_t j = 0; j < nbin; j++) {
@@ -141,7 +154,84 @@ namespace hnswlib {
         return res;
     }
 
-    // 1-D Histograms
+    static float
+        QFSqrSSE(const void* pVect1v, const void* pVect2v, const void* qty_ptr) {
+        float* pVect1 = (float*)pVect1v;
+        float* pVect2 = (float*)pVect2v;
+
+        space_params_QF* sparam = (space_params_QF*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t nbin = sparam->bin;
+
+        size_t nbin4 = nbin >> 2 << 2;		// right shift by 2, left-shift by 2: create a multiple of 4
+
+        float res = 0;
+        float PORTABLE_ALIGN32hnsw TmpRes[8];			// memory aligned float array
+        __m128 v1, v2, TmpSum, wRow, diff;			// write in registers of 128 bit size
+        float *pA, *pEnd1, *pW, *pWend, *pwR;
+        unsigned int wloc;
+
+        // add the histogram distance for each dimension
+        for (size_t d = 0; d < ndim; d++) {
+            pA = sparam->A.data();					// reset to first weight for every dimension
+
+           // calculate the QF distance for each dimension
+
+           // 1. calculate w = (pVect1-pVect2)
+            std::vector<float> w(nbin);
+            wloc = 0;
+            pEnd1 = pVect1 + nbin4;			// point to the first dimension not to be vectorized
+            while (pVect1 < pEnd1) {
+                v1 = _mm_loadu_ps(pVect1);					// Load the next four float values
+                v2 = _mm_loadu_ps(pVect2);
+                diff = _mm_sub_ps(v1, v2);					// substract all float values
+                _mm_store_ps(&w[wloc], diff);				// store diff values in memory
+                pVect1 += 4;								// advance pointer to position after loaded values
+                pVect2 += 4;
+                wloc += 4;
+            }
+
+            // manually calc the rest dims
+            for (wloc; wloc < nbin; wloc++) {
+                w[wloc] = *pVect1 - *pVect2;
+                pVect1++;
+                pVect2++;
+            }
+
+            // 2. calculate d = w'Aw
+            for (unsigned int row = 0; row < nbin; row++) {
+                TmpSum = _mm_set1_ps(0);
+                pW = w.data();					// pointer to first float in w
+                pWend = pW + nbin4;			// point to the first dimension not to be vectorized
+                pwR = pW + row;
+                wRow = _mm_load1_ps(pwR);					// load one float into all elements fo wRow
+
+                while (pW < pWend) {
+                    v1 = _mm_loadu_ps(pW);
+                    v2 = _mm_loadu_ps(pA);
+                    TmpSum = _mm_add_ps(TmpSum, _mm_mul_ps(wRow, _mm_mul_ps(v1, v2)));	// multiply all values and add them to temp sum values
+                    pW += 4;
+                    pA += 4;
+                }
+                _mm_store_ps(TmpRes, TmpSum);
+                res += TmpRes[0] + TmpRes[1] + TmpRes[2] + TmpRes[3];
+
+                // manually calc the rest dims
+                for (unsigned int uloc = nbin4; uloc < nbin; uloc++) {
+                    res += *pwR * *pW * *pA;
+                    pW++;
+                    pA++;
+                }
+            }
+
+            // point to next dimension is done in the last iteration
+            // of the for loop in the rest calc under point 1. (no pVect1++ necessary here)
+        }
+
+        return res;
+    }
+
+
     class QFSpace : public SpaceInterface<float> {
 
         DISTFUNC<float> fstdistfunc_;
@@ -154,9 +244,15 @@ namespace hnswlib {
             qDebug() << "Distance Calculation: Prepare QFSpace";
 
             fstdistfunc_ = QFSqr;
+            // Not entirely sure why this only shows positive effects for high bin counts...
+            if (bin >= 12)
+            {
+                fstdistfunc_ = QFSqrSSE;
+            }
+
             data_size_ = dim * bin * sizeof(float);
 
-            ::std::vector<size_t> A;
+            ::std::vector<float> A;
             A.resize(bin*bin);
             size_t ground_dist_max = bin - 1;
 
@@ -241,7 +337,6 @@ namespace hnswlib {
 
         DISTFUNC<float> fstdistfunc_;
         size_t data_size_;
-        size_t dim_;
 
         space_params_Hel params_;
 
@@ -267,6 +362,202 @@ namespace hnswlib {
         }
 
         ~HellingerSpace() {}
+    };
+
+
+    // ---------------
+    //    Point collection distance
+    // ---------------
+
+    // data struct for distance calculation in PointCollectionSpace
+    struct space_params_Col {
+        size_t dim;
+        size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
+        DISTFUNC<float> L2distfunc_;
+    };
+
+    static float
+        ColDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float *pVect1 = (float *)pVect1v;   // points to data item
+        float *pVect2 = (float *)pVect2v;   // points to data item
+
+        const space_params_Col* sparam = (space_params_Col*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t neighborhoodSize = sparam->neighborhoodSize;
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        float res = 0;
+        float minDist = 0;
+        float tmpDist = 0;
+
+        // Euclidean dist between all neighbor pairs
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2
+        // Sum over all the min dists
+        for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+            minDist = FLT_MAX;
+            for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
+                tmpDist = L2distfunc_( (pVect1 +(n1*ndim)), (pVect2 + (n2*ndim)), &ndim);
+
+                if (tmpDist < minDist)
+                    minDist = tmpDist;
+            }
+            res += minDist;
+        }
+        return (res);
+    }
+
+    class PointCollectionSpace : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+
+        space_params_Col params_;
+
+    public:
+        PointCollectionSpace(size_t dim, size_t neighborhoodSize) {
+            fstdistfunc_ = ColDist;
+            data_size_ = dim * sizeof(float);
+
+            params_ = { dim, neighborhoodSize, L2Sqr };
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                params_.L2distfunc_ = L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                params_.L2distfunc_ = L2SqrSIMD4Ext;
+            else if (dim > 16)
+                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return &params_;
+        }
+
+        ~PointCollectionSpace() {}
+    };
+
+    // ---------------
+    //    Wasserstein distance (EMD - Earth mover distance)
+    // ---------------
+
+    // data struct for distance calculation in QFSpace
+    struct space_params_EMD {
+        size_t dim;
+        size_t bin;
+        ::std::vector<float> A;     // ground distance matrix
+        float eps;                  // sinkhorn iteration update threshold
+        float gamma;                // entropic regularization multiplier
+    };
+
+    static float
+        EMD_sinkhorn(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float* pVect1 = (float*)pVect1v;
+        float* pVect2 = (float*)pVect2v;
+
+        space_params_EMD* sparam = (space_params_EMD*)qty_ptr;      // no const because of pWeight
+        const size_t ndim = sparam->dim;
+        const size_t nbin = sparam->bin;
+        const float eps = sparam->eps;
+        const float gamma = sparam->gamma;
+        float* pWeight = sparam->A.data();                          // no const because of Eigen::Map
+
+        float res = 0;
+
+        // ground distances and kernel
+        Eigen::MatrixXf M = Eigen::Map<Eigen::MatrixXf>(pWeight, nbin, nbin);
+        Eigen::MatrixXf K = (-1 * M / gamma).array().exp();
+        Eigen::MatrixXf K_t = K.transpose();
+
+#pragma omp parallel
+        for (size_t d = 0; d < ndim; d++) {
+
+            Eigen::VectorXf a = Eigen::Map<Eigen::VectorXf>(pVect1 + (d*nbin), nbin);
+            Eigen::VectorXf b = Eigen::Map<Eigen::VectorXf>(pVect2 + (d*nbin), nbin);
+
+            assert(a.sum() == b.sum());     // the current implementation only works for histograms that contain the same number of entries (balanced form of Wasserstein distance)
+
+            Eigen::VectorXf u = Eigen::VectorXf::Ones(a.size());
+            Eigen::VectorXf v = Eigen::VectorXf::Ones(b.size());
+
+            // for comparing differences between each sinkhorn iteration
+            Eigen::VectorXf u_old = u;
+            Eigen::VectorXf v_old = v;
+
+            // sinkhorn iterations (fixpoint iteration)
+            float iter_diff = 0;
+            do {
+                // update u, then v
+                u = a.cwiseQuotient(K * v);
+                v = b.cwiseQuotient(K_t * u);
+
+                iter_diff = ((u - u_old).squaredNorm() + (v - v_old).squaredNorm()) / 2;        // this might better be a percentage value
+                u_old = u;
+                v_old = v;
+
+            } while (iter_diff > eps);
+
+            // calculate divergence (inner product of ground distance and transportation matrix)
+            Eigen::MatrixXf P = u.asDiagonal() * K * v.asDiagonal();
+#pragma omp atomic
+            res += (M.cwiseProduct(P)).sum();
+        }
+
+        return res;
+    }
+
+    class EMDSpace : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+        space_params_EMD params_;
+
+    public:
+        // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
+        EMDSpace(size_t dim, size_t bin) {
+            qDebug() << "Distance Calculation: Prepare EMDSpace";
+
+            fstdistfunc_ = EMD_sinkhorn;
+
+            data_size_ = dim * bin * sizeof(float);
+
+            ::std::vector<float> A;
+            A.resize(bin * bin);
+
+            for (int i = 0; i < (int)bin; i++)
+                for (int j = 0; j < (int)bin; j++)
+                    A[i * bin + j] = std::abs(i - j);// +1;
+
+            // these are fast parameters, but not the most accurate
+            float eps = 0.1;
+            float gamma = 0.5;
+
+            params_ = { dim, bin, A, eps, gamma };
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return (void *)&params_;
+        }
+
+        ~EMDSpace() {}
     };
 
 }
