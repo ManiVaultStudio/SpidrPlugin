@@ -455,9 +455,9 @@ namespace hnswlib {
     struct space_params_EMD {
         size_t dim;
         size_t bin;
-        ::std::vector<float> A;
-        float eps;
-        float gamma;
+        ::std::vector<float> A;     // ground distance matrix
+        float eps;                  // sinkhorn iteration update threshold
+        float gamma;                // entropic regularization multiplier
     };
 
     static float
@@ -501,7 +501,7 @@ namespace hnswlib {
                 u = a.cwiseQuotient(K * v);
                 v = b.cwiseQuotient(K_t * u);
 
-                iter_diff = ((u - u_old).squaredNorm() + (v - v_old).squaredNorm()) / 2;
+                iter_diff = ((u - u_old).squaredNorm() + (v - v_old).squaredNorm()) / 2;        // this might better be a percentage value
                 u_old = u;
                 v_old = v;
 
@@ -538,6 +538,7 @@ namespace hnswlib {
                 for (int j = 0; j < (int)bin; j++)
                     A[i * bin + j] = std::abs(i - j);// +1;
 
+            // these are fast parameters, but not the most accurate
             float eps = 0.1;
             float gamma = 0.5;
 
