@@ -12,6 +12,7 @@
 #include <omp.h>
 
 #include <cmath>     // std::sqrt, exp
+#include <numeric>   // std::accumulate
 #include <vector>
 #include <thread>
 #include <atomic>
@@ -387,22 +388,32 @@ namespace hnswlib {
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
         float res = 0;
-        float minDist = 0;
+        float colDist = FLT_MAX;
+        std::vector<float> rowDist(neighborhoodSize, FLT_MAX);
         float tmpDist = 0;
 
         // Euclidean dist between all neighbor pairs
         // Take the min of all dists from a item in neigh1 to all items in Neigh2
-        // Sum over all the min dists
+        // (the above can be written in a distance matrix)
+        // Sum over all the column-wise and row-wise minima
         for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
-            minDist = FLT_MAX;
+            colDist = FLT_MAX;
             for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
                 tmpDist = L2distfunc_( (pVect1 +(n1*ndim)), (pVect2 + (n2*ndim)), &ndim);
 
-                if (tmpDist < minDist)
-                    minDist = tmpDist;
+                if (tmpDist < colDist)
+                    colDist = tmpDist;
+
+                if (tmpDist < rowDist[n2])
+                    rowDist[n2] = tmpDist;
+
             }
-            res += minDist;
+            // add min of col
+            res += colDist;
         }
+        // add min of col add min of all rows
+        res += std::accumulate(rowDist.begin(), rowDist.end(), 0.0f);
+
         return (res);
     }
 
