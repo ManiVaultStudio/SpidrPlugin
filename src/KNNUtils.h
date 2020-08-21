@@ -13,6 +13,7 @@
 
 #include <cmath>     // std::sqrt, exp
 #include <numeric>   // std::accumulate
+#include <algorithm> // std::find
 #include <vector>
 #include <thread>
 #include <atomic>
@@ -50,6 +51,49 @@ enum class ground_dist : size_t
     SIM_EUC = 0,    /*!<> */
     SIM_EXP = 1,    /*!<> */
 };
+
+
+/*!
+ * Computes the similarities of bins.
+ *
+ * \param neighborhood_width
+ * \param ground_type type of ground distance calculation
+ * \param ground_weight Only comes into play for ground_type = SIM_EXP, might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
+ * \return Matrix of neighborhood_width*neighborhood_width (stored in a vector) 
+ */
+static std::vector<float> BinSimilarities(size_t neighborhood_width, ground_dist ground_type = ground_dist::SIM_EUC, float ground_weight = 1) {
+    ::std::vector<float> A(neighborhood_width*neighborhood_width, -1);
+    size_t ground_dist_max = neighborhood_width - 1;
+
+    int bin_diff = 0;
+
+    size_t ground_dist_max_2 = ground_dist_max * ground_dist_max;
+    size_t bin_diff_2 = 0;
+
+    if (ground_type == ground_dist::SIM_EUC) {
+        for (int i = 0; i < (int)neighborhood_width; i++) {
+            for (int j = 0; j < (int)neighborhood_width; j++) {
+                bin_diff = (i - j);
+                bin_diff_2 = bin_diff * bin_diff;
+                A[i * neighborhood_width + j] = 1 - std::sqrt(float(bin_diff_2) / float(ground_dist_max_2));
+            }
+        }
+    }
+    else if (ground_type == ground_dist::SIM_EXP) {
+        for (int i = 0; i < (int)neighborhood_width; i++) {
+            for (int j = 0; j < (int)neighborhood_width; j++) {
+                bin_diff = (i - j);
+                bin_diff_2 = bin_diff * bin_diff;
+                A[i * neighborhood_width + j] = ::std::exp(-1 * ground_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
+            }
+        }
+    }
+
+    // if there is a -1 in A, this value was not set (no option selected)
+    assert(std::find(A.begin(), A.end(), -1) == A.end());
+
+    return A;
+}
 
 namespace hnswlib {
 
@@ -123,7 +167,7 @@ namespace hnswlib {
     struct space_params_QF {
         size_t dim;
         size_t bin;
-        ::std::vector<float> A;
+        ::std::vector<float> A;     // bin similarity matrix
     };
 
     static float
@@ -240,8 +284,7 @@ namespace hnswlib {
         space_params_QF params_;
 
     public:
-        // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
-        QFSpace(size_t dim, size_t bin, ground_dist ground_type = ground_dist::SIM_EUC, float ground_weight = 1) {
+        QFSpace(size_t dim, size_t bin, ground_dist ground_type = ground_dist::SIM_EUC) {
             qDebug() << "Distance Calculation: Prepare QFSpace";
 
             fstdistfunc_ = QFSqr;
@@ -253,34 +296,8 @@ namespace hnswlib {
 
             data_size_ = dim * bin * sizeof(float);
 
-            ::std::vector<float> A;
-            A.resize(bin*bin);
-            size_t ground_dist_max = bin - 1;
-
-            int bin_diff = 0;
-
-            size_t ground_dist_max_2 = ground_dist_max * ground_dist_max;
-            size_t bin_diff_2 = 0;
-
-            if (ground_type == ground_dist::SIM_EUC) {
-                for (int i = 0; i < bin; i++) {
-                    for (int j = 0; j < bin; j++) {
-                        bin_diff = (i - j);
-                        bin_diff_2 = bin_diff * bin_diff;
-                        A[i * bin + j] = 1 - std::sqrt(float(bin_diff_2) / float(ground_dist_max_2));
-                    }
-                }
-            }
-            else if (ground_type == ground_dist::SIM_EXP) {
-                for (int i = 0; i < bin; i++) {
-                    for (int j = 0; j < bin; j++) {
-                        bin_diff = (i - j);
-                        bin_diff_2 = bin_diff * bin_diff;
-                        A[i * bin + j] = ::std::exp(-1 * ground_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
-                    }
-                }
-            }
-        
+            ::std::vector<float> A = BinSimilarities(bin, ground_type);
+            
             params_ = { dim, bin, A};
         }
 
@@ -466,7 +483,7 @@ namespace hnswlib {
     struct space_params_EMD {
         size_t dim;
         size_t bin;
-        ::std::vector<float> A;     // ground distance matrix
+        ::std::vector<float> D;     // ground distance matrix
         float eps;                  // sinkhorn iteration update threshold
         float gamma;                // entropic regularization multiplier
     };
@@ -481,12 +498,13 @@ namespace hnswlib {
         const size_t nbin = sparam->bin;
         const float eps = sparam->eps;
         const float gamma = sparam->gamma;
-        float* pWeight = sparam->A.data();                          // no const because of Eigen::Map
+        float* pGroundDist = sparam->D.data();                          // no const because of Eigen::Map
 
         float res = 0;
 
         // ground distances and kernel
-        Eigen::MatrixXf M = Eigen::Map<Eigen::MatrixXf>(pWeight, nbin, nbin);
+        // the ground distance diag is 0 such that the kernel (here acting as a sim measure) has a diag of 1
+        Eigen::MatrixXf M = Eigen::Map<Eigen::MatrixXf>(pGroundDist, nbin, nbin);
         Eigen::MatrixXf K = (-1 * M / gamma).array().exp();
         Eigen::MatrixXf K_t = K.transpose();
 
@@ -542,18 +560,18 @@ namespace hnswlib {
 
             data_size_ = dim * bin * sizeof(float);
 
-            ::std::vector<float> A;
-            A.resize(bin * bin);
+            ::std::vector<float> D;
+            D.resize(bin * bin);
 
             for (int i = 0; i < (int)bin; i++)
                 for (int j = 0; j < (int)bin; j++)
-                    A[i * bin + j] = std::abs(i - j);// +1;
+                    D[i * bin + j] = std::abs(i - j);// +1;
 
             // these are fast parameters, but not the most accurate
             float eps = 0.1;
             float gamma = 0.5;
 
-            params_ = { dim, bin, A, eps, gamma };
+            params_ = { dim, bin, D, eps, gamma };
         }
 
         size_t get_data_size() {
