@@ -32,12 +32,11 @@ _analysisPlugin(analysisPlugin)
     // this is used as a nice way to cast this information internally in SpidrAnalysis
     distanceMetric.addItem("Quadratic form (TH)", QVariant(QPoint(0, 0)));
     distanceMetric.addItem("Earth Mover (TH)", QVariant(QPoint(0, 1)));
-    //dynamic_cast<QStandardItemModel *>(distanceMetric.model())->item(1)->setEnabled(false);
     distanceMetric.addItem("Hellinger (TH)", QVariant(QPoint(0, 2)));
     distanceMetric.addItem("Euclidean (LISA)", QVariant(QPoint(1, 3)));
     distanceMetric.addItem("Euclidean (GC)", QVariant(QPoint(2, 3)));
     distanceMetric.addItem("Euclidean (PCD)", QVariant(QPoint(3, 4)));
-    distanceMetric.setToolTip("TH: Texture Histogram \nLISA: Local Indicator of Spatial Association\n GC: local Geary's C\n CD: Point Collection Distance");
+    distanceMetric.setToolTip("TH: Texture Histogram (vector feature) \nLISA: Local Indicator of Spatial Association (scalar feature) \n GC: local Geary's C\n PCD: Point Collection Distance (no feature)");
 
     kernelWeight.addItem("Uniform");
     kernelWeight.addItem("Binomial");
@@ -280,24 +279,18 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
     // also, check if neighborhood weighting is 
     // available for the specific feature
     if (value >= 5) {   
-        // PCD
+        // PCD, no features
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
-
-        kernelWeight.setEnabled(false);
     }
     else if (value >= 3) {   
-        // also LISA and GC
+        // LISA, GC, scalar features
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
-
-        kernelWeight.setEnabled(true);
     }
     else {
         histBinSizeHeur.setEnabled(true);
         histBinSize.setEnabled(true);
-
-        kernelWeight.setEnabled(true);
     }
 }
 

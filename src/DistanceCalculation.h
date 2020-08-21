@@ -10,6 +10,7 @@ class Parameters;
 enum class knn_library : size_t;
 enum class knn_distance_metric : size_t;
 enum class feature_type : unsigned int;
+enum class loc_Neigh_Weighting : unsigned int;
 
 /*!
  * 
@@ -62,6 +63,7 @@ private:
     knn_distance_metric _knn_metric;                /*!<> */
     unsigned int _nn;                               /*!<> */
     size_t _neighborhoodSize;                       /*!< might be used for some distance metrics */
+    loc_Neigh_Weighting _neighborhoodWeighting;     /*!< used when calculating distance directly from high-dim points (_featureType is no feature/PCOL) */
 
     // Data
     // Input

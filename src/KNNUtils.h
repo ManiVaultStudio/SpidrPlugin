@@ -11,9 +11,9 @@
 
 #include <omp.h>
 
-#include <cmath>     // std::sqrt, exp
-#include <numeric>   // std::accumulate
-#include <algorithm> // std::find
+#include <cmath>     // std::sqrt, exp, floor
+#include <numeric>   // std::inner_product
+#include <algorithm> // std::find, fill
 #include <vector>
 #include <thread>
 #include <atomic>
@@ -21,9 +21,10 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
-/*!
- * 
- * 
+#include "FeatureUtils.h"
+
+/*! 
+ * kNN library that is used (extended) for kNN computations
  */
 enum class knn_library : size_t
 {
@@ -43,53 +44,58 @@ enum class knn_distance_metric : size_t
 };
 
 /*!
- * 
- * 
+ * Types of ground distance calculation that are used as the basis for bin similarities
  */
-enum class ground_dist : size_t
+enum class bin_sim : size_t
 {
-    SIM_EUC = 0,    /*!<> */
-    SIM_EXP = 1,    /*!<> */
+    SIM_EUC = 0,    /*!< 1 - sqrt(Euclidean distance between bins)/(Max dist) */
+    SIM_EXP = 1,    /*!< exp(-(Euclidean distance between bins)^2/(Max dist)) */
+    SIM_UNI = 2,    /*!< 1 (uniform) */
 };
 
 
 /*!
- * Computes the similarities of bins.
+ * Computes the similarities of bins of a 1D histogram.
  *
- * \param neighborhood_width
- * \param ground_type type of ground distance calculation
- * \param ground_weight Only comes into play for ground_type = SIM_EXP, might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
+ * Entry A_ij refers to the sim between bin i and bin j. The diag entries should be 1, all others <= 1.
+ *
+ * \param num_bins    
+ * \param sim_type type of ground distance calculation
+ * \param sim_weight Only comes into play for ground_type = SIM_EXP, might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
  * \return Matrix of neighborhood_width*neighborhood_width (stored in a vector) 
  */
-static std::vector<float> BinSimilarities(size_t neighborhood_width, ground_dist ground_type = ground_dist::SIM_EUC, float ground_weight = 1) {
-    ::std::vector<float> A(neighborhood_width*neighborhood_width, -1);
-    size_t ground_dist_max = neighborhood_width - 1;
+static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bin_sim::SIM_EUC, float sim_weight = 1) {
+    ::std::vector<float> A(num_bins*num_bins, -1);
+    size_t ground_dist_max = num_bins - 1;
 
     int bin_diff = 0;
 
     size_t ground_dist_max_2 = ground_dist_max * ground_dist_max;
     size_t bin_diff_2 = 0;
 
-    if (ground_type == ground_dist::SIM_EUC) {
-        for (int i = 0; i < (int)neighborhood_width; i++) {
-            for (int j = 0; j < (int)neighborhood_width; j++) {
+    if (sim_type == bin_sim::SIM_EUC) {
+        for (int i = 0; i < (int)num_bins; i++) {
+            for (int j = 0; j < (int)num_bins; j++) {
                 bin_diff = (i - j);
                 bin_diff_2 = bin_diff * bin_diff;
-                A[i * neighborhood_width + j] = 1 - std::sqrt(float(bin_diff_2) / float(ground_dist_max_2));
+                A[i * num_bins + j] = 1 - std::sqrt(float(bin_diff_2) / float(ground_dist_max_2));
             }
         }
     }
-    else if (ground_type == ground_dist::SIM_EXP) {
-        for (int i = 0; i < (int)neighborhood_width; i++) {
-            for (int j = 0; j < (int)neighborhood_width; j++) {
+    else if (sim_type == bin_sim::SIM_EXP) {
+        for (int i = 0; i < (int)num_bins; i++) {
+            for (int j = 0; j < (int)num_bins; j++) {
                 bin_diff = (i - j);
                 bin_diff_2 = bin_diff * bin_diff;
-                A[i * neighborhood_width + j] = ::std::exp(-1 * ground_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
+                A[i * num_bins + j] = ::std::exp(-1 * sim_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
             }
         }
+    }
+    else if (sim_type == bin_sim::SIM_UNI) {
+        std::fill(A.begin(), A.end(), 1);
     }
 
-    // if there is a -1 in A, this value was not set (no option selected)
+    // if there is a -1 in A, this value was not set (invalid ground_type option selected)
     assert(std::find(A.begin(), A.end(), -1) == A.end());
 
     return A;
@@ -98,7 +104,7 @@ static std::vector<float> BinSimilarities(size_t neighborhood_width, ground_dist
 namespace hnswlib {
 
 
-    /*
+    /* !
      * The method is borrowed from nmslib
      */
     template<class Function>
@@ -167,7 +173,7 @@ namespace hnswlib {
     struct space_params_QF {
         size_t dim;
         size_t bin;
-        ::std::vector<float> A;     // bin similarity matrix
+        ::std::vector<float> A;     // bin similarity matrix for 1D histograms: entry A_ij refers to the sim between bin i and bin j 
     };
 
     static float
@@ -284,7 +290,7 @@ namespace hnswlib {
         space_params_QF params_;
 
     public:
-        QFSpace(size_t dim, size_t bin, ground_dist ground_type = ground_dist::SIM_EUC) {
+        QFSpace(size_t dim, size_t bin, bin_sim ground_type = bin_sim::SIM_EUC) {
             qDebug() << "Distance Calculation: Prepare QFSpace";
 
             fstdistfunc_ = QFSqr;
@@ -390,6 +396,7 @@ namespace hnswlib {
     // data struct for distance calculation in PointCollectionSpace
     struct space_params_Col {
         size_t dim;
+        ::std::vector<float> A;         // neighborhood similarity matrix
         size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
         DISTFUNC<float> L2distfunc_;
     };
@@ -402,6 +409,7 @@ namespace hnswlib {
         const space_params_Col* sparam = (space_params_Col*)qty_ptr;
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* pWeight = sparam->A.data();
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
         float res = 0;
@@ -425,11 +433,11 @@ namespace hnswlib {
                     rowDist[n2] = tmpDist;
 
             }
-            // add min of col
-            res += colDist;
+            // add (weighted) min of col
+            res += colDist * *(pWeight + n1);
         }
-        // add min of col add min of all rows
-        res += std::accumulate(rowDist.begin(), rowDist.end(), 0.0f);
+        // add (weighted) min of all rows
+        res += std::inner_product(rowDist.begin(), rowDist.end(), pWeight, 0.0f);
 
         return (res);
     }
@@ -442,11 +450,23 @@ namespace hnswlib {
         space_params_Col params_;
 
     public:
-        PointCollectionSpace(size_t dim, size_t neighborhoodSize) {
+        PointCollectionSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
             fstdistfunc_ = ColDist;
             data_size_ = dim * sizeof(float);
 
-            params_ = { dim, neighborhoodSize, L2Sqr };
+            assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
+            unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
+
+            ::std::vector<float> A (neighborhoodSize);
+            switch (weighting)
+            {
+            case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
+            case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NOT); break;
+            default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
+            }
+
+            params_ = { dim, A, neighborhoodSize, L2Sqr };
 
 #if defined(USE_SSE) || defined(USE_AVX)
             if (dim % 16 == 0)
@@ -563,9 +583,10 @@ namespace hnswlib {
             ::std::vector<float> D;
             D.resize(bin * bin);
 
+            // ground distance between bin entries
             for (int i = 0; i < (int)bin; i++)
                 for (int j = 0; j < (int)bin; j++)
-                    D[i * bin + j] = std::abs(i - j);// +1;
+                    D[i * bin + j] = std::abs(i - j);
 
             // these are fast parameters, but not the most accurate
             float eps = 0.1;

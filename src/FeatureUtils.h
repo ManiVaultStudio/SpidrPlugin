@@ -14,10 +14,10 @@
  */
 enum class feature_type : unsigned int
 {
-    TEXTURE_HIST_1D = 0,    /*!< Histograms of data point neighborhood */
-    LISA = 1,               /*!< Local Indicator of Spatial Associations */
-    GEARYC = 2,             /*!< Geary's */
-    PCOL = 3,               /*!< Collection of points (neighborhood)*/
+    TEXTURE_HIST_1D = 0,    /*!< Histograms of data point neighborhood, vector feature */
+    LISA = 1,               /*!< Local Indicator of Spatial Associations, scalar feaure */
+    GEARYC = 2,             /*!< Geary's, scalar feature */
+    PCOL = 3,               /*!< Collection of points (neighborhood), i.e. no feature but a view of the data*/
 };
 
 

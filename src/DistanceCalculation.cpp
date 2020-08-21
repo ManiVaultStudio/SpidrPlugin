@@ -28,6 +28,7 @@ void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameter
     _knn_metric = params._aknn_metric;
     _nn = params._nn;
     _neighborhoodSize = (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1); // square neighborhood with _numLocNeighbors to each side from the center
+    _neighborhoodWeighting = params._neighWeighting;
 
     // Data
     // Input
@@ -97,7 +98,7 @@ void DistanceCalculation::computekNN() {
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_PCOL)
         {
             qDebug() << "Distance calculation: EuclidenSpace as scalar feature metric";
-            space = new hnswlib::PointCollectionSpace(_numDims, _neighborhoodSize);
+            space = new hnswlib::PointCollectionSpace(_numDims, _neighborhoodSize, _neighborhoodWeighting);
         }
         else
         {
