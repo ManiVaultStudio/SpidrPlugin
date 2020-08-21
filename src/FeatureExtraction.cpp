@@ -167,7 +167,8 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
 
         assert(h.rank() == 1);                      // 1D hist
         assert(h.axis().size() == _numHistBins);    // right number of bins
-        assert((_neighborhoodWeighting == loc_Neigh_Weighting::WEIGHT_UNIF) && ((int)std::accumulate(h.begin(), h.end(), 0) == _neighborhoodSize)); // check if uniformity works
+        // check if weighting works: sum(hist) == sum(weights)
+        assert((std::accumulate(h.begin(), h.end(), 0.0f) == std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f)));
 
         // save the histogram in _outFeatures 
         // data layout for points p, dimension d and bin b: [p0d0b0, p0d0b1, p0d0b2, ..., p0d1b0, p0d1b2, ..., p1d0b0, p0d0b1, ...]
@@ -234,7 +235,7 @@ void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
     switch (weighting)
     {
     case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1); break; 
-    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;
+    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
     case loc_Neigh_Weighting::WEIGHT_GAUS: _neighborhoodWeights = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NOT); break;
     default:  break;
     }

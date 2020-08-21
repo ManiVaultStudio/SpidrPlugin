@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <algorithm>    // for_each_n
 #include <execution>    // par_unseq
-#include <numeric>      //iota
+#include <numeric>      // iota
 
 /*! Types of neighborhood features
  *
@@ -38,7 +38,7 @@ enum class loc_Neigh_Weighting : unsigned int
  */
 enum class norm_vec : unsigned int
 {
-    NORM_NOT = 0,   /*!<> */ // No normalization
+    NORM_NOT = 0,   /*!<No normalization */
     NORM_MAX = 1,   /*!<> */
     NORM_SUM = 2,   /*!<> */
 };
@@ -72,7 +72,6 @@ std::vector<float> NormVector(std::vector<T> vec, float normVal);
  */
 std::vector<unsigned int> PascalsTriangleRow(const unsigned int n);
 
-// @param norm: 1 indicates max, 2 indicates sum, 0 indicates no normalization
 /*!
  *
  * \param width

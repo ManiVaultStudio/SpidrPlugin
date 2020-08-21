@@ -293,10 +293,6 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
 
         kernelWeight.setEnabled(true);
     }
-    else if (value == 1) {
-        // only EMD (as is implemented)
-        kernelWeight.setEnabled(false);
-    }
     else {
         histBinSizeHeur.setEnabled(true);
         histBinSize.setEnabled(true);
