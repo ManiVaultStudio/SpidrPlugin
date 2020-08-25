@@ -18,10 +18,17 @@
 #include <thread>
 #include <atomic>
 
+#include <chrono>
+
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
 #include "FeatureUtils.h"
+
+namespace Counter {
+    static unsigned int co = 1;
+    static unsigned int ci = 0;
+}
 
 /*! 
  * kNN library that is used (extended) for kNN computations
@@ -517,69 +524,112 @@ namespace hnswlib {
     struct space_params_Col_Appr {
         space_params_Col_Appr() {};
 
-        space_params_Col_Appr(size_t dim, ::std::vector<float> A, size_t neighborhoodSize, DISTFUNC<float> L2distfunc_, const std::vector<float>* dataFeatures, const std::vector<float>* attribute_data, unsigned int nn, std::vector<int> kNN_indices, std::vector<float> kNN_distances_squared) :
+        space_params_Col_Appr(size_t dim, ::std::vector<float> A, size_t neighborhoodSize, DISTFUNC<float> L2distfunc_, std::vector<float>* dataFeatures, std::vector<float>* attribute_data, unsigned int nn, std::vector<int> kNN_indices, std::vector<float> kNN_distances_squared) :
             dim(dim), A(A), neighborhoodSize(neighborhoodSize), L2distfunc_(L2distfunc_), dataFeatures(dataFeatures), attribute_data(attribute_data), nn(nn), kNN_indices(kNN_indices), kNN_distances_squared(kNN_distances_squared)
-        {}
+        {
+            nullAttr.resize(dim, 0);
+        }
 
         size_t dim;
         ::std::vector<float> A;         // neighborhood similarity matrix
         size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
         DISTFUNC<float> L2distfunc_;
-        const std::vector<float>* dataFeatures;         // pointer to data features: neighborhood indices
-        const std::vector<float>* attribute_data;       // pointer to attributes of size dim
+        std::vector<float>* dataFeatures;         // pointer to data features: neighborhood indices
+        std::vector<float>* attribute_data;       // pointer to attributes of size dim
         unsigned int nn;                                // number of nearest neighbors
         std::vector<int> kNN_indices;                   // indices of kNN in datafeatures
         std::vector<float> kNN_distances_squared;       // distances corresponding to the kNN
+        std::vector<float> nullAttr;                    // Compare with this vector, if an item lies outside the image/selection
     };
 
     /*! Estimate distance between itemID and centralNeighID
     * First, check whether any knn of itemID are the in neighborhood of centralNeighID. If not, calculate the min distance between itemID and all values in neighborhood of centralNeighID
     */
     static float
-        ColDistNeighCalc(unsigned int itemID, unsigned int *centralNeighID, const unsigned int nn, const std::vector<int>* kNN_indices, const std::vector<float>* kNN_distances_squared, const std::vector<float>* dataFeatures, const std::vector<float>* attribute_data, const size_t ndim, const size_t neighborhoodSize, DISTFUNC<float> L2distfunc_) {
+        ColDistNeighCalc(unsigned int itemID, unsigned int *centralNeighID, const unsigned int nn, std::vector<int>* kNN_indices, std::vector<float>* kNN_distances_squared, std::vector<float>* dataFeatures, std::vector<float>* attribute_data, std::vector<float>* nullAttr, const size_t ndim, const size_t neighborhoodSize, DISTFUNC<float> L2distfunc_) {
 
         float dist = FLT_MAX;
 
+        //auto t1 = std::chrono::steady_clock::now();
+        //int kNN_ID = 0;
+        //int kNN_index = 0;
+        //float* neigh_start = NULL;
+        //float* neigh_end = NULL;
+        float* p_n1_knn_index = NULL;
+
         for (unsigned int knn = 0; knn < nn; knn++) {
+            //auto t2 = std::chrono::steady_clock::now();
+            //// look up kNN indices for pVect1
+            //kNN_ID = (itemID * nn) + knn + 1;            // +1 because we don't count points themselves as nearest neighbors
+            //kNN_index = *(kNN_indices->data() + (kNN_ID));
 
-            // look up kNN indices for pVect1
-            const int kNN_ID = (itemID * nn) + knn + 1;            // +1 because we don't count points themselves as nearest neighbors
-            const int kNN_index = *(kNN_indices->data() + (kNN_ID));
+            //// check whether kNN index is in dataFeatures (neighbors)
+            //neigh_start = dataFeatures->data() + (*centralNeighID * neighborhoodSize);
+            //neigh_end = dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize);
 
-            // check whether kNN index is in dataFeatures (neighbors)
-            const float* neigh_start = dataFeatures->data() + (*centralNeighID * neighborhoodSize);
-            const float* neigh_end = dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize);
-            const float* p_n1_knn_index = std::find(neigh_start, neigh_end, (float)kNN_index);
+            //auto t3 = std::chrono::steady_clock::now();
 
-            if (p_n1_knn_index != neigh_end) {
+            p_n1_knn_index = std::find(dataFeatures->data() + (*centralNeighID * neighborhoodSize), dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize), (float)*(kNN_indices->data() + ((itemID * nn) + knn + 1)));
+
+            //auto t4 = std::chrono::steady_clock::now();
+
+            if (p_n1_knn_index != dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize)) {
                 // -2 marks points outside the selection/image
                 if (*p_n1_knn_index == -2.0f)
                     continue;
 
                 // take approximated closest value
-                dist = *(kNN_distances_squared->data() + (kNN_ID));
+                dist = *(kNN_distances_squared->data() + ((itemID * nn) + knn + 1));
                 break;
             }
+
+            //auto t5 = std::chrono::steady_clock::now();
+            //if (Counter::ci < Counter::co) {
+            //    Counter::ci++;
+            //    qDebug() << "KNN: t2t3 " << ((float)std::chrono::duration_cast<std::chrono::nanoseconds> (t3 - t2).count()) << ", t3t4 " << ((float)std::chrono::duration_cast<std::chrono::nanoseconds> (t4 - t3).count()) << ", t4t5 " << ((float)std::chrono::duration_cast<std::chrono::nanoseconds> (t5 - t4).count());
+
+            //}
         }
+
+        //auto t6 = std::chrono::steady_clock::now();
 
         // if no knn are in neighborhood, manually calc neighborhood distances and use the smallest
         if (dist == FLT_MAX) {
-            float tmpDist = 0;
-            const float* p_itemVal = attribute_data->data() + (itemID * ndim);    // pointer to first itemIds attribute values
+            //auto t7 = std::chrono::steady_clock::now();
 
-            std::vector<float> nullAttr(ndim, 0);   // Replace values outside with zeros
+            float tmpDist = 0;
+            float* p_itemVal = attribute_data->data() + (itemID * ndim);    // pointer to first itemIds attribute values
+            //float neighID = 0;
+            float* p_neighVal = NULL;
+
+            //auto t8 = std::chrono::steady_clock::now();
 
             for (size_t neigh = 0; neigh < neighborhoodSize; neigh++) {
 
-                float neighID = dataFeatures->at((*centralNeighID * neighborhoodSize) + neigh); // pointer to values in second points neighborhood
+                // neighID = dataFeatures->at((*centralNeighID * neighborhoodSize) + neigh); // pointer to values in second points neighborhood
 
-                const float* p_neighVal = (neighID != -2.0f) ? (attribute_data->data() + (unsigned int)neighID) : nullAttr.data();  // if neighID is outside selection, compare with 0
+                p_neighVal = (dataFeatures->at((*centralNeighID * neighborhoodSize) + neigh) != -2.0f) ? (attribute_data->data() + (unsigned int)dataFeatures->at((*centralNeighID * neighborhoodSize) + neigh)) : nullAttr->data();  // if neighID is outside selection, compare with 0
                 tmpDist = L2distfunc_(p_itemVal, p_neighVal, &ndim);
 
                 if (tmpDist < dist)
                     dist = tmpDist;
             }
+            //auto t9 = std::chrono::steady_clock::now();
+
+            //if (Counter::ci == Counter::co) {
+            //    qDebug() << "IF: t7t8 " << ((float)std::chrono::duration_cast<std::chrono::nanoseconds> (t8 - t7).count()) << ", t8t9 " << ((float)std::chrono::duration_cast<std::chrono::nanoseconds> (t9 - t8).count());
+            //}
+
         }
+
+        //auto t10 = std::chrono::steady_clock::now();
+
+        //if (itemID <= Counter::co) {
+        //    Counter::co++;
+        //    qDebug() << "KNN (full) t1t6 " << ((float)std::chrono::duration_cast<std::chrono::microseconds> (t6 - t1).count());
+        //    qDebug() << "IF (full) t6t11 " << ((float)std::chrono::duration_cast<std::chrono::microseconds> (t10 - t6).count());
+        //    qDebug() << "ALL t1t11       " << ((float)std::chrono::duration_cast<std::chrono::microseconds> (t10 - t1).count());
+        //}
 
         assert(dist >= 0);
         assert(dist < FLT_MAX);
@@ -593,20 +643,24 @@ namespace hnswlib {
         unsigned int *pVect2 = (unsigned int *)pVect2v;   // points to item in _pointIds
 
         // Easy access to parameters
-        const space_params_Col_Appr* sparam = (space_params_Col_Appr*)qty_ptr;
+        space_params_Col_Appr* sparam = (space_params_Col_Appr*)qty_ptr;
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
         const float* pWeight = sparam->A.data();
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
-        const std::vector<float>* dataFeatures = sparam->dataFeatures;                    // pointer to data features: neighborhood indices
-        const std::vector<float>* attribute_data = sparam->attribute_data;
+        std::vector<float>* dataFeatures = sparam->dataFeatures;                    // pointer to data features: neighborhood indices
+        std::vector<float>* attribute_data = sparam->attribute_data;
         const unsigned int nn = sparam->nn;
-        const std::vector<int>* kNN_indices = &(sparam->kNN_indices);
-        const std::vector<float>* kNN_distances_squared = &(sparam->kNN_distances_squared);
+        std::vector<int>* kNN_indices = &(sparam->kNN_indices);
+        std::vector<float>* kNN_distances_squared = &(sparam->kNN_distances_squared);
+        std::vector<float>* nullAttr = &(sparam->nullAttr);
 
         float res = 0;
         float colDist = FLT_MAX;
         float rowDist = FLT_MAX;
+
+        float An = 0;
+        float Bn = 0;
 
         // Euclidean dist between all neighbor pairs
         // Take the min of all dists from a item in neigh1 to all items in Neigh2
@@ -615,16 +669,16 @@ namespace hnswlib {
         // Sum over all the column-wise and row-wise minima
         for (size_t neigh = 0; neigh < neighborhoodSize; neigh++) {
 
-            float An = dataFeatures->at((*pVect1 * neighborhoodSize) + neigh);
-            float Bn = dataFeatures->at((*pVect2 * neighborhoodSize) + neigh);
+            An = dataFeatures->at((*pVect1 * neighborhoodSize) + neigh);
+            Bn = dataFeatures->at((*pVect2 * neighborhoodSize) + neigh);
 
             assert(An != -1.0f);    // This would mark an unprocessed value and possible error in FeatureExtraction
             assert(Bn != -1.0f);
 
             // for each col and row: look up if a knn if that item is in the neighborhood, else calc all distances
             // if item is outside the selection (ID == -2), simply assign no distance
-            colDist = (An != -2.0f) ? ColDistNeighCalc((unsigned int)An, pVect2, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, ndim, neighborhoodSize, L2distfunc_) : 0;
-            rowDist = (Bn != -2.0f) ? ColDistNeighCalc((unsigned int)Bn, pVect1, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, ndim, neighborhoodSize, L2distfunc_) : 0;
+            colDist = (An != -2.0f) ? ColDistNeighCalc((unsigned int)An, pVect2, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, nullAttr, ndim, neighborhoodSize, L2distfunc_) : 0;
+            rowDist = (Bn != -2.0f) ? ColDistNeighCalc((unsigned int)Bn, pVect1, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, nullAttr, ndim, neighborhoodSize, L2distfunc_) : 0;
 
             // add (weighted) min of col and row
             res += colDist * *(pWeight + neigh) + rowDist * *(pWeight + neigh);
@@ -641,7 +695,7 @@ namespace hnswlib {
         space_params_Col_Appr params_;
 
     public:
-        PointCollectionSpaceApprox(size_t numDims, size_t neighborhoodSize, size_t numPoints, const std::vector<float>* dataFeatures, const std::vector<float>* _attribute_data, loc_Neigh_Weighting weighting) {
+        PointCollectionSpaceApprox(size_t numDims, size_t neighborhoodSize, size_t numPoints, std::vector<float>* dataFeatures, std::vector<float>* _attribute_data, loc_Neigh_Weighting weighting) {
             fstdistfunc_ = ColDistAppr;
             data_size_ = neighborhoodSize * sizeof(float);  // numDims
 

@@ -20,7 +20,7 @@ DistanceCalculation::~DistanceCalculation()
 {
 }
 
-void DistanceCalculation::setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, std::vector<float>* dataFeatures, Parameters& params) {
+void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector<float>& attribute_data, std::vector<float>* dataFeatures, Parameters& params) {
     _featureType = params._featureType;
 
     // Parameters
@@ -112,7 +112,7 @@ void DistanceCalculation::computekNN() {
         }
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_PCOLappr)
         {
-            qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpace) as scalar feature metric";
+            qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpaceApprox) as scalar feature metric";
             space = new hnswlib::PointCollectionSpaceApprox(_numDims, _neighborhoodSize, _numPoints, _dataFeatures, _attribute_data, _neighborhoodWeighting);
         }
         else

@@ -15,15 +15,15 @@ std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>
     appr_alg.addPoint((void*)dataFeatures->data(), (std::size_t) 0);
 
     // This loop is for debugging, when you want to sequentially add points
-    for (int i = 1; i < numPoints; ++i)
-    {
-        appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
-    }
-
-    //int num_threads = std::thread::hardware_concurrency();
-    //hnswlib::ParallelFor(1, numPoints, num_threads, [&](size_t i, size_t threadId) {
+    //for (int i = 1; i < numPoints; ++i)
+    //{
     //    appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
-    //});
+    //}
+
+    int num_threads = std::thread::hardware_concurrency();
+    hnswlib::ParallelFor(1, numPoints, num_threads, [&](size_t i, size_t threadId) {
+        appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
+    });
 
     qDebug() << "ComputekNN: Search akNN Index";
 
