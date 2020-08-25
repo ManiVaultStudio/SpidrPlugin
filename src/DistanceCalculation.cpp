@@ -123,45 +123,14 @@ void DistanceCalculation::computekNN() {
         case feature_type::PCOL:            indMultiplier = _numDims * _neighborhoodSize; break;
         }
         
-        // add data points: each data point holds _numDims*_numHistBins values
-        appr_alg.addPoint((void*)_dataFeatures->data(), (std::size_t) 0);
+        std::tie(_indices, _distances_squared) = ComputekNN(_dataFeatures, space, indMultiplier, _numPoints, _nn);
 
-        // This loop is for debugging, when you want to sequentially add points
-        //for (int i = 1; i < _numPoints; ++i)
-        //{
-        //    appr_alg.addPoint((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
-        //}
-
-        hnswlib::ParallelFor(0, _numPoints, num_threads, [&](size_t i, size_t threadId) {
-            appr_alg.addPoint((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
-        });
+        assert(std::find(_indices.begin(), _indices.end(), -1) == _indices.end());
+        assert(std::find(_distances_squared.begin(), _distances_squared.end(), -1) == _distances_squared.end());
 
         auto end = std::chrono::steady_clock::now();
-        qDebug() << "Distance calculation: Build duration (sec): " << ((float) std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
+        qDebug() << "Distance calculation: Knn build and search index duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
 
-        qDebug() << "Distance calculation: Search akNN Index";
-
-        // query dataset
-#pragma omp parallel for
-        for (int i = 0; i < _numPoints; ++i)
-        {
-            // find nearest neighbors
-            auto top_candidates = appr_alg.searchKnn((void*)(_dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype)_nn);
-            while (top_candidates.size() > _nn) {
-                top_candidates.pop();
-            }
-            // save nn in _indices and _distances_squared 
-            auto *distances_offset = _distances_squared.data() + (i*_nn);
-            auto indices_offset = _indices.data() + (i*_nn);
-            int j = 0;
-            while (top_candidates.size() > 0) {
-                auto rez = top_candidates.top();
-                distances_offset[_nn - j - 1] = rez.first;
-                indices_offset[_nn - j - 1] = appr_alg.getExternalLabel(rez.second);
-                top_candidates.pop();
-                ++j;
-            }
-        }
     }
 
 }

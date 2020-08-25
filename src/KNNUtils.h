@@ -101,6 +101,17 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
     return A;
 }
 
+/*! Compute kNN for a custom metric on features of a data set
+ * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
+ * \param space HNSWLib metric space
+ * \param indMultiplier Size of one data item features
+ * \param numPoints Number of points in the data
+ * \param nn Number of kNN to compute
+ * \return Tuple of knn Indices and respective squared distances
+*/
+template<typename T>
+std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+
 namespace hnswlib {
 
 
