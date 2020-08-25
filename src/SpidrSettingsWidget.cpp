@@ -36,6 +36,7 @@ _analysisPlugin(analysisPlugin)
     distanceMetric.addItem("Euclidean (LISA)", QVariant(QPoint(1, 3)));
     distanceMetric.addItem("Euclidean (GC)", QVariant(QPoint(2, 3)));
     distanceMetric.addItem("Euclidean (PCD)", QVariant(QPoint(3, 4)));
+    distanceMetric.addItem("Euclidean (PCDa)", QVariant(QPoint(4, 5)));
     distanceMetric.setToolTip("TH: Texture Histogram (vector feature) \nLISA: Local Indicator of Spatial Association (scalar feature) \n GC: local Geary's C\n PCD: Point Collection Distance (no feature)");
 
     kernelWeight.addItem("Uniform");

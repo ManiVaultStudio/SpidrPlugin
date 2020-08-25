@@ -173,8 +173,6 @@ void SpidrPlugin::onNewEmbedding() {
 }
 
 void SpidrPlugin::initializeAnalysisSettings() {
-    const int featType = (_settings->distanceMetric.currentIndex() <= 2) ? 0 : 1;   // 0: vector (TH), 1: scalar (e.g. LISA, Geary's C)
-
     // set all the parameters
     _spidrAnalysis.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentIndex(), _settings->kernelSize.text().toInt(),  \
                                               _settings->histBinSize.text().toInt(), _settings->knnOptions.currentIndex(), _settings->distanceMetric.currentData().toPoint().y(), \
