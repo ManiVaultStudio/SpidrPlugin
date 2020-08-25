@@ -41,7 +41,7 @@ public:
      * \param histogramFeatures
      * \param params
      */
-    void setup(std::vector<float>* histogramFeatures, Parameters& params);
+    void setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, std::vector<float>* dataFeatures, Parameters& params);
 
     /*!
      * 
@@ -71,6 +71,8 @@ private:
     size_t _numPoints;                              /*!<> */
     size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
     const std::vector<float>* _dataFeatures;        /*!<> */
+    const std::vector<unsigned int>* _pointIds;     /*!<> */
+    const std::vector<float>* _attribute_data;      /*!<> */
 
     // Output
     std::vector<int> _indices;                      /*!<> */

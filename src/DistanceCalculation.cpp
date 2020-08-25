@@ -20,7 +20,7 @@ DistanceCalculation::~DistanceCalculation()
 {
 }
 
-void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameters& params) {
+void DistanceCalculation::setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, std::vector<float>* dataFeatures, Parameters& params) {
     _featureType = params._featureType;
 
     // Parameters
@@ -35,7 +35,9 @@ void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameter
     _numPoints = params._numPoints;
     _numDims = params._numDims;
     _numHistBins = params._numHistBins;
-    _dataFeatures = histogramFeatures;
+    _dataFeatures = dataFeatures;
+    _pointIds = &pointIds;
+    _attribute_data = &attribute_data;
 
     // Output
     _indices.resize(_numPoints*_nn);
@@ -56,6 +58,10 @@ void DistanceCalculation::setup(std::vector<float>* histogramFeatures, Parameter
         assert(_dataFeatures->size() == (_numPoints * _numDims * _neighborhoodSize));
         qDebug() << "Distance calculation: Feature values per point: " << _numDims * _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
     }
+    else if (_featureType == feature_type::PCOLappr) {
+        assert(_dataFeatures->size() == (_numPoints * _neighborhoodSize));
+        qDebug() << "Distance calculation: Feature values per point: " << _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    }
 
 }
 
@@ -72,6 +78,10 @@ void DistanceCalculation::computekNN() {
     
     if (_knn_lib == knn_library::KNN_HNSW) {
         qDebug() << "Distance calculation: HNSWLib for knn computation";
+
+        auto start = std::chrono::steady_clock::now();
+
+        qDebug() << "Distance calculation: Setting up metric space";
 
         // setup hsnw index
         hnswlib::SpaceInterface<float> *space = NULL;
@@ -92,27 +102,24 @@ void DistanceCalculation::computekNN() {
         }
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_EUC)
         {
-            qDebug() << "Distance calculation: EuclidenSpace as scalar feature metric";
+            qDebug() << "Distance calculation: EuclidenSpace (L2Space) as scalar feature metric";
             space = new hnswlib::L2Space(_numDims);
         }
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_PCOL)
         {
-            qDebug() << "Distance calculation: EuclidenSpace as scalar feature metric";
+            qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpace) as scalar feature metric";
             space = new hnswlib::PointCollectionSpace(_numDims, _neighborhoodSize, _neighborhoodWeighting);
+        }
+        else if (_knn_metric == knn_distance_metric::KNN_METRIC_PCOLappr)
+        {
+            qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpace) as scalar feature metric";
+            space = new hnswlib::PointCollectionSpaceApprox(_numDims, _neighborhoodSize, _numPoints, _dataFeatures, _attribute_data, _neighborhoodWeighting);
         }
         else
         {
             qDebug() << "Distance calculation: ERROR: Distance metric unknown.";
             return;
         }
-
-        qDebug() << "Distance calculation: Build akNN Index";
-
-        hnswlib::HierarchicalNSW<float> appr_alg(space, _numPoints);   // use default HNSW values for M, ef_construction random_seed
-
-        int num_threads = std::thread::hardware_concurrency();
-
-        auto start = std::chrono::steady_clock::now();
 
         // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
         size_t indMultiplier = 0;
@@ -121,9 +128,14 @@ void DistanceCalculation::computekNN() {
         case feature_type::LISA:            // same as Geary's C
         case feature_type::GEARYC:          indMultiplier = _numDims; break;
         case feature_type::PCOL:            indMultiplier = _numDims * _neighborhoodSize; break;
+        case feature_type::PCOLappr:        indMultiplier = 1; break;   // because we use the _pointIds later on
         }
         
-        std::tie(_indices, _distances_squared) = ComputekNN(_dataFeatures, space, indMultiplier, _numPoints, _nn);
+        qDebug() << "Distance calculation: Compute kNN";
+        if (_featureType == feature_type::PCOLappr)
+            std::tie(_indices, _distances_squared) = ComputekNN(_pointIds, space, indMultiplier, _numPoints, _nn);
+        else
+            std::tie(_indices, _distances_squared) = ComputekNN(_dataFeatures, space, indMultiplier, _numPoints, _nn);
 
         assert(std::find(_indices.begin(), _indices.end(), -1) == _indices.end());
         assert(std::find(_distances_squared.begin(), _distances_squared.end(), -1) == _distances_squared.end());

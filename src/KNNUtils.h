@@ -41,6 +41,7 @@ enum class knn_distance_metric : size_t
     KNN_METRIC_HEL = 2,     /*!< Hellinger distance */
     KNN_METRIC_EUC = 3,     /*!< Euclidean distance - not suitable for histogram features */
     KNN_METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
+    KNN_METRIC_PCOLappr = 5,     /*!< (approx) Collection distance between the neighborhoods around two items*/
 };
 
 /*!
@@ -505,6 +506,205 @@ namespace hnswlib {
 
         ~PointCollectionSpace() {}
     };
+
+
+
+    // ---------------
+    //    Point collection distance approx
+    // ---------------
+
+    // data struct for distance calculation in PointCollectionSpaceApprox
+    struct space_params_Col_Appr {
+        space_params_Col_Appr() {};
+
+        space_params_Col_Appr(size_t dim, ::std::vector<float> A, size_t neighborhoodSize, DISTFUNC<float> L2distfunc_, const std::vector<float>* dataFeatures, const std::vector<float>* attribute_data, unsigned int nn, std::vector<int> kNN_indices, std::vector<float> kNN_distances_squared) :
+            dim(dim), A(A), neighborhoodSize(neighborhoodSize), L2distfunc_(L2distfunc_), dataFeatures(dataFeatures), attribute_data(attribute_data), nn(nn), kNN_indices(kNN_indices), kNN_distances_squared(kNN_distances_squared)
+        {}
+
+        size_t dim;
+        ::std::vector<float> A;         // neighborhood similarity matrix
+        size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
+        DISTFUNC<float> L2distfunc_;
+        const std::vector<float>* dataFeatures;         // pointer to data features: neighborhood indices
+        const std::vector<float>* attribute_data;       // pointer to attributes of size dim
+        unsigned int nn;                                // number of nearest neighbors
+        std::vector<int> kNN_indices;                   // indices of kNN in datafeatures
+        std::vector<float> kNN_distances_squared;       // distances corresponding to the kNN
+    };
+
+    /*! Estimate distance between itemID and centralNeighID
+    * First, check whether any knn of itemID are the in neighborhood of centralNeighID. If not, calculate the min distance between itemID and all values in neighborhood of centralNeighID
+    */
+    static float
+        ColDistNeighCalc(unsigned int itemID, unsigned int *centralNeighID, const unsigned int nn, const std::vector<int>* kNN_indices, const std::vector<float>* kNN_distances_squared, const std::vector<float>* dataFeatures, const std::vector<float>* attribute_data, const size_t ndim, const size_t neighborhoodSize, DISTFUNC<float> L2distfunc_) {
+
+        float dist = FLT_MAX;
+
+        for (unsigned int knn = 0; knn < nn; knn++) {
+
+            // look up kNN indices for pVect1
+            const int kNN_ID = (itemID * nn) + knn + 1;            // +1 because we don't count points themselves as nearest neighbors
+            const int kNN_index = *(kNN_indices->data() + (kNN_ID));
+
+            // check whether kNN index is in dataFeatures (neighbors)
+            const float* neigh_start = dataFeatures->data() + (*centralNeighID * neighborhoodSize);
+            const float* neigh_end = dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize);
+            const float* p_n1_knn_index = std::find(neigh_start, neigh_end, (float)kNN_index);
+
+            if (p_n1_knn_index != neigh_end) {
+                // -2 marks points outside the selection/image
+                if (*p_n1_knn_index == -2.0f)
+                    continue;
+
+                // take approximated closest value
+                dist = *(kNN_distances_squared->data() + (kNN_ID));
+                break;
+            }
+        }
+
+        // if no knn are in neighborhood, manually calc neighborhood distances and use the smallest
+        if (dist == FLT_MAX) {
+            float tmpDist = 0;
+            const float* p_itemVal = attribute_data->data() + (itemID * ndim);    // pointer to first itemIds attribute values
+
+            std::vector<float> nullAttr(ndim, 0);   // Replace values outside with zeros
+
+            for (size_t neigh = 0; neigh < neighborhoodSize; neigh++) {
+
+                float neighID = dataFeatures->at((*centralNeighID * neighborhoodSize) + neigh); // pointer to values in second points neighborhood
+
+                const float* p_neighVal = (neighID != -2.0f) ? (attribute_data->data() + (unsigned int)neighID) : nullAttr.data();  // if neighID is outside selection, compare with 0
+                tmpDist = L2distfunc_(p_itemVal, p_neighVal, &ndim);
+
+                if (tmpDist < dist)
+                    dist = tmpDist;
+            }
+        }
+
+        assert(dist >= 0);
+        assert(dist < FLT_MAX);
+
+        return dist;
+    }
+
+    static float
+        ColDistAppr(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        unsigned int *pVect1 = (unsigned int *)pVect1v;   // points to item in _pointIds
+        unsigned int *pVect2 = (unsigned int *)pVect2v;   // points to item in _pointIds
+
+        // Easy access to parameters
+        const space_params_Col_Appr* sparam = (space_params_Col_Appr*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* pWeight = sparam->A.data();
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+        const std::vector<float>* dataFeatures = sparam->dataFeatures;                    // pointer to data features: neighborhood indices
+        const std::vector<float>* attribute_data = sparam->attribute_data;
+        const unsigned int nn = sparam->nn;
+        const std::vector<int>* kNN_indices = &(sparam->kNN_indices);
+        const std::vector<float>* kNN_distances_squared = &(sparam->kNN_distances_squared);
+
+        float res = 0;
+        float colDist = FLT_MAX;
+        float rowDist = FLT_MAX;
+
+        // Euclidean dist between all neighbor pairs
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2
+        // This is aproximated using precalculated kNN
+        // (the above can be written in a distance matrix, hence the column and row terms)
+        // Sum over all the column-wise and row-wise minima
+        for (size_t neigh = 0; neigh < neighborhoodSize; neigh++) {
+
+            float An = dataFeatures->at((*pVect1 * neighborhoodSize) + neigh);
+            float Bn = dataFeatures->at((*pVect2 * neighborhoodSize) + neigh);
+
+            assert(An != -1.0f);    // This would mark an unprocessed value and possible error in FeatureExtraction
+            assert(Bn != -1.0f);
+
+            // for each col and row: look up if a knn if that item is in the neighborhood, else calc all distances
+            // if item is outside the selection (ID == -2), simply assign no distance
+            colDist = (An != -2.0f) ? ColDistNeighCalc((unsigned int)An, pVect2, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, ndim, neighborhoodSize, L2distfunc_) : 0;
+            rowDist = (Bn != -2.0f) ? ColDistNeighCalc((unsigned int)Bn, pVect1, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, ndim, neighborhoodSize, L2distfunc_) : 0;
+
+            // add (weighted) min of col and row
+            res += colDist * *(pWeight + neigh) + rowDist * *(pWeight + neigh);
+        }
+
+        return (res);
+    }
+
+    class PointCollectionSpaceApprox : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+
+        space_params_Col_Appr params_;
+
+    public:
+        PointCollectionSpaceApprox(size_t numDims, size_t neighborhoodSize, size_t numPoints, const std::vector<float>* dataFeatures, const std::vector<float>* _attribute_data, loc_Neigh_Weighting weighting) {
+            fstdistfunc_ = ColDistAppr;
+            data_size_ = neighborhoodSize * sizeof(float);  // numDims
+
+            assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
+            unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
+
+            ::std::vector<float> A(neighborhoodSize);
+            switch (weighting)
+            {
+            case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
+            case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NOT); break;
+            default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
+            }
+
+            // precalculate kNN with attribute data for PC distance approximation
+            unsigned int nn = 91;
+            std::vector<int> indices;
+            std::vector<float> distances_squared;
+
+            qDebug() << "PointCollectionSpaceApprox: Calculate kNN for distance approximation";
+
+            SpaceInterface<float> *space = new L2Space(numDims);
+            std::tie(indices, distances_squared) = ComputekNN(_attribute_data, space, numDims, numPoints, nn);
+
+            // Debug check if all indices and distances are set
+            assert(indices.size() == (numPoints*nn));
+            assert(distances_squared.size() == (numPoints*nn));
+            assert(std::find(indices.begin(), indices.end(), -1) == indices.end());
+            assert(std::find(distances_squared.begin(), distances_squared.end(), -1) == distances_squared.end());
+
+            DISTFUNC<float> L2distfunc_ = L2Sqr;
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (numDims % 16 == 0)
+                L2distfunc_ = L2SqrSIMD16Ext;
+            else if (numDims % 4 == 0)
+                L2distfunc_ = L2SqrSIMD4Ext;
+            else if (numDims > 16)
+                L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (numDims > 4)
+                L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+
+            params_ = space_params_Col_Appr(numDims, A, neighborhoodSize, L2distfunc_, dataFeatures, _attribute_data, nn, indices, distances_squared);
+
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return &params_;
+        }
+
+        ~PointCollectionSpaceApprox() {}
+    };
+
 
     // ---------------
     //    Wasserstein distance (EMD - Earth mover distance)

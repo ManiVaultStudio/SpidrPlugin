@@ -76,7 +76,7 @@ private:
      * \param pointInd
      * \param neighborValues
      */
-    void calculateHistogram(size_t pointInd, std::vector<float> neighborValues);
+    void calculateHistogram(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
 
     /*! Calculate Local Indicator of Spatial Association features for each item
      * Compute Local Moran's I of the neighborhood values for pointID. 
@@ -85,7 +85,7 @@ private:
      * \param pointInd
      * \param neighborValues
     */ 
-    void calculateLISA(size_t pointInd, std::vector<float> neighborValues);
+    void calculateLISA(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
 
     /*! Calculate Geary's C features for each item
      * Compute Geary's C of the neighborhood values for pointID.
@@ -94,14 +94,21 @@ private:
      * \param pointInd
      * \param neighborValues
     */
-    void calculateGearysC(size_t pointInd, std::vector<float> neighborValues);
+    void calculateGearysC(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
 
-    /*! Sets the Feature per element to all its neighbors
+    /*! Sets the Feature per element to all it's neighbors attributes
      * The neighborhood is a square and centered around each item respectively
      * Padding is done by setting out-of-boundary values to 0
      * \param weighting
      */
-    void calculateAllNeighborhoods(size_t pointInd, std::vector<float> neighborValues);
+    void allNeighborhoodVals(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
+
+    /*! Sets the Feature per element to all its neighbor's IDs
+     * The neighborhood is a square and centered around each item respectively
+     * Padding is done by setting out-of-boundary values to 0
+     * \param weighting
+     */
+    void allNeighborhoodIDs(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
 
     /*! Inits the neighborhood weighting
      * 
@@ -113,7 +120,7 @@ private:
      * E.g. calculateHistogram or calculateLISA. 
      * It set in extractFeatures().
      */
-    void(FeatureExtraction::*featFunct)(size_t, std::vector<float>);
+    void(FeatureExtraction::*featFunct)(size_t, std::vector<float>, std::vector<int>);
 
     bool _stopFeatureComputation;                   /*!< Stops the computation (TODO: breaks the openmp parallel loop) */
 
