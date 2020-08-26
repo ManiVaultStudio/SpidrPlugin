@@ -137,6 +137,10 @@ void DistanceCalculation::computekNN() {
         else
             std::tie(_indices, _distances_squared) = ComputekNN(_dataFeatures, space, indMultiplier, _numPoints, _nn);
 
+        auto t = std::find(_indices.begin(), _indices.end(), -1);
+
+        //qDebug() << *t;
+
         assert(std::find(_indices.begin(), _indices.end(), -1) == _indices.end());
         assert(std::find(_distances_squared.begin(), _distances_squared.end(), -1) == _distances_squared.end());
 
