@@ -18,6 +18,9 @@
 #include <thread>
 #include <atomic>
 
+#include <unordered_set>
+#include <utility>
+    
 #include <chrono>
 
 #include <Eigen/Dense>
@@ -524,14 +527,51 @@ namespace hnswlib {
     //    Point collection distance approx
     // ---------------
 
+
+    //inline void hash_combine(std::size_t & seed, const int & v)
+    //{
+    //    std::hash<int> hasher;
+    //    seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    //}
+
+    //struct pair_hash
+    //{
+    //    inline std::size_t operator()(const std::pair<int, int> & v) const
+    //    {
+    //        std::size_t seed = 0;
+    //        hash_combine(seed, v.first);
+    //        hash_combine(seed, v.second);
+    //        return seed;
+    //    }
+    //};
+
+    struct pair_hash
+    {
+        std::size_t operator() (const std::pair<unsigned int, int> &pair) const
+        {
+            return std::hash<unsigned int>()(pair.first) ^ std::hash<int>()(pair.second);
+        }
+    };
+
     // data struct for distance calculation in PointCollectionSpaceApprox
     struct space_params_Col_Appr {
         space_params_Col_Appr() {};
 
-        space_params_Col_Appr(size_t dim, ::std::vector<float> A, size_t neighborhoodSize, DISTFUNC<float> L2distfunc_, std::vector<float>* dataFeatures, std::vector<float>* attribute_data, unsigned int nn, std::vector<int> kNN_indices, std::vector<float> kNN_distances_squared) :
-            dim(dim), A(A), neighborhoodSize(neighborhoodSize), L2distfunc_(L2distfunc_), dataFeatures(dataFeatures), attribute_data(attribute_data), nn(nn), kNN_indices(kNN_indices), kNN_distances_squared(kNN_distances_squared)
+        space_params_Col_Appr(size_t dim, ::std::vector<float> A, size_t neighborhoodSize, DISTFUNC<float> L2distfunc_, std::vector<float>* dataFeatures, std::vector<float>* attribute_data, unsigned int nn, std::vector<int> kNN_indices, std::vector<float> kNN_distances_squared, size_t numPoints) :
+            dim(dim), A(A), neighborhoodSize(neighborhoodSize), L2distfunc_(L2distfunc_), dataFeatures(dataFeatures), attribute_data(attribute_data), nn(nn), kNN_indices(kNN_indices), kNN_distances_squared(kNN_distances_squared), numPoints(numPoints)
         {
             nullAttr.resize(dim, 0);
+
+            qDebug() << "PointCollectionSpaceApprox: Building nearest neighbor index";
+
+            for (unsigned int pointID = 0; pointID < numPoints; pointID++) {
+                for (unsigned int neighID = 0; neighID < neighborhoodSize; neighID++) {
+                    if ((int)(*dataFeatures)[pointID*neighborhoodSize + neighID] != -2)
+                        //neighbor_set.insert(std::make_pair((int)pointID, (int)(*dataFeatures)[pointID*neighborhoodSize + neighID]));
+                        neighbor_set.insert(pointID * numPoints + (int)(*dataFeatures)[pointID*neighborhoodSize + neighID]);
+                }
+            }
+
         }
 
         size_t dim;
@@ -544,13 +584,15 @@ namespace hnswlib {
         std::vector<int> kNN_indices;                   // indices of kNN in datafeatures
         std::vector<float> kNN_distances_squared;       // distances corresponding to the kNN
         std::vector<float> nullAttr;                    // Compare with this vector, if an item lies outside the image/selection
+        std::unordered_set<int> neighbor_set;  // key: pair(pointID, neighbor's pointID)
+        size_t numPoints;  // key: pair(pointID, neighbor's pointID)
     };
 
     /*! Estimate distance between itemID and centralNeighID
     * First, check whether any knn of itemID are the in neighborhood of centralNeighID. If not, calculate the min distance between itemID and all values in neighborhood of centralNeighID
     */
     static float
-        ColDistNeighCalc(unsigned int itemID, unsigned int *centralNeighID, const unsigned int nn, std::vector<int>* kNN_indices, std::vector<float>* kNN_distances_squared, std::vector<float>* dataFeatures, std::vector<float>* attribute_data, std::vector<float>* nullAttr, const size_t ndim, const size_t neighborhoodSize, DISTFUNC<float> L2distfunc_) {
+        ColDistNeighCalc(unsigned int itemID, unsigned int *centralNeighID, const unsigned int nn, std::vector<int>* kNN_indices, std::vector<float>* kNN_distances_squared, std::vector<float>* dataFeatures, std::vector<float>* attribute_data, std::vector<float>* nullAttr, const size_t ndim, const size_t neighborhoodSize, DISTFUNC<float> L2distfunc_, std::unordered_set<int>* neighbor_set, size_t numPoints) {
 
         float dist = FLT_MAX;
 
@@ -559,7 +601,7 @@ namespace hnswlib {
         //int kNN_index = 0;
         //float* neigh_start = NULL;
         //float* neigh_end = NULL;
-        float* p_n1_knn_index = NULL;
+        //float* p_n1_knn_index = NULL;
 
         for (unsigned int knn = 0; knn < nn; knn++) {
             //auto t2 = std::chrono::steady_clock::now();
@@ -573,14 +615,24 @@ namespace hnswlib {
 
             //auto t3 = std::chrono::steady_clock::now();
 
-            p_n1_knn_index = std::find(dataFeatures->data() + (*centralNeighID * neighborhoodSize), dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize), (float)*(kNN_indices->data() + ((itemID * nn) + knn + 1)));
+            //p_n1_knn_index = std::find(dataFeatures->data() + (*centralNeighID * neighborhoodSize), dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize), (float)*(kNN_indices->data() + ((itemID * nn) + knn + 1)));
+
+            //auto center = (int)*centralNeighID;
+            //auto potentialNeighbor = (int)*(kNN_indices->data() + ((itemID * nn) + knn + 1));
+
+            //auto search = neighbor_set->find(std::make_pair(*centralNeighID, *(kNN_indices->data() + ((itemID * nn) + knn + 1))));
+            //auto search = neighbor_set->find(std::hash<unsigned int>{}(*centralNeighID) ^ std::hash<unsigned int>{}(*(kNN_indices->data() + ((itemID * nn) + knn + 1))));
+            auto search = neighbor_set->find(*centralNeighID * numPoints + *(kNN_indices->data() + ((itemID * nn) + knn + 1)) );
 
             //auto t4 = std::chrono::steady_clock::now();
-
-            if (p_n1_knn_index != dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize)) {
+            
+            if (search != neighbor_set->end()) {
+            //if (p_n1_knn_index != dataFeatures->data() + ((*centralNeighID + 1) * neighborhoodSize)) {
                 // -2 marks points outside the selection/image
-                if (*p_n1_knn_index == -2.0f)
-                    continue;
+                // auto val = *(dataFeatures->data() + *(kNN_indices->data() + ((itemID * nn) + knn + 1)));
+                // if (*(dataFeatures->data() + *(kNN_indices->data() + ((itemID * nn) + knn + 1))) == -2.0f)
+             //   if (*p_n1_knn_index == -2.0f)
+             //       continue;
 
                 // take approximated closest value
                 dist = *(kNN_distances_squared->data() + ((itemID * nn) + knn + 1));
@@ -658,6 +710,8 @@ namespace hnswlib {
         std::vector<int>* kNN_indices = &(sparam->kNN_indices);
         std::vector<float>* kNN_distances_squared = &(sparam->kNN_distances_squared);
         std::vector<float>* nullAttr = &(sparam->nullAttr);
+        std::unordered_set<int>* neighbor_set = &(sparam->neighbor_set);
+        size_t numPoints = (sparam->numPoints);
 
         float res = 0;
         float colDist = FLT_MAX;
@@ -681,8 +735,8 @@ namespace hnswlib {
 
             // for each col and row: look up if a knn if that item is in the neighborhood, else calc all distances
             // if item is outside the selection (ID == -2), simply assign no distance
-            colDist = (An != -2.0f) ? ColDistNeighCalc((unsigned int)An, pVect2, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, nullAttr, ndim, neighborhoodSize, L2distfunc_) : 0;
-            rowDist = (Bn != -2.0f) ? ColDistNeighCalc((unsigned int)Bn, pVect1, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, nullAttr, ndim, neighborhoodSize, L2distfunc_) : 0;
+            colDist = (An != -2.0f) ? ColDistNeighCalc((unsigned int)An, pVect2, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, nullAttr, ndim, neighborhoodSize, L2distfunc_, neighbor_set, numPoints) : 0;
+            rowDist = (Bn != -2.0f) ? ColDistNeighCalc((unsigned int)Bn, pVect1, nn, kNN_indices, kNN_distances_squared, dataFeatures, attribute_data, nullAttr, ndim, neighborhoodSize, L2distfunc_, neighbor_set, numPoints) : 0;
 
             // add (weighted) min of col and row
             res += colDist * *(pWeight + neigh) + rowDist * *(pWeight + neigh);
@@ -715,13 +769,12 @@ namespace hnswlib {
             default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
             }
 
-            // precalculate kNN with attribute data for PC distance approximation
-            unsigned int nn = 91;
-            std::vector<int> indices;
-            std::vector<float> distances_squared;
-
             qDebug() << "PointCollectionSpaceApprox: Calculate kNN for distance approximation";
 
+            // precalculate kNN with attribute data for PC distance approximation
+            unsigned int nn = 91;  // std::sqrt(numPoints)
+            std::vector<int> indices;
+            std::vector<float> distances_squared;
             SpaceInterface<float> *space = new L2Space(numDims);
             std::tie(indices, distances_squared) = ComputekNN(_attribute_data, space, numDims, numPoints, nn);
 
@@ -744,8 +797,9 @@ namespace hnswlib {
                 L2distfunc_ = L2SqrSIMD4ExtResiduals;
 #endif
 
-            params_ = space_params_Col_Appr(numDims, A, neighborhoodSize, L2distfunc_, dataFeatures, _attribute_data, nn, indices, distances_squared);
+            params_ = space_params_Col_Appr(numDims, A, neighborhoodSize, L2distfunc_, dataFeatures, _attribute_data, nn, indices, distances_squared, numPoints);
 
+            qDebug() << "PointCollectionSpaceApprox: Finished space construction";
         }
 
         size_t get_data_size() {
@@ -797,16 +851,15 @@ namespace hnswlib {
         Eigen::MatrixXf K = (-1 * M / gamma).array().exp();
         Eigen::MatrixXf K_t = K.transpose();
 
-        Eigen::VectorXf a;
-        Eigen::VectorXf b;
+        Eigen::VectorXf a;  // histogram A, to which pVect1 points
+        Eigen::VectorXf b;  // histogram B, to which pVect2 points
 
-        Eigen::VectorXf u;
-        Eigen::VectorXf v;
+        Eigen::VectorXf u;  // sinkhorn update variable
+        Eigen::VectorXf v;  // sinkhorn update variable
+        Eigen::VectorXf u_old;  // sinkhorn update variable
+        Eigen::VectorXf v_old;  // sinkhorn update variable
 
-        Eigen::VectorXf u_old;
-        Eigen::VectorXf v_old;
-
-        Eigen::MatrixXf P;
+        Eigen::MatrixXf P;  // Optimal transport matrix
 
         for (size_t d = 0; d < ndim; d++) {
 
