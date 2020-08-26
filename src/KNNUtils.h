@@ -206,13 +206,16 @@ namespace hnswlib {
         const float* pWeight = sparam->A.data();
 
         float res = 0;
+        float t1 = 0;
+        float t2 = 0;
+
         // add the histogram distance for each dimension
         for (size_t d = 0; d < ndim; d++) {
             // QF distance = sum_ij ( a_ij * (x_i-y_i) * (x_j-y_j) )
             for (size_t i = 0; i < nbin; i++) {
-                float t1 = *(pVect1 + i) - *(pVect2 + i);
+                t1 = *(pVect1 + i) - *(pVect2 + i);
                 for (size_t j = 0; j < nbin; j++) {
-                    float t2 = *(pVect1 + j) - *(pVect2 + j);
+                    t2 = *(pVect1 + j) - *(pVect2 + j);
                     res += *(pWeight + i * nbin + j) * t1 * t2;
                 }
             }
@@ -362,11 +365,12 @@ namespace hnswlib {
         const size_t ndim = sparam->dim;
         const size_t nbin = sparam->bin;
 
+        float t = 0;
         float res = 0;
         // add the histogram distance for each dimension
         for (size_t d = 0; d < ndim; d++) {
             for (size_t i = 0; i < nbin; i++) {
-                float t = ::std::sqrt(*pVect1) - ::std::sqrt(*pVect2);
+                t = ::std::sqrt(*pVect1) - ::std::sqrt(*pVect2);
                 pVect1++;
                 pVect2++;
                 res += t * t;
@@ -793,20 +797,30 @@ namespace hnswlib {
         Eigen::MatrixXf K = (-1 * M / gamma).array().exp();
         Eigen::MatrixXf K_t = K.transpose();
 
-#pragma omp parallel
+        Eigen::VectorXf a;
+        Eigen::VectorXf b;
+
+        Eigen::VectorXf u;
+        Eigen::VectorXf v;
+
+        Eigen::VectorXf u_old;
+        Eigen::VectorXf v_old;
+
+        Eigen::MatrixXf P;
+
         for (size_t d = 0; d < ndim; d++) {
 
-            Eigen::VectorXf a = Eigen::Map<Eigen::VectorXf>(pVect1 + (d*nbin), nbin);
-            Eigen::VectorXf b = Eigen::Map<Eigen::VectorXf>(pVect2 + (d*nbin), nbin);
+            a = Eigen::Map<Eigen::VectorXf>(pVect1 + (d*nbin), nbin);
+            b = Eigen::Map<Eigen::VectorXf>(pVect2 + (d*nbin), nbin);
 
             assert(a.sum() == b.sum());     // the current implementation only works for histograms that contain the same number of entries (balanced form of Wasserstein distance)
 
-            Eigen::VectorXf u = Eigen::VectorXf::Ones(a.size());
-            Eigen::VectorXf v = Eigen::VectorXf::Ones(b.size());
+            u = Eigen::VectorXf::Ones(a.size());
+            v = Eigen::VectorXf::Ones(b.size());
 
             // for comparing differences between each sinkhorn iteration
-            Eigen::VectorXf u_old = u;
-            Eigen::VectorXf v_old = v;
+            u_old = u;
+            v_old = v;
 
             // sinkhorn iterations (fixpoint iteration)
             float iter_diff = 0;
@@ -822,8 +836,7 @@ namespace hnswlib {
             } while (iter_diff > eps);
 
             // calculate divergence (inner product of ground distance and transportation matrix)
-            Eigen::MatrixXf P = u.asDiagonal() * K * v.asDiagonal();
-#pragma omp atomic
+            P = u.asDiagonal() * K * v.asDiagonal();
             res += (M.cwiseProduct(P)).sum();
         }
 

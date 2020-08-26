@@ -202,12 +202,15 @@ void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighb
     assert(_varVals.size() == _numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
+    float neigh_diff_from_mean_sum = 0;
+    float diff_from_mean = 0;
+
     for (size_t dim = 0; dim < _numDims; dim++) {
-        float neigh_diff_from_mean_sum = 0;
+        neigh_diff_from_mean_sum = 0;
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
         }
-        float diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
+        diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
         _outFeatures[pointInd * _numDims + dim] = diff_from_mean * neigh_diff_from_mean_sum / _varVals[dim];
     }
 }
@@ -218,9 +221,12 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
     assert(_varVals.size() == _numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
+    float diff_from_neigh_sum = 0;
+    float diff_from_neigh = 0;
+
     for (size_t dim = 0; dim < _numDims; dim++) {
-        float diff_from_neigh_sum = 0;
-        float diff_from_neigh = 0;
+        diff_from_neigh_sum = 0;
+        diff_from_neigh = 0;
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             diff_from_neigh = _attribute_data[pointInd * _numDims + dim] - neighborValues[neighbor * _numDims + dim];
             diff_from_neigh_sum += _neighborhoodWeights[neighbor] * (diff_from_neigh * diff_from_neigh);
