@@ -41,8 +41,8 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
     _attribute_data = &attribute_data;
 
     // Output
-    //_indices.resize(_numPoints*_nn, -1);              // unnecessary, done in ComputekNN
-    //_distances_squared.resize(_numPoints*_nn, -1);    // unnecessary, done in ComputekNN
+    //_knn_indices.resize(_numPoints*_nn, -1);              // unnecessary, done in ComputekNN
+    //_knn_distances_squared.resize(_numPoints*_nn, -1);    // unnecessary, done in ComputekNN
 
     assert(params._nn == (size_t)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
@@ -79,89 +79,64 @@ void DistanceCalculation::compute() {
 
 void DistanceCalculation::computekNN() {
     
+    qDebug() << "Distance calculation: Setting up metric space";
+    auto t_start_CreateHNSWSpace = std::chrono::steady_clock::now();
+
+    // setup hsnw index
+    hnswlib::SpaceInterface<float> *space = CreateHNSWSpace(_knn_metric, _numDims, _numHistBins, _neighborhoodSize, _neighborhoodWeighting, _numPoints, _attribute_data);
+    assert(space != NULL);
+
+    auto t_end_CreateHNSWSpace = std::chrono::steady_clock::now();
+    qDebug() << "Distance calculation: Build time metric space (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (t_end_CreateHNSWSpace - t_start_CreateHNSWSpace).count()) / 1000;
+
+    // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
+    size_t featureSize = 0;
+    switch (_featureType) {
+    case feature_type::TEXTURE_HIST_1D: featureSize = _numDims * _numHistBins; break;
+    case feature_type::LISA:            // same as Geary's C
+    case feature_type::GEARYC:          featureSize = _numDims; break;
+    case feature_type::PCOL:            featureSize = _numDims * _neighborhoodSize; break;
+    case feature_type::PCOLappr:        featureSize = _neighborhoodSize; break;
+    }
+
+    auto t_start_ComputeDist = std::chrono::steady_clock::now();
+
     if (_knn_lib == knn_library::KNN_HNSW) {
         qDebug() << "Distance calculation: HNSWLib for knn computation";
-
-        auto start = std::chrono::steady_clock::now();
-
-        qDebug() << "Distance calculation: Setting up metric space";
-
-        // setup hsnw index
-        hnswlib::SpaceInterface<float> *space = NULL;
-        if (_knn_metric == knn_distance_metric::KNN_METRIC_QF)
-        {
-            qDebug() << "Distance calculation: QFSpace as vector feature";
-            space = new hnswlib::QFSpace(_numDims, _numHistBins);
-        }
-        else if (_knn_metric == knn_distance_metric::KNN_METRIC_EMD)
-        {
-            qDebug() << "Distance calculation: EMDSpace as vector feature";
-            space = new hnswlib::EMDSpace(_numDims, _numHistBins);
-        }
-        else if (_knn_metric == knn_distance_metric::KNN_METRIC_HEL)
-        {
-            qDebug() << "Distance calculation: HellingerSpace as vector feature metric";
-            space = new hnswlib::HellingerSpace(_numDims, _numHistBins);
-        }
-        else if (_knn_metric == knn_distance_metric::KNN_METRIC_EUC)
-        {
-            qDebug() << "Distance calculation: EuclidenSpace (L2Space) as scalar feature metric";
-            space = new hnswlib::L2Space(_numDims);
-        }
-        else if (_knn_metric == knn_distance_metric::KNN_METRIC_PCOL)
-        {
-            qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpace) as scalar feature metric";
-            space = new hnswlib::PointCollectionSpace(_numDims, _neighborhoodSize, _neighborhoodWeighting);
-        }
-        else if (_knn_metric == knn_distance_metric::KNN_METRIC_PCOLappr)
-        {
-            qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpaceApprox) as scalar feature metric";
-            space = new hnswlib::PointCollectionSpaceApprox(_numDims, _neighborhoodSize, _numPoints, _attribute_data, _neighborhoodWeighting);
-        }
-        else
-        {
-            qDebug() << "Distance calculation: ERROR: Distance metric unknown.";
-            return;
-        }
-
-        // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
-        size_t featureSize = 0;
-        switch (_featureType) {
-        case feature_type::TEXTURE_HIST_1D: featureSize = _numDims * _numHistBins; break;
-        case feature_type::LISA:            // same as Geary's C
-        case feature_type::GEARYC:          featureSize = _numDims; break;
-        case feature_type::PCOL:            featureSize = _numDims * _neighborhoodSize; break;
-        case feature_type::PCOLappr:        featureSize = _neighborhoodSize; break;
-        }
-        
         qDebug() << "Distance calculation: Compute kNN";
-        std::tie(_indices, _distances_squared) = ComputekNN(_dataFeatures, space, featureSize, _numPoints, _nn);
 
-        auto t = std::find(_indices.begin(), _indices.end(), -1);
-
-        //qDebug() << *t;
-
-        // -1 would mark unset values
-        assert(std::none_of(_indices.begin(), _indices.end(), [](int i) {return i == -1; }));
-        assert(std::none_of(_distances_squared.begin(), _distances_squared.end(), [](float i) {return i == -1.0f; }));
-
-        auto end = std::chrono::steady_clock::now();
-        qDebug() << "Distance calculation: Knn build and search index duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
+        std::tie(_knn_indices, _knn_distances_squared) = ComputekNN(_dataFeatures, space, featureSize, _numPoints, _nn);
 
     }
-    // else if exact solution is wanted: calculate full distance table and hand that over to the t-sne calculation
+    else if (_knn_lib == knn_library::NONE) {
+        qDebug() << "Distance calculation: No kNN approximation";
+        qDebug() << "Distance calculation: Compute all distances";
+
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, featureSize, _numPoints, _nn);
+
+    }
+
+    auto t_end_ComputeDist = std::chrono::steady_clock::now();
+    qDebug() << "Distance calculation: Computation duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (t_end_ComputeDist - t_start_ComputeDist).count()) / 1000;
+
+    // -1 would mark unset values
+    assert(_knn_indices.size() == _numPoints * _nn);
+    assert(_knn_distances_squared.size() == _numPoints * _nn);
+    assert(std::none_of(_knn_indices.begin(), _knn_indices.end(), [](int i) {return i == -1; }));
+    assert(std::none_of(_knn_distances_squared.begin(), _knn_distances_squared.end(), [](float i) {return i == -1.0f; }));
+
 }
 
 const std::tuple< std::vector<int>, std::vector<float>> DistanceCalculation::output() {
-    return { _indices, _distances_squared };
+    return { _knn_indices, _knn_distances_squared };
 }
 
 std::vector<int>* DistanceCalculation::get_knn_indices() {
-    return &_indices;
+    return &_knn_indices;
 }
 
 std::vector<float>* DistanceCalculation::get_knn_distances_squared() {
-    return &_distances_squared;
+    return &_knn_distances_squared;
 }
 
 

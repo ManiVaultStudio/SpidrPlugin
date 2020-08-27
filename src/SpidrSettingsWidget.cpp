@@ -24,8 +24,10 @@ _analysisPlugin(analysisPlugin)
     const auto minimumWidth = 200;
     setMinimumWidth(minimumWidth);
     setMaximumWidth(2 * minimumWidth);
-
-    knnOptions.addItem("HNSW");
+    
+    // add data item according to enum knn_library (KNNUtils)
+    knnOptions.addItem("HNSW", QVariant(1));
+    knnOptions.addItem("None", QVariant(0));
 
     // add options in the order as defined in enums in utils files
     // data values (QPoint) store feature_type (FeatureUtils) and knn_distance_metric (KNNUtils) values as x and y 

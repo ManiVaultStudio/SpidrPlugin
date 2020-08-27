@@ -111,18 +111,21 @@ void FeatureExtraction::initExtraction() {
     if (_featType == feature_type::TEXTURE_HIST_1D) {
         // find min and max for each channel, resize the output larger due to vector features
         _minMaxVals = CalcMinMaxPerChannel(_numPoints, _numDims, _attribute_data);
-        _outFeatures.resize(_numPoints * _numDims * _numHistBins, -1.0f);
+        _outFeatures.resize(_numPoints * _numDims * _numHistBins);
     }
     else if ((_featType == feature_type::LISA) | (_featType == feature_type::GEARYC)) {
         // find mean and varaince for each channel
         _meanVals = CalcMeanPerChannel(_numPoints, _numDims, _attribute_data);
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
-        _outFeatures.resize(_numPoints * _numDims, -1.0f);
+        _outFeatures.resize(_numPoints * _numDims);
     }
     else if (_featType == feature_type::PCOL)
-        _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize, -1.0f);
+        _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
     else if (_featType == feature_type::PCOLappr)
-        _outFeatures.resize(_numPoints * _neighborhoodSize, -1.0f);
+        _outFeatures.resize(_numPoints * _neighborhoodSize);
+
+    // fill such that _outFeatures are always initialized to -1
+    std::fill(_outFeatures.begin(), _outFeatures.end(), -1.0f);
 
 }
 

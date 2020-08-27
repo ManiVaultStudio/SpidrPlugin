@@ -75,6 +75,6 @@ private:
     std::vector<float>* _attribute_data;      /*!<> */
 
     // Output
-    std::vector<int> _indices;                      /*!<> */
-    std::vector<float> _distances_squared;          /*!<> */
+    std::vector<int> _knn_indices;                      /*!<> */
+    std::vector<float> _knn_distances_squared;          /*!<> */
 };

@@ -13,7 +13,8 @@
 
 #include <cmath>     // std::sqrt, exp, floor
 #include <numeric>   // std::inner_product
-#include <algorithm> // std::find, fill
+#include <algorithm> // std::find, fill, sort
+#include <utility>   // std:: pair
 #include <vector>
 #include <thread>
 #include <atomic>
@@ -39,7 +40,8 @@ typedef std::vector<hdi::data::MapMemEff<int, float> > sparse_scalar_matrix;
  */
 enum class knn_library : size_t
 {
-    KNN_HNSW = 0,       /*!<> */
+    NONE = 0,           /*!< No knn library in use, no approximation */ 
+    KNN_HNSW = 1,       /*!< HNSWLib */
 };
 
 /*!
@@ -116,13 +118,63 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
 /*! Compute kNN for a custom metric on features of a data set
  * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
  * \param space HNSWLib metric space
- * \param indMultiplier Size of one data item features
+ * \param featureSize Size of one data item features
  * \param numPoints Number of points in the data
  * \param nn Number of kNN to compute
  * \return Tuple of knn Indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
+
+/*! Compute all distance using a custom metric on features of a data set
+ * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
+ * \param space HNSWLib metric space
+ * \param featureSize Size of one data item features
+ * \param numPoints Number of points in the data
+ * \return Tuple of indices and respective squared distances
+*/
+template<typename T>
+std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn) {
+    std::vector<std::pair<int, float>> indices_distances;
+    std::vector<int> knn_indices;
+    std::vector<float> knn_distances_squared;
+
+    assert(numPoints*numPoints < indices_distances.max_size());
+
+    indices_distances.resize(numPoints*numPoints);
+    knn_indices.resize(numPoints*nn, -1);
+    knn_distances_squared.resize(numPoints*nn, -1.0f);
+
+    hnswlib::DISTFUNC<float> distfunc = space->get_dist_func();
+    void* params = space->get_dist_func_param();
+
+    // Calculate a distance between all point combinations using the respective metric
+//#pragma omp parallel for
+    for (int i = 0; i < (int)numPoints; i++) {
+        for (int j = 0; j < (int)numPoints; j++) {
+            //indices[i * numPoints + j] = j;
+            indices_distances[i * numPoints + j] = std::make_pair(j, distfunc(dataFeatures + i * featureSize, dataFeatures + j * featureSize, params));
+        }
+    }
+
+    // find k nearest neighbors
+    // get k smallest distances for each item
+    for (int i = 0; i < (int)numPoints; i++) {
+        // sort all distances to point i
+        std::sort(indices_distances.begin() + i* numPoints, indices_distances.begin() + i* numPoints + numPoints, [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second;});
+
+        // Take the first nn distances and indices 
+        std::transform(indices_distances.begin() + i * nn, indices_distances.begin() + i * nn + nn, knn_indices.begin() + i * nn, [](const std::pair<int, float>& p) { return p.first; });
+        std::transform(indices_distances.begin() + i * nn, indices_distances.begin() + i * nn + nn, knn_distances_squared.begin() + i * nn, [](const std::pair<int, float>& p) { return p.second; });
+
+    }
+
+    return std::make_tuple(knn_indices, knn_distances_squared);
+}
+
+
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(knn_distance_metric knn_metric, size_t numDims, size_t numHistBins, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data);
+
 
 namespace hnswlib {
 
