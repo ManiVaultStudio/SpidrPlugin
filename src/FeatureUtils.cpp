@@ -156,8 +156,7 @@ std::vector<int> neighborhoodIndices(const unsigned int pointInd, const size_t l
 }
 
 std::vector<float> getNeighborhoodValues(const std::vector<int>& neighborIDs, const std::vector<float>& attribute_data, const size_t neighborhoodSize, const size_t numDims) {
-    std::vector<float> neighborValues;
-    neighborValues.resize(neighborhoodSize * numDims);
+    std::vector<float> neighborValues(neighborhoodSize * numDims, -1);      // init all neighbors to -1
     for (unsigned int neighbor = 0; neighbor < neighborhoodSize; neighbor++) {
         for (unsigned int dim = 0; dim < numDims; dim++) {
             neighborValues[neighbor * numDims + dim] = (neighborIDs[neighbor] != -1) ? attribute_data[neighborIDs[neighbor] * numDims + dim] : 0;

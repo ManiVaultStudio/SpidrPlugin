@@ -92,6 +92,8 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
 void FeatureExtraction::computeHistogramFeatures() {
     // init, i.e. identify min and max per dimension for histogramming
     initExtraction();
+    // all _outFeatures have to be -1 to, so we can easily check later if the were all assigned
+    assert(std::all_of(_outFeatures.begin(), _outFeatures.end(), [](float i) {return i == -1.0f; }));
 
     auto start = std::chrono::steady_clock::now();
     // convolution over all points to create histograms
@@ -99,8 +101,8 @@ void FeatureExtraction::computeHistogramFeatures() {
     auto end = std::chrono::steady_clock::now();
     qDebug() << "Feature extraction: extraction duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
 
-    // if there is a -1 in the features, this value was not set at all
-    assert(std::find(_outFeatures.begin(), _outFeatures.end(), -1) == _outFeatures.end());
+    // if there is a -1 in the _outFeatures, this value was not set at all
+    assert(std::none_of(_outFeatures.begin(), _outFeatures.end(), [](float i) {return i == -1.0f; }));
 }
 
 void FeatureExtraction::initExtraction() {
@@ -109,22 +111,19 @@ void FeatureExtraction::initExtraction() {
     if (_featType == feature_type::TEXTURE_HIST_1D) {
         // find min and max for each channel, resize the output larger due to vector features
         _minMaxVals = CalcMinMaxPerChannel(_numPoints, _numDims, _attribute_data);
-        _outFeatures.resize(_numPoints * _numDims * _numHistBins);
+        _outFeatures.resize(_numPoints * _numDims * _numHistBins, -1.0f);
     }
     else if ((_featType == feature_type::LISA) | (_featType == feature_type::GEARYC)) {
         // find mean and varaince for each channel
         _meanVals = CalcMeanPerChannel(_numPoints, _numDims, _attribute_data);
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
-        _outFeatures.resize(_numPoints * _numDims);
+        _outFeatures.resize(_numPoints * _numDims, -1.0f);
     }
     else if (_featType == feature_type::PCOL)
-        _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
+        _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize, -1.0f);
     else if (_featType == feature_type::PCOLappr)
-        _outFeatures.resize(_numPoints * _neighborhoodSize);
+        _outFeatures.resize(_numPoints * _neighborhoodSize, -1.0f);
 
-    // this is basically for easier debugging to see if all features are assigned a valid value
-    // (currently only positive feature values are valid)
-    std::fill(_outFeatures.begin(), _outFeatures.end(), -1);
 }
 
 void FeatureExtraction::extractFeatures() {
@@ -153,6 +152,7 @@ void FeatureExtraction::extractFeatures() {
 
         // get neighborhood values of the current point
         std::vector<float> neighborValues = getNeighborhoodValues(neighborIDs, _attribute_data, _neighborhoodSize, _numDims);
+        assert(std::find(neighborValues.begin(), neighborValues.end(), -1) == neighborValues.end());
 
         // calculate feature(s) for neighborhood
         (this->*featFunct)(_pointIds[pointID], neighborValues, neighborIDs);  // function pointer defined above

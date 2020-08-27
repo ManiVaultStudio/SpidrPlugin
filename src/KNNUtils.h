@@ -456,7 +456,7 @@ namespace hnswlib {
                 if (tmpDist < colDist)
                     colDist = tmpDist;
 
-                if (tmpDist < rowDist[n2])
+                if (tmpDist < rowDist[n2]) 
                     rowDist[n2] = tmpDist;
 
             }
@@ -479,7 +479,7 @@ namespace hnswlib {
     public:
         PointCollectionSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
             fstdistfunc_ = ColDist;
-            data_size_ = dim * sizeof(float);
+            data_size_ = dim * neighborhoodSize * sizeof(float);
 
             assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
             unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);

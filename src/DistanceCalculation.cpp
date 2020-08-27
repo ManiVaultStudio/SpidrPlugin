@@ -8,6 +8,7 @@
 #include <QDebug>
 
 #include <chrono>
+#include <algorithm>    // std::none_of
 
 DistanceCalculation::DistanceCalculation() :
     _knn_lib(knn_library::KNN_HNSW),
@@ -40,8 +41,8 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
     _attribute_data = &attribute_data;
 
     // Output
-    _indices.resize(_numPoints*_nn);
-    _distances_squared.resize(_numPoints*_nn);
+    //_indices.resize(_numPoints*_nn, -1);              // unnecessary, done in ComputekNN
+    //_distances_squared.resize(_numPoints*_nn, -1);    // unnecessary, done in ComputekNN
 
     assert(params._nn == (size_t)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
@@ -63,6 +64,8 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
         qDebug() << "Distance calculation: Feature values per point: " << _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
     }
 
+    // -1 would mark an unset feature
+    assert(std::none_of(_dataFeatures->begin(), _dataFeatures->end(), [](float i) {return i == -1.0f; }));
 }
 
 void DistanceCalculation::compute() {
@@ -141,8 +144,9 @@ void DistanceCalculation::computekNN() {
 
         //qDebug() << *t;
 
-        assert(std::find(_indices.begin(), _indices.end(), -1) == _indices.end());
-        assert(std::find(_distances_squared.begin(), _distances_squared.end(), -1) == _distances_squared.end());
+        // -1 would mark unset values
+        assert(std::none_of(_indices.begin(), _indices.end(), [](int i) {return i == -1; }));
+        assert(std::none_of(_distances_squared.begin(), _distances_squared.end(), [](float i) {return i == -1.0f; }));
 
         auto end = std::chrono::steady_clock::now();
         qDebug() << "Distance calculation: Knn build and search index duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
