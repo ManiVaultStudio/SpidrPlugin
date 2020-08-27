@@ -116,7 +116,7 @@ void DistanceCalculation::computekNN() {
         else if (_knn_metric == knn_distance_metric::KNN_METRIC_PCOLappr)
         {
             qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpaceApprox) as scalar feature metric";
-            space = new hnswlib::PointCollectionSpaceApprox(_numDims, _neighborhoodSize, _numPoints, _dataFeatures, _attribute_data, _neighborhoodWeighting);
+            space = new hnswlib::PointCollectionSpaceApprox(_numDims, _neighborhoodSize, _numPoints, _attribute_data, _neighborhoodWeighting);
         }
         else
         {
@@ -125,20 +125,17 @@ void DistanceCalculation::computekNN() {
         }
 
         // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
-        size_t indMultiplier = 0;
+        size_t featureSize = 0;
         switch (_featureType) {
-        case feature_type::TEXTURE_HIST_1D: indMultiplier = _numDims * _numHistBins; break;
+        case feature_type::TEXTURE_HIST_1D: featureSize = _numDims * _numHistBins; break;
         case feature_type::LISA:            // same as Geary's C
-        case feature_type::GEARYC:          indMultiplier = _numDims; break;
-        case feature_type::PCOL:            indMultiplier = _numDims * _neighborhoodSize; break;
-        case feature_type::PCOLappr:        indMultiplier = 1; break;   // because we use the _pointIds later on
+        case feature_type::GEARYC:          featureSize = _numDims; break;
+        case feature_type::PCOL:            featureSize = _numDims * _neighborhoodSize; break;
+        case feature_type::PCOLappr:        featureSize = _neighborhoodSize; break;
         }
         
         qDebug() << "Distance calculation: Compute kNN";
-        if (_featureType == feature_type::PCOLappr)
-            std::tie(_indices, _distances_squared) = ComputekNN(_pointIds, space, indMultiplier, _numPoints, _nn);
-        else
-            std::tie(_indices, _distances_squared) = ComputekNN(_dataFeatures, space, indMultiplier, _numPoints, _nn);
+        std::tie(_indices, _distances_squared) = ComputekNN(_dataFeatures, space, featureSize, _numPoints, _nn);
 
         auto t = std::find(_indices.begin(), _indices.end(), -1);
 
@@ -152,7 +149,7 @@ void DistanceCalculation::computekNN() {
         qDebug() << "Distance calculation: Knn build and search index duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
 
     }
-
+    // else if exact solution is wanted: calculate full distance table and hand that over to the t-sne calculation
 }
 
 const std::tuple< std::vector<int>, std::vector<float>> DistanceCalculation::output() {
