@@ -83,8 +83,6 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
         qDebug() << "Feature extraction: local Geary's C";
     else if (_featType == feature_type::PCOL)
         qDebug() << "Feature extraction: Collection of points (neighborhood)";
-    else if (_featType == feature_type::PCOLappr)
-        qDebug() << "Feature extraction: (approximated) Collection of points (neighborhood)";
     else
         qDebug() << "Feature extraction: unknown feature type";
 }
@@ -121,8 +119,6 @@ void FeatureExtraction::initExtraction() {
     }
     else if (_featType == feature_type::PCOL)
         _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
-    else if (_featType == feature_type::PCOLappr)
-        _outFeatures.resize(_numPoints * _neighborhoodSize);
 
     // fill such that _outFeatures are always initialized to -1
     std::fill(_outFeatures.begin(), _outFeatures.end(), -1.0f);
@@ -141,8 +137,6 @@ void FeatureExtraction::extractFeatures() {
         featFunct = &FeatureExtraction::calculateGearysC;
     else if (_featType == feature_type::PCOL)
         featFunct = &FeatureExtraction::allNeighborhoodVals;
-    else if (_featType == feature_type::PCOLappr)
-        featFunct = &FeatureExtraction::allNeighborhoodIDs;
     else
         qDebug() << "Feature extraction: unknown feature Type";
 

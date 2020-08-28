@@ -18,7 +18,6 @@ enum class feature_type : unsigned int
     LISA = 1,               /*!< Local Indicator of Spatial Associations, scalar feaure */
     GEARYC = 2,             /*!< Geary's, scalar feature */
     PCOL = 3,               /*!< Collection of points (neighborhood), i.e. no feature but a view of the data*/
-    PCOLappr = 4,               /*!< (approximated) Collection of points (neighborhood), i.e. no feature but a view of the data*/
 };
 
 

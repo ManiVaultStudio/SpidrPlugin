@@ -89,12 +89,6 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
         qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpace) as scalar feature metric";
         space = new hnswlib::PointCollectionSpace(numDims, neighborhoodSize, neighborhoodWeighting);
     }
-    else if (knn_metric == distance_metric::METRIC_PCOLappr)
-    {
-        qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpaceApprox) as scalar feature metric";
-        qDebug() << "DEPRECATED: PointCollectionSpaceApprox will be removed soon";
-        space = new hnswlib::PointCollectionSpaceApprox(numDims, neighborhoodSize, numPoints, attribute_data, neighborhoodWeighting);
-    }
     else
     {
         qDebug() << "Distance calculation: ERROR: Distance metric unknown.";

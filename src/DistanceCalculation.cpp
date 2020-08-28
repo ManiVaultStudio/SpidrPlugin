@@ -59,10 +59,6 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
         assert(_dataFeatures->size() == (_numPoints * _numDims * _neighborhoodSize));
         qDebug() << "Distance calculation: Feature values per point: " << _numDims * _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
     }
-    else if (_featureType == feature_type::PCOLappr) {
-        assert(_dataFeatures->size() == (_numPoints * _neighborhoodSize));
-        qDebug() << "Distance calculation: Feature values per point: " << _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
-    }
 
     // -1 would mark an unset feature
     assert(std::none_of(_dataFeatures->begin(), _dataFeatures->end(), [](float i) {return i == -1.0f; }));
@@ -97,7 +93,6 @@ void DistanceCalculation::computekNN() {
     case feature_type::LISA:            // same as Geary's C
     case feature_type::GEARYC:          featureSize = _numDims; break;
     case feature_type::PCOL:            featureSize = _numDims * _neighborhoodSize; break;
-    case feature_type::PCOLappr:        featureSize = _neighborhoodSize; break;
     }
 
     auto t_start_ComputeDist = std::chrono::steady_clock::now();
