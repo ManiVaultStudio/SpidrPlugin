@@ -91,7 +91,7 @@ void SpidrAnalysis::setKnnAlgorithm(const int index) {
 }
 
 void SpidrAnalysis::setDistanceMetric(const int index) {
-    _params._aknn_metric = static_cast<knn_distance_metric> (index);
+    _params._aknn_metric = static_cast<distance_metric> (index);
 }
 
 void SpidrAnalysis::setPerplexity(const unsigned perplexity) {

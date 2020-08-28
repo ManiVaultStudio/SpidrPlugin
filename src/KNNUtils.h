@@ -35,26 +35,25 @@ namespace Counter {
 
 typedef std::vector<hdi::data::MapMemEff<int, float> > sparse_scalar_matrix;
 
-/*! 
- * kNN library that is used (extended) for kNN computations
+/*! kNN library that is used kNN computations
+ * The librarires are extended in order to work with different feature types
  */
 enum class knn_library : size_t
 {
-    NONE = 0,           /*!< No knn library in use, no approximation */ 
+    NONE = 0,           /*!< No knn library in use, no approximation i.e. exact kNN computation */ 
     KNN_HNSW = 1,       /*!< HNSWLib */
 };
 
-/*!
- * The numerical value corresponds to the order in which each option is added to the GUI in SpidrSettingsWidget
+/*! Defines the distance metric
   */
-enum class knn_distance_metric : size_t
+enum class distance_metric : size_t
 {
-    KNN_METRIC_QF = 0,      /*!< Quadratic form distance */
-    KNN_METRIC_EMD = 1,     /*!< Earth mover distance*/
-    KNN_METRIC_HEL = 2,     /*!< Hellinger distance */
-    KNN_METRIC_EUC = 3,     /*!< Euclidean distance - not suitable for histogram features */
-    KNN_METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
-    KNN_METRIC_PCOLappr = 5,     /*!< (approx) Collection distance between the neighborhoods around two items*/
+    METRIC_QF = 0,       /*!< Quadratic form distance */
+    METRIC_EMD = 1,      /*!< Earth mover distance*/
+    METRIC_HEL = 2,      /*!< Hellinger distance */
+    METRIC_EUC = 3,      /*!< Euclidean distance - not suitable for histogram features */
+    METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
+    METRIC_PCOLappr = 5, /*!< (approx) Collection distance between the neighborhoods around two items*/
 };
 
 /*!
@@ -115,7 +114,7 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
     return A;
 }
 
-/*! Compute kNN for a custom metric on features of a data set
+/*! Compute approximated kNN with a custom metric using HNSWLib
  * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
  * \param space HNSWLib metric space
  * \param featureSize Size of one data item features
@@ -124,9 +123,10 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
  * \return Tuple of knn Indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
 
-/*! Compute all distance using a custom metric on features of a data set
+/*! Compute exact kNNs 
+ * Calculate the distances between all point pairs and find closest neighbors
  * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
  * \param space HNSWLib metric space
  * \param featureSize Size of one data item features
@@ -139,48 +139,56 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
     std::vector<int> knn_indices;
     std::vector<float> knn_distances_squared;
 
-    assert(numPoints*numPoints < indices_distances.max_size());
-
-    indices_distances.resize(numPoints*numPoints);
+    indices_distances.resize(numPoints);
     knn_indices.resize(numPoints*nn, -1);
     knn_distances_squared.resize(numPoints*nn, -1.0f);
 
     hnswlib::DISTFUNC<float> distfunc = space->get_dist_func();
     void* params = space->get_dist_func_param();
 
-    // Calculate a distance between all point combinations using the respective metric
-//#pragma omp parallel for
+    
+    // For each point, calc distances to all other
+    // and take the nn smallest as kNN
     for (int i = 0; i < (int)numPoints; i++) {
+        // Calculate distance to all points  using the respective metric
+#ifdef NDEBUG
+#pragma omp parallel for
+#endif
         for (int j = 0; j < (int)numPoints; j++) {
-            //indices[i * numPoints + j] = j;
-            indices_distances[i * numPoints + j] = std::make_pair(j, distfunc(dataFeatures + i * featureSize, dataFeatures + j * featureSize, params));
+            indices_distances[j] = std::make_pair(j, distfunc(dataFeatures->data() + i * featureSize, dataFeatures->data() + j * featureSize, params));
         }
-    }
 
-    // find k nearest neighbors
-    // get k smallest distances for each item
-    for (int i = 0; i < (int)numPoints; i++) {
         // sort all distances to point i
-        std::sort(indices_distances.begin() + i* numPoints, indices_distances.begin() + i* numPoints + numPoints, [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second;});
+        std::sort(indices_distances.begin(), indices_distances.end(), [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second;});
 
         // Take the first nn distances and indices 
-        std::transform(indices_distances.begin() + i * nn, indices_distances.begin() + i * nn + nn, knn_indices.begin() + i * nn, [](const std::pair<int, float>& p) { return p.first; });
-        std::transform(indices_distances.begin() + i * nn, indices_distances.begin() + i * nn + nn, knn_distances_squared.begin() + i * nn, [](const std::pair<int, float>& p) { return p.second; });
-
+        std::transform(indices_distances.begin(), indices_distances.begin() + nn, knn_indices.begin() + i * nn, [](const std::pair<int, float>& p) { return p.first; });
+        std::transform(indices_distances.begin(), indices_distances.begin() + nn, knn_distances_squared.begin() + i * nn, [](const std::pair<int, float>& p) { return p.second; });
     }
 
     return std::make_tuple(knn_indices, knn_distances_squared);
 }
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(knn_distance_metric knn_metric, size_t numDims, size_t numHistBins, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data);
+/*! Creates a metric space used by HNSWLib to build a kNN index
+ * 
+ * \param knn_metric distance metric to compare two points with
+ * \param numDims Number of data channels
+ * \param neighborhoodSize Size of neighborhood, must be a perfect square
+ * \param neighborhoodWeighting Featureless distances use the weighting
+ * \param numPoints Number of points in the data
+ * \param attribute_data For use in some DEPRECATED distance metrics
+ * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
+ * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
+ */
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data, size_t numHistBins=0);
 
 
 namespace hnswlib {
 
 
     /* !
-     * The method is borrowed from nmslib
+     * The method is borrowed from nmslib, https://github.com/nmslib/nmslib/blob/master/similarity_search/include/thread_pool.h
      */
     template<class Function>
     inline void ParallelFor(size_t start, size_t end, size_t numThreads, Function fn) {
@@ -677,7 +685,7 @@ namespace hnswlib {
             std::vector<int> knn_indices;
             std::vector<float> knn_distances_squared;
             SpaceInterface<float> *space = new L2Space(numDims);
-            std::tie(knn_indices, knn_distances_squared) = ComputekNN(_attribute_data, space, numDims, numPoints, nn);
+            std::tie(knn_indices, knn_distances_squared) = ComputeHNSWkNN(_attribute_data, space, numDims, numPoints, nn);
 
             // Debug check if all knn_indices and distances are set
             assert(knn_indices.size() == (numPoints*nn));

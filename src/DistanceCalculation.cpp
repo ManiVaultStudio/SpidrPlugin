@@ -12,7 +12,7 @@
 
 DistanceCalculation::DistanceCalculation() :
     _knn_lib(knn_library::KNN_HNSW),
-    _knn_metric(knn_distance_metric::KNN_METRIC_QF)
+    _knn_metric(distance_metric::METRIC_QF)
 {
 }
 
@@ -41,8 +41,8 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
     _attribute_data = &attribute_data;
 
     // Output
-    //_knn_indices.resize(_numPoints*_nn, -1);              // unnecessary, done in ComputekNN
-    //_knn_distances_squared.resize(_numPoints*_nn, -1);    // unnecessary, done in ComputekNN
+    //_knn_indices.resize(_numPoints*_nn, -1);              // unnecessary, done in ComputeHNSWkNN
+    //_knn_distances_squared.resize(_numPoints*_nn, -1);    // unnecessary, done in ComputeHNSWkNN
 
     assert(params._nn == (size_t)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
@@ -83,11 +83,12 @@ void DistanceCalculation::computekNN() {
     auto t_start_CreateHNSWSpace = std::chrono::steady_clock::now();
 
     // setup hsnw index
-    hnswlib::SpaceInterface<float> *space = CreateHNSWSpace(_knn_metric, _numDims, _numHistBins, _neighborhoodSize, _neighborhoodWeighting, _numPoints, _attribute_data);
+    hnswlib::SpaceInterface<float> *space = CreateHNSWSpace(_knn_metric, _numDims, _neighborhoodSize, _neighborhoodWeighting, _numPoints, _attribute_data, _numHistBins);
     assert(space != NULL);
 
     auto t_end_CreateHNSWSpace = std::chrono::steady_clock::now();
     qDebug() << "Distance calculation: Build time metric space (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (t_end_CreateHNSWSpace - t_start_CreateHNSWSpace).count()) / 1000;
+    qDebug() << "Distance calculation: Compute kNN";
 
     // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
     size_t featureSize = 0;
@@ -103,14 +104,12 @@ void DistanceCalculation::computekNN() {
 
     if (_knn_lib == knn_library::KNN_HNSW) {
         qDebug() << "Distance calculation: HNSWLib for knn computation";
-        qDebug() << "Distance calculation: Compute kNN";
 
-        std::tie(_knn_indices, _knn_distances_squared) = ComputekNN(_dataFeatures, space, featureSize, _numPoints, _nn);
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeHNSWkNN(_dataFeatures, space, featureSize, _numPoints, _nn);
 
     }
     else if (_knn_lib == knn_library::NONE) {
-        qDebug() << "Distance calculation: No kNN approximation";
-        qDebug() << "Distance calculation: Compute all distances";
+        qDebug() << "Distance calculation: Exact kNN computation";
 
         std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, featureSize, _numPoints, _nn);
 
@@ -145,7 +144,7 @@ void DistanceCalculation::setKnnAlgorithm(knn_library knn)
     _knn_lib = knn;
 }
 
-void DistanceCalculation::setDistanceMetric(knn_distance_metric metric)
+void DistanceCalculation::setDistanceMetric(distance_metric metric)
 {
     _knn_metric = metric;
 }

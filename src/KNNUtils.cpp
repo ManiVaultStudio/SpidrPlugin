@@ -2,12 +2,12 @@
 #include "KNNUtils.h"
 
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
 
     std::vector<int> indices(numPoints * nn, -1);
     std::vector<float> distances_squared(numPoints * nn, -1);
 
-    qDebug() << "ComputekNN: Build akNN Index";
+    qDebug() << "ComputeHNSWkNN: Build akNN Index";
 
     hnswlib::HierarchicalNSW<float> appr_alg(space, numPoints);   // use default HNSW values for M, ef_construction random_seed
 
@@ -15,7 +15,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>
     appr_alg.addPoint((void*)dataFeatures->data(), (std::size_t) 0);
 
 #ifdef NDEBUG
-//    // This loop is for release mode, it's parallel loop implementation from hnswlib
+    // This loop is for release mode, it's parallel loop implementation from hnswlib
     int num_threads = std::thread::hardware_concurrency();
     hnswlib::ParallelFor(1, numPoints, num_threads, [&](size_t i, size_t threadId) {
         appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
@@ -27,7 +27,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>
         appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
     }
 #endif
-    qDebug() << "ComputekNN: Search akNN Index";
+    qDebug() << "ComputeHNSWkNN: Search akNN Index";
 
     // query dataset
 #pragma omp parallel for
@@ -54,41 +54,45 @@ std::tuple<std::vector<int>, std::vector<float>> ComputekNN(const std::vector<T>
     return std::make_tuple(indices, distances_squared);
 }
 // Resolve linker errors with explicit instantiation, https://isocpp.org/wiki/faq/templates#separate-template-fn-defn-from-decl
-template std::tuple<std::vector<int>, std::vector<float>> ComputekNN<float>(const std::vector<float>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
-template std::tuple<std::vector<int>, std::vector<float>> ComputekNN<unsigned int>(const std::vector<unsigned int>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(const std::vector<float>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(knn_distance_metric knn_metric, size_t numDims, size_t numHistBins, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data) {
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data, size_t numHistBins) {
     // chose distance metric
     hnswlib::SpaceInterface<float> *space = NULL;
-    if (knn_metric == knn_distance_metric::KNN_METRIC_QF)
+    if (knn_metric == distance_metric::METRIC_QF)
     {
+        assert(numHistBins > 0);
         qDebug() << "Distance calculation: QFSpace as vector feature";
         space = new hnswlib::QFSpace(numDims, numHistBins);
     }
-    else if (knn_metric == knn_distance_metric::KNN_METRIC_EMD)
+    else if (knn_metric == distance_metric::METRIC_EMD)
     {
+        assert(numHistBins > 0);
         qDebug() << "Distance calculation: EMDSpace as vector feature";
         space = new hnswlib::EMDSpace(numDims, numHistBins);
     }
-    else if (knn_metric == knn_distance_metric::KNN_METRIC_HEL)
+    else if (knn_metric == distance_metric::METRIC_HEL)
     {
+        assert(numHistBins > 0);
         qDebug() << "Distance calculation: HellingerSpace as vector feature metric";
         space = new hnswlib::HellingerSpace(numDims, numHistBins);
     }
-    else if (knn_metric == knn_distance_metric::KNN_METRIC_EUC)
+    else if (knn_metric == distance_metric::METRIC_EUC)
     {
         qDebug() << "Distance calculation: EuclidenSpace (L2Space) as scalar feature metric";
         space = new hnswlib::L2Space(numDims);
     }
-    else if (knn_metric == knn_distance_metric::KNN_METRIC_PCOL)
+    else if (knn_metric == distance_metric::METRIC_PCOL)
     {
         qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpace) as scalar feature metric";
         space = new hnswlib::PointCollectionSpace(numDims, neighborhoodSize, neighborhoodWeighting);
     }
-    else if (knn_metric == knn_distance_metric::KNN_METRIC_PCOLappr)
+    else if (knn_metric == distance_metric::METRIC_PCOLappr)
     {
         qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpaceApprox) as scalar feature metric";
+        qDebug() << "DEPRECATED: PointCollectionSpaceApprox will be removed soon";
         space = new hnswlib::PointCollectionSpaceApprox(numDims, neighborhoodSize, numPoints, attribute_data, neighborhoodWeighting);
     }
     else

@@ -8,7 +8,7 @@
 
 class Parameters;
 enum class knn_library : size_t;
-enum class knn_distance_metric : size_t;
+enum class distance_metric : size_t;
 enum class feature_type : unsigned int;
 enum class loc_Neigh_Weighting : unsigned int;
 
@@ -33,7 +33,7 @@ public:
     std::vector<float>* get_knn_distances_squared();
 
     void setKnnAlgorithm(knn_library knn);
-    void setDistanceMetric(knn_distance_metric metric);
+    void setDistanceMetric(distance_metric metric);
 
     /*!
      * 
@@ -60,7 +60,7 @@ private:
     // Options
     feature_type _featureType;                      /*!<> */
     knn_library _knn_lib;                           /*!<> */
-    knn_distance_metric _knn_metric;                /*!<> */
+    distance_metric _knn_metric;                /*!<> */
     unsigned int _nn;                               /*!<> */
     size_t _neighborhoodSize;                       /*!< might be used for some distance metrics */
     loc_Neigh_Weighting _neighborhoodWeighting;     /*!< used when calculating distance directly from high-dim points (_featureType is no feature/PCOL) */

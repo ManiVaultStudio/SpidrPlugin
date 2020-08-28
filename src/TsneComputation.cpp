@@ -90,7 +90,7 @@ void TsneComputation::setup(std::vector<int>* knn_indices, std::vector<float>* k
     _iterations = params._numIterations;
     _perplexity = params._perplexity;
     _exaggerationIter = params._exaggeration;
-    _numPoints = knn_indices->size() / params._nn;
+    _numPoints = params._numPoints;
     _perplexity_multiplier = params._perplexity_multiplier;
 
     // Data
