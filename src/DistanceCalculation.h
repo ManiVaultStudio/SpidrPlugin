@@ -8,8 +8,9 @@
 
 class Parameters;
 enum class knn_library : size_t;
-enum class knn_distance_metric : size_t;
+enum class distance_metric : size_t;
 enum class feature_type : unsigned int;
+enum class loc_Neigh_Weighting : unsigned int;
 
 /*!
  * 
@@ -32,7 +33,7 @@ public:
     std::vector<float>* get_knn_distances_squared();
 
     void setKnnAlgorithm(knn_library knn);
-    void setDistanceMetric(knn_distance_metric metric);
+    void setDistanceMetric(distance_metric metric);
 
     /*!
      * 
@@ -40,7 +41,7 @@ public:
      * \param histogramFeatures
      * \param params
      */
-    void setup(std::vector<float>* histogramFeatures, Parameters& params);
+    void setup(std::vector<unsigned int>& pointIds, std::vector<float>& attribute_data, std::vector<float>* dataFeatures, Parameters& params);
 
     /*!
      * 
@@ -59,18 +60,21 @@ private:
     // Options
     feature_type _featureType;                      /*!<> */
     knn_library _knn_lib;                           /*!<> */
-    knn_distance_metric _knn_metric;                /*!<> */
+    distance_metric _knn_metric;                /*!<> */
     unsigned int _nn;                               /*!<> */
     size_t _neighborhoodSize;                       /*!< might be used for some distance metrics */
+    loc_Neigh_Weighting _neighborhoodWeighting;     /*!< used when calculating distance directly from high-dim points (_featureType is no feature/PCOL) */
 
     // Data
     // Input
     size_t _numDims;                                /*!<> */
     size_t _numPoints;                              /*!<> */
     size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
-    const std::vector<float>* _dataFeatures;        /*!<> */
+    std::vector<float>* _dataFeatures;        /*!<> */
+    std::vector<unsigned int>* _pointIds;     /*!<> */
+    std::vector<float>* _attribute_data;      /*!<> */
 
     // Output
-    std::vector<int> _indices;                      /*!<> */
-    std::vector<float> _distances_squared;          /*!<> */
+    std::vector<int> _knn_indices;                      /*!<> */
+    std::vector<float> _knn_distances_squared;          /*!<> */
 };

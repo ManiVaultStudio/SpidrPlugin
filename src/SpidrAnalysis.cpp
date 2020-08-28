@@ -57,10 +57,10 @@ void SpidrAnalysis::spatialAnalysis() {
     // Extract features
     _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params);
     _featExtraction.compute();
-    std::vector<float>* histoFeats = _featExtraction.output();
+    std::vector<float>* dataFeats = _featExtraction.output();
 
     // Caclculate distances and kNN
-    _distCalc.setup(histoFeats, _params);
+    _distCalc.setup(_pointIDsGlobal, _attribute_data, dataFeats, _params);
     _distCalc.compute();
     std::vector<int>* indices = _distCalc.get_knn_indices();
     std::vector<float>* distances_squared = _distCalc.get_knn_distances_squared();
@@ -91,7 +91,7 @@ void SpidrAnalysis::setKnnAlgorithm(const int index) {
 }
 
 void SpidrAnalysis::setDistanceMetric(const int index) {
-    _params._aknn_metric = static_cast<knn_distance_metric> (index);
+    _params._aknn_metric = static_cast<distance_metric> (index);
 }
 
 void SpidrAnalysis::setPerplexity(const unsigned perplexity) {

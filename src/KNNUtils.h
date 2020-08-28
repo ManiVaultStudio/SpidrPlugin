@@ -11,50 +11,183 @@
 
 #include <omp.h>
 
-#include <cmath>     // std::sqrt, exp
+#include <cmath>     // std::sqrt, exp, floor
+#include <numeric>   // std::inner_product
+#include <algorithm> // std::find, fill, sort
+#include <utility>   // std:: pair
 #include <vector>
 #include <thread>
 #include <atomic>
 
+#include "hdi/data/map_mem_eff.h" // hdi::data::MapMemEff
+
+#include <chrono>
+
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
-/*!
- * 
- * 
+#include "FeatureUtils.h"
+
+namespace Counter {
+    static unsigned int co = 1;
+    static unsigned int ci = 0;
+}
+
+typedef std::vector<hdi::data::MapMemEff<int, float> > sparse_scalar_matrix;
+
+/*! kNN library that is used kNN computations
+ * The librarires are extended in order to work with different feature types
  */
 enum class knn_library : size_t
 {
-    KNN_HNSW = 0,       /*!<> */
+    NONE = 0,           /*!< No knn library in use, no approximation i.e. exact kNN computation */ 
+    KNN_HNSW = 1,       /*!< HNSWLib */
 };
 
-/*!
- * The numerical value corresponds to the order in which each option is added to the GUI in SpidrSettingsWidget
+/*! Defines the distance metric
   */
-enum class knn_distance_metric : size_t
+enum class distance_metric : size_t
 {
-    KNN_METRIC_QF = 0,      /*!< Quadratic form distance */
-    KNN_METRIC_EMD = 1,     /*!< Earth mover distance*/
-    KNN_METRIC_HEL = 2,     /*!< Hellinger distance */
-    KNN_METRIC_EUC = 3,     /*!< Euclidean distance - not suitable for histogram features */
-    KNN_METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
+    METRIC_QF = 0,       /*!< Quadratic form distance */
+    METRIC_EMD = 1,      /*!< Earth mover distance*/
+    METRIC_HEL = 2,      /*!< Hellinger distance */
+    METRIC_EUC = 3,      /*!< Euclidean distance - not suitable for histogram features */
+    METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
 };
 
 /*!
- * 
- * 
+ * Types of ground distance calculation that are used as the basis for bin similarities
  */
-enum class ground_dist : size_t
+enum class bin_sim : size_t
 {
-    SIM_EUC = 0,    /*!<> */
-    SIM_EXP = 1,    /*!<> */
+    SIM_EUC = 0,    /*!< 1 - sqrt(Euclidean distance between bins)/(Max dist) */
+    SIM_EXP = 1,    /*!< exp(-(Euclidean distance between bins)^2/(Max dist)) */
+    SIM_UNI = 2,    /*!< 1 (uniform) */
 };
+
+
+/*!
+ * Computes the similarities of bins of a 1D histogram.
+ *
+ * Entry A_ij refers to the sim between bin i and bin j. The diag entries should be 1, all others <= 1.
+ *
+ * \param num_bins    
+ * \param sim_type type of ground distance calculation
+ * \param sim_weight Only comes into play for ground_type = SIM_EXP, might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
+ * \return Matrix of neighborhood_width*neighborhood_width (stored in a vector) 
+ */
+static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bin_sim::SIM_EUC, float sim_weight = 1) {
+    ::std::vector<float> A(num_bins*num_bins, -1);
+    size_t ground_dist_max = num_bins - 1;
+
+    int bin_diff = 0;
+
+    size_t ground_dist_max_2 = ground_dist_max * ground_dist_max;
+    size_t bin_diff_2 = 0;
+
+    if (sim_type == bin_sim::SIM_EUC) {
+        for (int i = 0; i < (int)num_bins; i++) {
+            for (int j = 0; j < (int)num_bins; j++) {
+                bin_diff = (i - j);
+                bin_diff_2 = bin_diff * bin_diff;
+                A[i * num_bins + j] = 1 - std::sqrt(float(bin_diff_2) / float(ground_dist_max_2));
+            }
+        }
+    }
+    else if (sim_type == bin_sim::SIM_EXP) {
+        for (int i = 0; i < (int)num_bins; i++) {
+            for (int j = 0; j < (int)num_bins; j++) {
+                bin_diff = (i - j);
+                bin_diff_2 = bin_diff * bin_diff;
+                A[i * num_bins + j] = ::std::exp(-1 * sim_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
+            }
+        }
+    }
+    else if (sim_type == bin_sim::SIM_UNI) {
+        std::fill(A.begin(), A.end(), 1);
+    }
+
+    // if there is a -1 in A, this value was not set (invalid ground_type option selected)
+    assert(std::find(A.begin(), A.end(), -1) == A.end());
+
+    return A;
+}
+
+/*! Compute approximated kNN with a custom metric using HNSWLib
+ * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
+ * \param space HNSWLib metric space
+ * \param featureSize Size of one data item features
+ * \param numPoints Number of points in the data
+ * \param nn Number of kNN to compute
+ * \return Tuple of knn Indices and respective squared distances
+*/
+template<typename T>
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
+
+/*! Compute exact kNNs 
+ * Calculate the distances between all point pairs and find closest neighbors
+ * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
+ * \param space HNSWLib metric space
+ * \param featureSize Size of one data item features
+ * \param numPoints Number of points in the data
+ * \return Tuple of indices and respective squared distances
+*/
+template<typename T>
+std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn) {
+    std::vector<std::pair<int, float>> indices_distances;
+    std::vector<int> knn_indices;
+    std::vector<float> knn_distances_squared;
+
+    indices_distances.resize(numPoints);
+    knn_indices.resize(numPoints*nn, -1);
+    knn_distances_squared.resize(numPoints*nn, -1.0f);
+
+    hnswlib::DISTFUNC<float> distfunc = space->get_dist_func();
+    void* params = space->get_dist_func_param();
+
+    
+    // For each point, calc distances to all other
+    // and take the nn smallest as kNN
+    for (int i = 0; i < (int)numPoints; i++) {
+        // Calculate distance to all points  using the respective metric
+#ifdef NDEBUG
+#pragma omp parallel for
+#endif
+        for (int j = 0; j < (int)numPoints; j++) {
+            indices_distances[j] = std::make_pair(j, distfunc(dataFeatures->data() + i * featureSize, dataFeatures->data() + j * featureSize, params));
+        }
+
+        // sort all distances to point i
+        std::sort(indices_distances.begin(), indices_distances.end(), [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second;});
+
+        // Take the first nn distances and indices 
+        std::transform(indices_distances.begin(), indices_distances.begin() + nn, knn_indices.begin() + i * nn, [](const std::pair<int, float>& p) { return p.first; });
+        std::transform(indices_distances.begin(), indices_distances.begin() + nn, knn_distances_squared.begin() + i * nn, [](const std::pair<int, float>& p) { return p.second; });
+    }
+
+    return std::make_tuple(knn_indices, knn_distances_squared);
+}
+
+
+/*! Creates a metric space used by HNSWLib to build a kNN index
+ * 
+ * \param knn_metric distance metric to compare two points with
+ * \param numDims Number of data channels
+ * \param neighborhoodSize Size of neighborhood, must be a perfect square
+ * \param neighborhoodWeighting Featureless distances use the weighting
+ * \param numPoints Number of points in the data
+ * \param attribute_data For use in some DEPRECATED distance metrics
+ * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
+ * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
+ */
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data, size_t numHistBins=0);
+
 
 namespace hnswlib {
 
 
-    /*
-     * The method is borrowed from nmslib
+    /* !
+     * The method is borrowed from nmslib, https://github.com/nmslib/nmslib/blob/master/similarity_search/include/thread_pool.h
      */
     template<class Function>
     inline void ParallelFor(size_t start, size_t end, size_t numThreads, Function fn) {
@@ -122,7 +255,7 @@ namespace hnswlib {
     struct space_params_QF {
         size_t dim;
         size_t bin;
-        ::std::vector<float> A;
+        ::std::vector<float> A;     // bin similarity matrix for 1D histograms: entry A_ij refers to the sim between bin i and bin j 
     };
 
     static float
@@ -136,13 +269,16 @@ namespace hnswlib {
         const float* pWeight = sparam->A.data();
 
         float res = 0;
+        float t1 = 0;
+        float t2 = 0;
+
         // add the histogram distance for each dimension
         for (size_t d = 0; d < ndim; d++) {
             // QF distance = sum_ij ( a_ij * (x_i-y_i) * (x_j-y_j) )
             for (size_t i = 0; i < nbin; i++) {
-                float t1 = *(pVect1 + i) - *(pVect2 + i);
+                t1 = *(pVect1 + i) - *(pVect2 + i);
                 for (size_t j = 0; j < nbin; j++) {
-                    float t2 = *(pVect1 + j) - *(pVect2 + j);
+                    t2 = *(pVect1 + j) - *(pVect2 + j);
                     res += *(pWeight + i * nbin + j) * t1 * t2;
                 }
             }
@@ -239,8 +375,7 @@ namespace hnswlib {
         space_params_QF params_;
 
     public:
-        // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
-        QFSpace(size_t dim, size_t bin, ground_dist ground_type = ground_dist::SIM_EUC, float ground_weight = 1) {
+        QFSpace(size_t dim, size_t bin, bin_sim ground_type = bin_sim::SIM_EUC) {
             qDebug() << "Distance Calculation: Prepare QFSpace";
 
             fstdistfunc_ = QFSqr;
@@ -252,34 +387,8 @@ namespace hnswlib {
 
             data_size_ = dim * bin * sizeof(float);
 
-            ::std::vector<float> A;
-            A.resize(bin*bin);
-            size_t ground_dist_max = bin - 1;
-
-            int bin_diff = 0;
-
-            size_t ground_dist_max_2 = ground_dist_max * ground_dist_max;
-            size_t bin_diff_2 = 0;
-
-            if (ground_type == ground_dist::SIM_EUC) {
-                for (int i = 0; i < bin; i++) {
-                    for (int j = 0; j < bin; j++) {
-                        bin_diff = (i - j);
-                        bin_diff_2 = bin_diff * bin_diff;
-                        A[i * bin + j] = 1 - std::sqrt(float(bin_diff_2) / float(ground_dist_max_2));
-                    }
-                }
-            }
-            else if (ground_type == ground_dist::SIM_EXP) {
-                for (int i = 0; i < bin; i++) {
-                    for (int j = 0; j < bin; j++) {
-                        bin_diff = (i - j);
-                        bin_diff_2 = bin_diff * bin_diff;
-                        A[i * bin + j] = ::std::exp(-1 * ground_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
-                    }
-                }
-            }
-        
+            ::std::vector<float> A = BinSimilarities(bin, ground_type);
+            
             params_ = { dim, bin, A};
         }
 
@@ -319,11 +428,12 @@ namespace hnswlib {
         const size_t ndim = sparam->dim;
         const size_t nbin = sparam->bin;
 
+        float t = 0;
         float res = 0;
         // add the histogram distance for each dimension
         for (size_t d = 0; d < ndim; d++) {
             for (size_t i = 0; i < nbin; i++) {
-                float t = ::std::sqrt(*pVect1) - ::std::sqrt(*pVect2);
+                t = ::std::sqrt(*pVect1) - ::std::sqrt(*pVect2);
                 pVect1++;
                 pVect2++;
                 res += t * t;
@@ -372,37 +482,49 @@ namespace hnswlib {
     // data struct for distance calculation in PointCollectionSpace
     struct space_params_Col {
         size_t dim;
+        ::std::vector<float> A;         // neighborhood similarity matrix
         size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
         DISTFUNC<float> L2distfunc_;
     };
 
     static float
         ColDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        float *pVect1 = (float *)pVect1v;   // points to data item
-        float *pVect2 = (float *)pVect2v;   // points to data item
+        float *pVect1 = (float *)pVect1v;   // points to data item: values of neighbors
+        float *pVect2 = (float *)pVect2v;   // points to data item: values of neighbors
 
         const space_params_Col* sparam = (space_params_Col*)qty_ptr;
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* pWeight = sparam->A.data();
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
         float res = 0;
-        float minDist = 0;
+        float colDist = FLT_MAX;
+        std::vector<float> rowDist(neighborhoodSize, FLT_MAX);
         float tmpDist = 0;
 
         // Euclidean dist between all neighbor pairs
         // Take the min of all dists from a item in neigh1 to all items in Neigh2
-        // Sum over all the min dists
+        // (the above can be written in a distance matrix)
+        // Sum over all the column-wise and row-wise minima
         for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
-            minDist = FLT_MAX;
+            colDist = FLT_MAX;
             for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
                 tmpDist = L2distfunc_( (pVect1 +(n1*ndim)), (pVect2 + (n2*ndim)), &ndim);
 
-                if (tmpDist < minDist)
-                    minDist = tmpDist;
+                if (tmpDist < colDist)
+                    colDist = tmpDist;
+
+                if (tmpDist < rowDist[n2]) 
+                    rowDist[n2] = tmpDist;
+
             }
-            res += minDist;
+            // add (weighted) min of col
+            res += colDist * *(pWeight + n1);
         }
+        // add (weighted) min of all rows
+        res += std::inner_product(rowDist.begin(), rowDist.end(), pWeight, 0.0f);
+
         return (res);
     }
 
@@ -414,11 +536,23 @@ namespace hnswlib {
         space_params_Col params_;
 
     public:
-        PointCollectionSpace(size_t dim, size_t neighborhoodSize) {
+        PointCollectionSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
             fstdistfunc_ = ColDist;
-            data_size_ = dim * sizeof(float);
+            data_size_ = dim * neighborhoodSize * sizeof(float);
 
-            params_ = { dim, neighborhoodSize, L2Sqr };
+            assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
+            unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
+
+            ::std::vector<float> A (neighborhoodSize);
+            switch (weighting)
+            {
+            case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
+            case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NOT); break;
+            default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
+            }
+
+            params_ = { dim, A, neighborhoodSize, L2Sqr };
 
 #if defined(USE_SSE) || defined(USE_AVX)
             if (dim % 16 == 0)
@@ -447,6 +581,7 @@ namespace hnswlib {
         ~PointCollectionSpace() {}
     };
 
+
     // ---------------
     //    Wasserstein distance (EMD - Earth mover distance)
     // ---------------
@@ -455,7 +590,7 @@ namespace hnswlib {
     struct space_params_EMD {
         size_t dim;
         size_t bin;
-        ::std::vector<float> A;     // ground distance matrix
+        ::std::vector<float> D;     // ground distance matrix
         float eps;                  // sinkhorn iteration update threshold
         float gamma;                // entropic regularization multiplier
     };
@@ -470,29 +605,39 @@ namespace hnswlib {
         const size_t nbin = sparam->bin;
         const float eps = sparam->eps;
         const float gamma = sparam->gamma;
-        float* pWeight = sparam->A.data();                          // no const because of Eigen::Map
+        float* pGroundDist = sparam->D.data();                          // no const because of Eigen::Map
 
         float res = 0;
 
         // ground distances and kernel
-        Eigen::MatrixXf M = Eigen::Map<Eigen::MatrixXf>(pWeight, nbin, nbin);
+        // the ground distance diag is 0 such that the kernel (here acting as a sim measure) has a diag of 1
+        Eigen::MatrixXf M = Eigen::Map<Eigen::MatrixXf>(pGroundDist, nbin, nbin);
         Eigen::MatrixXf K = (-1 * M / gamma).array().exp();
         Eigen::MatrixXf K_t = K.transpose();
 
-#pragma omp parallel
+        Eigen::VectorXf a;  // histogram A, to which pVect1 points
+        Eigen::VectorXf b;  // histogram B, to which pVect2 points
+
+        Eigen::VectorXf u;  // sinkhorn update variable
+        Eigen::VectorXf v;  // sinkhorn update variable
+        Eigen::VectorXf u_old;  // sinkhorn update variable
+        Eigen::VectorXf v_old;  // sinkhorn update variable
+
+        Eigen::MatrixXf P;  // Optimal transport matrix
+
         for (size_t d = 0; d < ndim; d++) {
 
-            Eigen::VectorXf a = Eigen::Map<Eigen::VectorXf>(pVect1 + (d*nbin), nbin);
-            Eigen::VectorXf b = Eigen::Map<Eigen::VectorXf>(pVect2 + (d*nbin), nbin);
+            a = Eigen::Map<Eigen::VectorXf>(pVect1 + (d*nbin), nbin);
+            b = Eigen::Map<Eigen::VectorXf>(pVect2 + (d*nbin), nbin);
 
             assert(a.sum() == b.sum());     // the current implementation only works for histograms that contain the same number of entries (balanced form of Wasserstein distance)
 
-            Eigen::VectorXf u = Eigen::VectorXf::Ones(a.size());
-            Eigen::VectorXf v = Eigen::VectorXf::Ones(b.size());
+            u = Eigen::VectorXf::Ones(a.size());
+            v = Eigen::VectorXf::Ones(b.size());
 
             // for comparing differences between each sinkhorn iteration
-            Eigen::VectorXf u_old = u;
-            Eigen::VectorXf v_old = v;
+            u_old = u;
+            v_old = v;
 
             // sinkhorn iterations (fixpoint iteration)
             float iter_diff = 0;
@@ -508,8 +653,7 @@ namespace hnswlib {
             } while (iter_diff > eps);
 
             // calculate divergence (inner product of ground distance and transportation matrix)
-            Eigen::MatrixXf P = u.asDiagonal() * K * v.asDiagonal();
-#pragma omp atomic
+            P = u.asDiagonal() * K * v.asDiagonal();
             res += (M.cwiseProduct(P)).sum();
         }
 
@@ -531,18 +675,19 @@ namespace hnswlib {
 
             data_size_ = dim * bin * sizeof(float);
 
-            ::std::vector<float> A;
-            A.resize(bin * bin);
+            ::std::vector<float> D;
+            D.resize(bin * bin);
 
+            // ground distance between bin entries
             for (int i = 0; i < (int)bin; i++)
                 for (int j = 0; j < (int)bin; j++)
-                    A[i * bin + j] = std::abs(i - j);// +1;
+                    D[i * bin + j] = std::abs(i - j);
 
             // these are fast parameters, but not the most accurate
             float eps = 0.1;
             float gamma = 0.5;
 
-            params_ = { dim, bin, A, eps, gamma };
+            params_ = { dim, bin, D, eps, gamma };
         }
 
         size_t get_data_size() {

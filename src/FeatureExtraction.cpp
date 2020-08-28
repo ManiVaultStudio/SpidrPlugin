@@ -90,6 +90,8 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
 void FeatureExtraction::computeHistogramFeatures() {
     // init, i.e. identify min and max per dimension for histogramming
     initExtraction();
+    // all _outFeatures have to be -1 to, so we can easily check later if the were all assigned
+    assert(std::all_of(_outFeatures.begin(), _outFeatures.end(), [](float i) {return i == -1.0f; }));
 
     auto start = std::chrono::steady_clock::now();
     // convolution over all points to create histograms
@@ -97,8 +99,8 @@ void FeatureExtraction::computeHistogramFeatures() {
     auto end = std::chrono::steady_clock::now();
     qDebug() << "Feature extraction: extraction duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
 
-    // if there is a -1 in the features, this value was not set at all
-    assert(std::find(_outFeatures.begin(), _outFeatures.end(), -1) == _outFeatures.end());
+    // if there is a -1 in the _outFeatures, this value was not set at all
+    assert(std::none_of(_outFeatures.begin(), _outFeatures.end(), [](float i) {return i == -1.0f; }));
 }
 
 void FeatureExtraction::initExtraction() {
@@ -118,9 +120,9 @@ void FeatureExtraction::initExtraction() {
     else if (_featType == feature_type::PCOL)
         _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
 
-    // this is basically for easier debugging to see if all features are assigned a valid value
-    // (currently only positive feature values are valid)
-    std::fill(_outFeatures.begin(), _outFeatures.end(), -1);
+    // fill such that _outFeatures are always initialized to -1
+    std::fill(_outFeatures.begin(), _outFeatures.end(), -1.0f);
+
 }
 
 void FeatureExtraction::extractFeatures() {
@@ -134,7 +136,7 @@ void FeatureExtraction::extractFeatures() {
     else if (_featType == feature_type::GEARYC)
         featFunct = &FeatureExtraction::calculateGearysC;
     else if (_featType == feature_type::PCOL)
-        featFunct = &FeatureExtraction::calculateAllNeighborhoods;
+        featFunct = &FeatureExtraction::allNeighborhoodVals;
     else
         qDebug() << "Feature extraction: unknown feature Type";
 
@@ -147,13 +149,14 @@ void FeatureExtraction::extractFeatures() {
 
         // get neighborhood values of the current point
         std::vector<float> neighborValues = getNeighborhoodValues(neighborIDs, _attribute_data, _neighborhoodSize, _numDims);
+        assert(std::find(neighborValues.begin(), neighborValues.end(), -1) == neighborValues.end());
 
         // calculate feature(s) for neighborhood
-        (this->*featFunct)(_pointIds[pointID], neighborValues);  // function pointer defined above
+        (this->*featFunct)(_pointIds[pointID], neighborValues, neighborIDs);  // function pointer defined above
     }
 }
 
-void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> neighborValues) {
+void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
     assert(_outFeatures.size() == _numPoints * _numDims * _numHistBins);
     assert(_minMaxVals.size() == 2*_numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
@@ -167,7 +170,8 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
 
         assert(h.rank() == 1);                      // 1D hist
         assert(h.axis().size() == _numHistBins);    // right number of bins
-        assert((_neighborhoodWeighting == loc_Neigh_Weighting::WEIGHT_UNIF) && ((int)std::accumulate(h.begin(), h.end(), 0) == _neighborhoodSize)); // check if uniformity works
+        // check if weighting works: sum(hist) == sum(weights)
+        assert((std::accumulate(h.begin(), h.end(), 0.0f) == std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f)));
 
         // save the histogram in _outFeatures 
         // data layout for points p, dimension d and bin b: [p0d0b0, p0d0b1, p0d0b2, ..., p0d1b0, p0d1b2, ..., p1d0b0, p0d0b1, ...]
@@ -190,30 +194,36 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
 
 }
 
-void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighborValues) {
+void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
     assert(_outFeatures.size() == _numPoints * _numDims);
     assert(_varVals.size() == _numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
+    float neigh_diff_from_mean_sum = 0;
+    float diff_from_mean = 0;
+
     for (size_t dim = 0; dim < _numDims; dim++) {
-        float neigh_diff_from_mean_sum = 0;
+        neigh_diff_from_mean_sum = 0;
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
         }
-        float diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
+        diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
         _outFeatures[pointInd * _numDims + dim] = diff_from_mean * neigh_diff_from_mean_sum / _varVals[dim];
     }
 }
 
-void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> neighborValues) {
+void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
     assert(_outFeatures.size() == _numPoints * _numDims);
     assert(_meanVals.size() == _numDims);
     assert(_varVals.size() == _numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
+    float diff_from_neigh_sum = 0;
+    float diff_from_neigh = 0;
+
     for (size_t dim = 0; dim < _numDims; dim++) {
-        float diff_from_neigh_sum = 0;
-        float diff_from_neigh = 0;
+        diff_from_neigh_sum = 0;
+        diff_from_neigh = 0;
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             diff_from_neigh = _attribute_data[pointInd * _numDims + dim] - neighborValues[neighbor * _numDims + dim];
             diff_from_neigh_sum += _neighborhoodWeights[neighbor] * (diff_from_neigh * diff_from_neigh);
@@ -222,11 +232,19 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
     }
 }
 
-void FeatureExtraction::calculateAllNeighborhoods(size_t pointInd, std::vector<float> neighborValues) {
+void FeatureExtraction::allNeighborhoodVals(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
     assert(_outFeatures.size() == _numPoints * _numDims * _neighborhoodSize);
 
     // copy neighborValues into _outFeatures
     std::swap_ranges(neighborValues.begin(), neighborValues.end(), _outFeatures.begin() + (pointInd * _numDims * _neighborhoodSize));
+}
+
+void FeatureExtraction::allNeighborhoodIDs(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
+    assert(_outFeatures.size() == _numPoints * _neighborhoodSize);
+
+    // copy neighborIDs into _outFeatures
+    std::replace(neighborIDs.begin(), neighborIDs.end(), -1, -2);       // use -2 mark outsiders, whereas -1 marks not processed
+    std::copy(neighborIDs.begin(), neighborIDs.end(), _outFeatures.begin() + (pointInd * _neighborhoodSize));
 }
 
 void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
@@ -234,9 +252,9 @@ void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
     switch (weighting)
     {
     case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1); break; 
-    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;
+    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
     case loc_Neigh_Weighting::WEIGHT_GAUS: _neighborhoodWeights = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NOT); break;
-    default:  break;
+    default:  std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), -1);  break;  // no implemented weighting type given. 
     }
 }
 
