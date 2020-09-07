@@ -30,7 +30,9 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     qDebug() << "ComputeHNSWkNN: Search akNN Index";
 
     // query dataset
+#ifdef NDEBUG
 #pragma omp parallel for
+#endif
     for (int i = 0; i < numPoints; ++i)
     {
         // find nearest neighbors
@@ -38,6 +40,9 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
         while (top_candidates.size() > nn) {
             top_candidates.pop();
         }
+
+        assert(top_candidates.size() == nn);
+
         // save nn in _knn_indices and _knn_distances_squared 
         auto *distances_offset = distances_squared.data() + (i*nn);
         auto indices_offset = indices.data() + (i*nn);
@@ -96,4 +101,16 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
     }
 
     return space;
+}
+
+size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBins, size_t neighborhoodSize) {
+    size_t featureSize = 0;
+    switch (featureType) {
+    case feature_type::TEXTURE_HIST_1D: featureSize = numDims * numHistBins; break;
+    case feature_type::LISA:            // same as Geary's C
+    case feature_type::GEARYC:          featureSize = numDims; break;
+    case feature_type::PCOL:            featureSize = numDims * neighborhoodSize; break;
+    }
+
+    return featureSize;
 }

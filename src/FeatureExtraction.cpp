@@ -161,6 +161,8 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
     assert(_minMaxVals.size() == 2*_numDims);
     assert(_neighborhoodWeights.size() == _neighborhoodSize);
 
+    float histSum = 0;
+
     // 1D histograms for each dimension
     for (size_t dim = 0; dim < _numDims; dim++) {
         auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[2 * dim], _minMaxVals[2 * dim + 1]));
@@ -171,7 +173,14 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
         assert(h.rank() == 1);                      // 1D hist
         assert(h.axis().size() == _numHistBins);    // right number of bins
         // check if weighting works: sum(hist) == sum(weights)
-        assert((std::accumulate(h.begin(), h.end(), 0.0f) == std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f)));
+        assert(std::accumulate(h.begin(), h.end(), 0.0f) == std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f));
+
+        // normalize the histogram: sum(hist) := 1
+        histSum = std::accumulate(h.begin(), h.end(), 0.0f);
+        for (auto& hVal : h)
+            hVal /= histSum;
+
+        assert(std::abs(std::accumulate(h.begin(), h.end(), 0.0f)-1) < 0.01);    // sum(hist) ~= 1
 
         // save the histogram in _outFeatures 
         // data layout for points p, dimension d and bin b: [p0d0b0, p0d0b1, p0d0b2, ..., p0d1b0, p0d1b2, ..., p1d0b0, p0d0b1, ...]
