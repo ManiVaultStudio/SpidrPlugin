@@ -80,17 +80,10 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
     ::std::vector<float> A(num_bins*num_bins, -1);
     size_t ground_dist_max = num_bins - 1;
 
-    int bin_diff = 0;
-
-    size_t ground_dist_max_2 = ground_dist_max * ground_dist_max;
-    size_t bin_diff_2 = 0;
-
     if (sim_type == bin_sim::SIM_EUC) {
         for (int i = 0; i < (int)num_bins; i++) {
             for (int j = 0; j < (int)num_bins; j++) {
-                bin_diff = (i - j);
-                bin_diff_2 = bin_diff * bin_diff;
-                A[i * num_bins + j] = 1 - std::sqrt(float(bin_diff_2) / float(ground_dist_max_2));
+                A[i * num_bins + j] = 1 - (float(std::abs(i - j)) / float(ground_dist_max));
             }
         }
     }
