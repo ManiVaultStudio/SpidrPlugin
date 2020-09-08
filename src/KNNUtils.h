@@ -97,9 +97,7 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
     else if (sim_type == bin_sim::SIM_EXP) {
         for (int i = 0; i < (int)num_bins; i++) {
             for (int j = 0; j < (int)num_bins; j++) {
-                bin_diff = (i - j);
-                bin_diff_2 = bin_diff * bin_diff;
-                A[i * num_bins + j] = ::std::exp(-1 * sim_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
+                A[i * num_bins + j] = ::std::exp(-1 * sim_weight * float(std::abs(i - j)));
             }
         }
     }
