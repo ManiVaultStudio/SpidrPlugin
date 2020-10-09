@@ -42,6 +42,16 @@ void SpidrPlugin::init()
 
 void SpidrPlugin::dataAdded(const QString name)
 {
+    // For now, only handle underived data until Points implementation 
+    // provides functionality to seamlessly obtain global IDs from derived data
+    Points& points = _core->requestData<Points>(name);
+    if (points.isDerivedData())
+        return;
+    // Only accept valid image data
+    QSize imageSize = points.getProperty("ImageSize", QSize()).toSize();
+    if ((imageSize.height() <= 0) || (imageSize.width() <= 0))
+        return;
+
     _settings->dataOptions.addItem(name);
 }
 
@@ -58,7 +68,7 @@ void SpidrPlugin::dataChanged(const QString name)
 
 void SpidrPlugin::dataRemoved(const QString name)
 {
-
+    // Currently, data sets cannot be removed through the UI at this moment
 }
 
 void SpidrPlugin::selectionChanged(const QString dataName)
@@ -82,7 +92,6 @@ SettingsWidget* const SpidrPlugin::getSettings()
 void SpidrPlugin::dataSetPicked(const QString& name)
 {
     Points& points = _core->requestData<Points>(name);
-
     _settings->dataChanged(points);
 }
 
@@ -118,12 +127,7 @@ void SpidrPlugin::startComputation()
 }
 
 void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize) {
-    // For now, only handle underived data until Points implementation 
-    // provides functionality to seamlessly obtain global IDs from derived data
     Points& points = _core->requestData<Points>(dataName);
-    if (points.isDerivedData())
-        exit(-1);
-
     imgSize = points.getProperty("ImageSize", QSize()).toSize();
 
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
