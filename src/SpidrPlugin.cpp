@@ -126,14 +126,15 @@ void SpidrPlugin::startComputation()
 
 }
 
-void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize) {
+void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, QSize& imgSize) {
     Points& points = _core->requestData<Points>(dataName);
     imgSize = points.getProperty("ImageSize", QSize()).toSize();
 
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 
     // Get number of enabled dimensions
-    numDims = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
+    unsigned int numDimensions = points.getNumDimensions();
+    numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
     // Get indices of selected points
     pointIDsGlobal = points.indices;
@@ -146,16 +147,16 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
     }
 
     // For all selected points, retrieve values from each dimension
-    attribute_data.reserve(pointIDsGlobal.size() * numDims);
+    attribute_data.reserve(pointIDsGlobal.size() * numEnabledDimensions);
     
-    points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, &numDims](auto beginOfData, auto endOfData)
+    points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, &numDimensions](auto beginOfData, auto endOfData)
     {
         for (const auto& pointId : pointIDsGlobal)
         {
-            for (unsigned int dimensionId = 0; dimensionId < numDims; dimensionId++)
+            for (unsigned int dimensionId = 0; dimensionId < numDimensions; dimensionId++)
             {
                 if (enabledDimensions[dimensionId]) {
-                    const auto index = pointId * numDims + dimensionId;
+                    const auto index = pointId * numDimensions + dimensionId;
                     attribute_data.push_back(beginOfData[index]);
                 }
             }
