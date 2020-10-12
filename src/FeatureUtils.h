@@ -21,15 +21,14 @@ enum class feature_type : unsigned int
 };
 
 
-/*!
- * 
- * 
+/*! Weighting of local neighborhoods
+ * Used e.g. in histogram creation, spatial weighting in LISA and Point collection distance
  */
 enum class loc_Neigh_Weighting : unsigned int
 {
-    WEIGHT_UNIF = 0,    /*!<> */
-    WEIGHT_BINO = 1,    /*!<> */
-    WEIGHT_GAUS = 2,    /*!<> */
+    WEIGHT_UNIF = 0,    /*!< Uniform weighting (all 1) */
+    WEIGHT_BINO = 1,    /*!< Weighting binomial approximation of 2D gaussian */
+    WEIGHT_GAUS = 2,    /*!< Weighting given by 2D gaussian */
 };
 
 /*!
@@ -38,9 +37,9 @@ enum class loc_Neigh_Weighting : unsigned int
  */
 enum class norm_vec : unsigned int
 {
-    NORM_NOT = 0,   /*!<No normalization */
-    NORM_MAX = 1,   /*!<> */
-    NORM_SUM = 2,   /*!<> */
+    NORM_NONE = 0,   /*!< No normalization */
+    NORM_MAX = 1,   /*!< Normalization such that max = 1 (usually center value) */
+    NORM_SUM = 2,   /*!< Normalization such that sum = 1 */
 };
 
 /*!
@@ -55,15 +54,14 @@ enum class bin_size : unsigned int
     RICE = 3,       /*!<> */
 };
 
-/*!
+/*! Normalizes all values in vec wrt to normVal
+ * Basically normedVec[i] = vec[i] / normVal
  *
- * \tparam  T
- * \arg  cev
- * \arg  nornmVal
- * \return
+ * \param vec
+ * \param normVal
  */
 template<typename T>
-std::vector<float> NormVector(std::vector<T> vec, float normVal);
+void NormVector(std::vector<T>& vec, T normVal);
 
 /*!
  *
@@ -78,7 +76,7 @@ std::vector<unsigned int> PascalsTriangleRow(const unsigned int n);
  * \param norm
  * \return
  */
-std::vector<float> BinomialKernel2D(const unsigned int width, norm_vec norm = norm_vec::NORM_NOT);
+std::vector<float> BinomialKernel2D(const unsigned int width, norm_vec norm = norm_vec::NORM_NONE);
 
 /*!
  *
@@ -88,7 +86,6 @@ std::vector<float> BinomialKernel2D(const unsigned int width, norm_vec norm = no
  */
 std::vector<float> GaussianKernel1D(const unsigned int width, const float sd = 1);
 
-// @param norm: 1 indicates max, 2 indicates sum, 0 indicates no normalization
 /*!
  *
  * \param width
@@ -96,7 +93,7 @@ std::vector<float> GaussianKernel1D(const unsigned int width, const float sd = 1
  * \param norm
  * \return
  */
-std::vector<float> GaussianKernel2D(const unsigned int width, const float sd = 1, norm_vec norm = norm_vec::NORM_NOT);
+std::vector<float> GaussianKernel2D(const unsigned int width, const float sd = 1, norm_vec norm = norm_vec::NORM_NONE);
 
 /*!
  *

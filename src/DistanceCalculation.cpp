@@ -87,13 +87,7 @@ void DistanceCalculation::computekNN() {
     qDebug() << "Distance calculation: Compute kNN";
 
     // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
-    size_t featureSize = 0;
-    switch (_featureType) {
-    case feature_type::TEXTURE_HIST_1D: featureSize = _numDims * _numHistBins; break;
-    case feature_type::LISA:            // same as Geary's C
-    case feature_type::GEARYC:          featureSize = _numDims; break;
-    case feature_type::PCOL:            featureSize = _numDims * _neighborhoodSize; break;
-    }
+    size_t featureSize = SetFeatureSize(_featureType, _numDims, _numHistBins, _neighborhoodSize);
 
     auto t_start_ComputeDist = std::chrono::steady_clock::now();
 

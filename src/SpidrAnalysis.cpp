@@ -97,6 +97,10 @@ void SpidrAnalysis::setDistanceMetric(const int index) {
 void SpidrAnalysis::setPerplexity(const unsigned perplexity) {
     _params._perplexity = perplexity;
     _params._nn = (perplexity * _params._perplexity_multiplier) + 1;
+
+    // For small images, use less kNN
+    if (_params._nn > _params._numPoints)
+        _params._nn = _params._numPoints;
 }
 
 void SpidrAnalysis::setNumIterations(const unsigned num) {

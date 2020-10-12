@@ -24,6 +24,15 @@ using namespace hdps::gui;
 
 class SpidrPlugin;
 
+// Heuristic for setting the histogram bin size
+enum class histBinSizeHeuristic : unsigned int
+{
+    MANUAL = 0,    /*!< Manually  adjust histogram bin size */
+    SQRT = 1,      /*!< ceil(sqrt(n)), n = neighborhood size */
+    STURGES = 2,   /*!< ceil(log_2(n))+1, n = neighborhood size */
+    RICE = 3,      /*!< ceil(2*pow(n, 1/3)), n = neighborhood size */
+};
+
 /**
  * Main settings widget
  */
@@ -60,7 +69,7 @@ public slots:
 
 private slots:
     void onStartToggled(bool pressed);
-    void onHistBinSizeChanged(const QString &value);
+    void onKernelSizeChanged(const QString &kernelSizeField);
     void onHistBinSizeHeurPicked(int value);
     void onDistanceMetricPicked(int value);
     void numIterationsChanged(const QString &value);

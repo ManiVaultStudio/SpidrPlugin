@@ -42,6 +42,16 @@ void SpidrPlugin::init()
 
 void SpidrPlugin::dataAdded(const QString name)
 {
+    // For now, only handle underived data until Points implementation 
+    // provides functionality to seamlessly obtain global IDs from derived data
+    Points& points = _core->requestData<Points>(name);
+    if (points.isDerivedData())
+        return;
+    // Only accept valid image data
+    QSize imageSize = points.getProperty("ImageSize", QSize()).toSize();
+    if ((imageSize.height() <= 0) || (imageSize.width() <= 0))
+        return;
+
     _settings->dataOptions.addItem(name);
 }
 
@@ -58,7 +68,7 @@ void SpidrPlugin::dataChanged(const QString name)
 
 void SpidrPlugin::dataRemoved(const QString name)
 {
-
+    // Currently, data sets cannot be removed through the UI at this moment
 }
 
 void SpidrPlugin::selectionChanged(const QString dataName)
@@ -82,7 +92,6 @@ SettingsWidget* const SpidrPlugin::getSettings()
 void SpidrPlugin::dataSetPicked(const QString& name)
 {
     Points& points = _core->requestData<Points>(name);
-
     _settings->dataChanged(points);
 }
 
@@ -117,19 +126,15 @@ void SpidrPlugin::startComputation()
 
 }
 
-void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize) {
-    // For now, only handle underived data until Points implementation 
-    // provides functionality to seamlessly obtain global IDs from derived data
+void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, QSize& imgSize) {
     Points& points = _core->requestData<Points>(dataName);
-    if (points.isDerivedData())
-        exit(-1);
-
     imgSize = points.getProperty("ImageSize", QSize()).toSize();
 
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 
     // Get number of enabled dimensions
-    numDims = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
+    unsigned int numDimensions = points.getNumDimensions();
+    numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
     // Get indices of selected points
     pointIDsGlobal = points.indices;
@@ -142,18 +147,16 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
     }
 
     // For all selected points, retrieve values from each dimension
-    attribute_data.reserve(pointIDsGlobal.size() * numDims);
+    attribute_data.reserve(pointIDsGlobal.size() * numEnabledDimensions);
     
-    const auto numDim = points.getNumDimensions();
-    
-    points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, numDim](auto beginOfData, auto endOfData)
+    points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, &numDimensions](auto beginOfData, auto endOfData)
     {
         for (const auto& pointId : pointIDsGlobal)
         {
-            for (unsigned int dimensionId = 0; dimensionId < numDim; dimensionId++)
+            for (unsigned int dimensionId = 0; dimensionId < numDimensions; dimensionId++)
             {
                 if (enabledDimensions[dimensionId]) {
-                    const auto index = pointId * numDim + dimensionId;
+                    const auto index = pointId * numDimensions + dimensionId;
                     attribute_data.push_back(beginOfData[index]);
                 }
             }
@@ -174,7 +177,7 @@ void SpidrPlugin::onNewEmbedding() {
 
 void SpidrPlugin::initializeAnalysisSettings() {
     // set all the parameters
-    _spidrAnalysis.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentIndex(), _settings->kernelSize.text().toInt(),  \
+    _spidrAnalysis.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().toInt(), _settings->kernelSize.text().toInt(),  \
                                               _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().toInt(), _settings->distanceMetric.currentData().toPoint().y(), \
                                               _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt());
 }

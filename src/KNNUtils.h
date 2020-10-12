@@ -80,26 +80,17 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
     ::std::vector<float> A(num_bins*num_bins, -1);
     size_t ground_dist_max = num_bins - 1;
 
-    int bin_diff = 0;
-
-    size_t ground_dist_max_2 = ground_dist_max * ground_dist_max;
-    size_t bin_diff_2 = 0;
-
     if (sim_type == bin_sim::SIM_EUC) {
         for (int i = 0; i < (int)num_bins; i++) {
             for (int j = 0; j < (int)num_bins; j++) {
-                bin_diff = (i - j);
-                bin_diff_2 = bin_diff * bin_diff;
-                A[i * num_bins + j] = 1 - std::sqrt(float(bin_diff_2) / float(ground_dist_max_2));
+                A[i * num_bins + j] = 1 - (float(std::abs(i - j)) / float(ground_dist_max));
             }
         }
     }
     else if (sim_type == bin_sim::SIM_EXP) {
         for (int i = 0; i < (int)num_bins; i++) {
             for (int j = 0; j < (int)num_bins; j++) {
-                bin_diff = (i - j);
-                bin_diff_2 = bin_diff * bin_diff;
-                A[i * num_bins + j] = ::std::exp(-1 * sim_weight * (float(bin_diff_2) / float(ground_dist_max_2)));
+                A[i * num_bins + j] = ::std::exp(-1 * sim_weight * float(std::abs(i - j)));
             }
         }
     }
@@ -160,8 +151,9 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
         // sort all distances to point i
         std::sort(indices_distances.begin(), indices_distances.end(), [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second;});
 
-        // Take the first nn distances and indices 
+        // Take the first nn indices 
         std::transform(indices_distances.begin(), indices_distances.begin() + nn, knn_indices.begin() + i * nn, [](const std::pair<int, float>& p) { return p.first; });
+        // Take the first nn distances 
         std::transform(indices_distances.begin(), indices_distances.begin() + nn, knn_distances_squared.begin() + i * nn, [](const std::pair<int, float>& p) { return p.second; });
     }
 
@@ -182,6 +174,17 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
  */
 hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data, size_t numHistBins=0);
 
+
+/*! Calculates the size of an feature wrt to the feature type
+ * Used as a step size for adding points to an HNSWlib index
+ *
+ * \param featureType type of feature (e.g. scalar LISA or vector Texture Histogram)
+ * \param numDims Number of data channels
+ * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
+ * \param neighborhoodSize Size of neighborhood, must be a perfect square
+ * \return 
+ */
+size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBins, size_t neighborhoodSize);
 
 namespace hnswlib {
 
@@ -428,17 +431,23 @@ namespace hnswlib {
         const size_t ndim = sparam->dim;
         const size_t nbin = sparam->bin;
 
-        float t = 0;
         float res = 0;
+
+        // Calculate Hellinger distance based on Bhattacharyya coefficient 
+        float binSim = 0;
+        float histDiff = 1;
         // add the histogram distance for each dimension
         for (size_t d = 0; d < ndim; d++) {
+            histDiff = 1;
             for (size_t i = 0; i < nbin; i++) {
-                t = ::std::sqrt(*pVect1) - ::std::sqrt(*pVect2);
+                binSim = (*pVect1) * (*pVect2);
+                histDiff -= ::std::sqrt(binSim);
                 pVect1++;
                 pVect2++;
-                res += t * t;
             }
+            res += (histDiff>=0) ? ::std::sqrt(histDiff) : 0; // sometimes histDiff is slightly below 0 due to rounding errors
         }
+
         return (res);
     }
 
@@ -548,7 +557,7 @@ namespace hnswlib {
             {
             case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
             case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
-            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NOT); break;
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NONE); break;
             default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
             }
 

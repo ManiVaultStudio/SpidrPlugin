@@ -40,22 +40,25 @@ _analysisPlugin(analysisPlugin)
     distanceMetric.addItem("Euclidean (PC)", QVariant(QPoint(3, 4)));
     distanceMetric.setToolTip("TH: Texture Histogram (vector feature) \nLISA: Local Indicator of Spatial Association (scalar feature) \n GC: local Geary's C\n PC: Point Collection Distance (no feature)");
 
-    kernelWeight.addItem("Uniform");
-    kernelWeight.addItem("Binomial");
-    kernelWeight.addItem("Gaussian");
+    // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
+    kernelWeight.addItem("Uniform", QVariant(0));
+    kernelWeight.addItem("Binomial", QVariant(1));
+    kernelWeight.addItem("Gaussian", QVariant(2));
 
-    histBinSizeHeur.addItem("Manual");  
-    histBinSizeHeur.addItem("Sqrt");
-    histBinSizeHeur.addItem("Sturges");
-    histBinSizeHeur.addItem("Rice");
+    // add data item according to enum histBinSizeHeuristic (SpiderSettingsWidget.h)
+    histBinSizeHeur.addItem("Manual", QVariant(0));
+    histBinSizeHeur.addItem("Sqrt", QVariant(1));
+    histBinSizeHeur.addItem("Sturges", QVariant(2));
+    histBinSizeHeur.addItem("Rice", QVariant(3));
     histBinSizeHeur.setToolTip("Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))");
 
     connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
     
     connect(&distanceMetric, SIGNAL(currentIndexChanged(int)), this, SLOT(onDistanceMetricPicked(int)));
 
-    connect(&kernelSize, SIGNAL(textChanged(QString)), this, SLOT(onHistBinSizeChanged(QString)));
-    connect(&histBinSize, SIGNAL(textChanged(QString)), SLOT(histBinSizeChanged(QString)));
+    // as the kernel changes, the histogram bin number might change if it is not manually set
+    connect(&kernelSize, &QSpinBox::textChanged, this, &SpidrSettingsWidget::onKernelSizeChanged);
+    // change the hist bin size heuristic
     connect(&histBinSizeHeur, SIGNAL(currentIndexChanged(int)), this, SLOT(onHistBinSizeHeurPicked(int)));
 
     connect(&numIterations, SIGNAL(textChanged(QString)), SLOT(numIterationsChanged(QString)));
@@ -250,14 +253,14 @@ void SpidrSettingsWidget::onStartToggled(bool pressed)
     pressed ? _analysisPlugin.startComputation() : _analysisPlugin.stopComputation();;
 }
 
-void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
+void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {
     int activeHeur = histBinSizeHeur.currentIndex();
 
     if (activeHeur == 0) 
         return;
     else  {
-        int kernelSize_ = value.toInt();
-        int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
+        const int kernelSize_ = kernelSizeField.toInt();
+        const int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
         int binNum = 0;
         switch (activeHeur)
         {
@@ -297,19 +300,21 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
 }
 
 void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
+    histBinSizeHeuristic heuristic = static_cast<histBinSizeHeuristic> (value);
 
-    if (value == 0) {
+    if (heuristic == histBinSizeHeuristic::MANUAL) {
         histBinSize.setReadOnly(false);
     }
-    else if (value > 0) {
+    else {
         int kernelSize_ = kernelSize.text().toInt();
         int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
-        switch (value)
+        switch (heuristic)
         {
-        case 1: histBinSize.setValue(SqrtBinSize(numLocNeighbors)); break;
-        case 2: histBinSize.setValue(SturgesBinSize(numLocNeighbors)); break;
-        case 3: histBinSize.setValue(RiceBinSize(numLocNeighbors)); break;
+        case histBinSizeHeuristic::SQRT: histBinSize.setValue(SqrtBinSize(numLocNeighbors)); break;
+        case histBinSizeHeuristic::STURGES: histBinSize.setValue(SturgesBinSize(numLocNeighbors)); break;
+        case histBinSizeHeuristic::RICE: histBinSize.setValue(RiceBinSize(numLocNeighbors)); break;
         default:
+            qDebug() << "SpidrSettingsWidget::onHistBinSizeHeurPicked: heuristic not implemented";
             break;
         }
         histBinSize.setReadOnly(true);
