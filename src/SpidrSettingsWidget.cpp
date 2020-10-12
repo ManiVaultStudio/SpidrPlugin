@@ -314,6 +314,7 @@ void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
         case histBinSizeHeuristic::STURGES: histBinSize.setValue(SturgesBinSize(numLocNeighbors)); break;
         case histBinSizeHeuristic::RICE: histBinSize.setValue(RiceBinSize(numLocNeighbors)); break;
         default:
+            qDebug() << "SpidrSettingsWidget::onHistBinSizeHeurPicked: heuristic not implemented";
             break;
         }
         histBinSize.setReadOnly(true);

@@ -140,6 +140,8 @@ void FeatureExtraction::extractFeatures() {
     else
         qDebug() << "Feature extraction: unknown feature Type";
 
+    qDebug() << QVector<float>::fromStdVector(_neighborhoodWeights);
+
     // convolve over all selected data points
 #pragma omp parallel for
     for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
@@ -173,7 +175,7 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
         assert(h.rank() == 1);                      // 1D hist
         assert(h.axis().size() == _numHistBins);    // right number of bins
         // check if weighting works: sum(hist) == sum(weights)
-        assert(std::accumulate(h.begin(), h.end(), 0.0f) == std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f));
+        assert(std::accumulate(h.begin(), h.end(), 0.0f) - std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f) < 0.01);
 
         // normalize the histogram: sum(hist) := 1
         histSum = std::accumulate(h.begin(), h.end(), 0.0f);
@@ -258,12 +260,24 @@ void FeatureExtraction::allNeighborhoodIDs(size_t pointInd, std::vector<float> n
 
 void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
     _neighborhoodWeights.resize(_neighborhoodSize);
+
+    // Set neighborhood weights
     switch (weighting)
     {
     case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 1); break; 
-    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
-    case loc_Neigh_Weighting::WEIGHT_GAUS: _neighborhoodWeights = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NOT); break;
+    case loc_Neigh_Weighting::WEIGHT_BINO: _neighborhoodWeights = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;            // kernel norm: max(_neighborhoodWeights) = 1
+    case loc_Neigh_Weighting::WEIGHT_GAUS: _neighborhoodWeights = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_MAX); break;       // kernel norm: max(_neighborhoodWeights) = 1
     default:  std::fill(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), -1);  break;  // no implemented weighting type given. 
+    }
+
+    // Some features do not take into account the current point but only the neighborhood values
+    if ((_featType == feature_type::LISA) || (_featType == feature_type::GEARYC)) {
+        int centralID = (int)std::sqrt(_neighborhoodSize) + 1;
+        assert(_neighborhoodWeights.size() == (centralID-1)*(centralID-1));
+        _neighborhoodWeights[centralID] = 0;
+
+        // normalize neighborhood to the sum w/o the center
+        NormVector(_neighborhoodWeights, std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f));
     }
 }
 

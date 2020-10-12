@@ -2,12 +2,12 @@
 
 
 template<typename T>
-std::vector<float> NormVector(std::vector<T> vec, float normVal) {
-    std::vector<float> normedVec(vec.size(), 0);
-    for (unsigned int i = 0; i < vec.size(); i++) {
-        normedVec[i] = vec[i] / normVal;
-    }
-    return normedVec;
+void NormVector(std::vector<T>& vec, T normVal) {
+
+    std::for_each(std::execution::par_unseq, std::begin(vec), std::end(vec), [normVal](auto& val) {
+        val /= normVal;
+    });
+
 }
 
 std::vector<unsigned int> PascalsTriangleRow(const unsigned int n) {
@@ -46,9 +46,9 @@ std::vector<float> BinomialKernel2D(const unsigned int width, norm_vec norm) {
 
     // normalization
     if (norm == norm_vec::NORM_MAX)
-        bino2D = NormVector(bino2D, max);
+        NormVector(bino2D, (float)max);
     else if (norm == norm_vec::NORM_SUM)
-        bino2D = NormVector(bino2D, sum);
+        NormVector(bino2D, (float)sum);
 
     return bino2D;
 }
@@ -77,7 +77,7 @@ std::vector<float> GaussianKernel2D(const unsigned int width, const float sd, no
         throw std::invalid_argument("sd must be positive");
 
     std::vector<float> gauss1D = GaussianKernel1D(width);
-    std::vector<float> gauss2D(width * width, 0);
+    std::vector<float> gauss2D(width * width, -1);
 
     // helper for normalization
     float sum = 0;
@@ -97,9 +97,9 @@ std::vector<float> GaussianKernel2D(const unsigned int width, const float sd, no
 
     // normalization
     if (norm == norm_vec::NORM_MAX)
-        gauss2D = NormVector(gauss2D, max);
+        NormVector(gauss2D, max);
     else if (norm == norm_vec::NORM_SUM)
-        gauss2D = NormVector(gauss2D, sum);
+        NormVector(gauss2D, sum);
 
     return gauss2D;
 }
