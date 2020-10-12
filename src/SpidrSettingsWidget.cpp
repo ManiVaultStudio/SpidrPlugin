@@ -54,8 +54,9 @@ _analysisPlugin(analysisPlugin)
     
     connect(&distanceMetric, SIGNAL(currentIndexChanged(int)), this, SLOT(onDistanceMetricPicked(int)));
 
-    connect(&kernelSize, SIGNAL(textChanged(QString)), this, SLOT(onHistBinSizeChanged(QString)));
-    connect(&histBinSize, SIGNAL(textChanged(QString)), SLOT(histBinSizeChanged(QString)));
+    // as the kernel changes, the histogram bin number might change if it is not manually set
+    connect(&kernelSize, &QSpinBox::textChanged, this, &SpidrSettingsWidget::onKernelSizeChanged);
+    // change the hist bin size heuristic
     connect(&histBinSizeHeur, SIGNAL(currentIndexChanged(int)), this, SLOT(onHistBinSizeHeurPicked(int)));
 
     connect(&numIterations, SIGNAL(textChanged(QString)), SLOT(numIterationsChanged(QString)));
@@ -250,14 +251,14 @@ void SpidrSettingsWidget::onStartToggled(bool pressed)
     pressed ? _analysisPlugin.startComputation() : _analysisPlugin.stopComputation();;
 }
 
-void SpidrSettingsWidget::onHistBinSizeChanged(const QString &value) {
+void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {
     int activeHeur = histBinSizeHeur.currentIndex();
 
     if (activeHeur == 0) 
         return;
     else  {
-        int kernelSize_ = value.toInt();
-        int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
+        const int kernelSize_ = kernelSizeField.toInt();
+        const int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
         int binNum = 0;
         switch (activeHeur)
         {

@@ -60,7 +60,7 @@ public slots:
 
 private slots:
     void onStartToggled(bool pressed);
-    void onHistBinSizeChanged(const QString &value);
+    void onKernelSizeChanged(const QString &kernelSizeField);
     void onHistBinSizeHeurPicked(int value);
     void onDistanceMetricPicked(int value);
     void numIterationsChanged(const QString &value);
