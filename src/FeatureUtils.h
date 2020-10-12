@@ -21,15 +21,14 @@ enum class feature_type : unsigned int
 };
 
 
-/*!
- * 
- * 
+/*! Weighting of local neighborhoods
+ * Used e.g. in histogram creation, spatial weighting in LISA and Point collection distance
  */
 enum class loc_Neigh_Weighting : unsigned int
 {
-    WEIGHT_UNIF = 0,    /*!<> */
-    WEIGHT_BINO = 1,    /*!<> */
-    WEIGHT_GAUS = 2,    /*!<> */
+    WEIGHT_UNIF = 0,    /*!< Uniform weighting (all 1) */
+    WEIGHT_BINO = 1,    /*!< Weighting binomial approximation of 2D gaussian */
+    WEIGHT_GAUS = 2,    /*!< Weighting given by 2D gaussian */
 };
 
 /*!

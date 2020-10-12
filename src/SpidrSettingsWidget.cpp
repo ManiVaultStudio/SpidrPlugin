@@ -40,14 +40,16 @@ _analysisPlugin(analysisPlugin)
     distanceMetric.addItem("Euclidean (PC)", QVariant(QPoint(3, 4)));
     distanceMetric.setToolTip("TH: Texture Histogram (vector feature) \nLISA: Local Indicator of Spatial Association (scalar feature) \n GC: local Geary's C\n PC: Point Collection Distance (no feature)");
 
-    kernelWeight.addItem("Uniform");
-    kernelWeight.addItem("Binomial");
-    kernelWeight.addItem("Gaussian");
+    // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
+    kernelWeight.addItem("Uniform", QVariant(0));
+    kernelWeight.addItem("Binomial", QVariant(1));
+    kernelWeight.addItem("Gaussian", QVariant(2));
 
-    histBinSizeHeur.addItem("Manual");  
-    histBinSizeHeur.addItem("Sqrt");
-    histBinSizeHeur.addItem("Sturges");
-    histBinSizeHeur.addItem("Rice");
+    // add data item according to enum histBinSizeHeuristic (SpiderSettingsWidget.h)
+    histBinSizeHeur.addItem("Manual", QVariant(0));
+    histBinSizeHeur.addItem("Sqrt", QVariant(1));
+    histBinSizeHeur.addItem("Sturges", QVariant(2));
+    histBinSizeHeur.addItem("Rice", QVariant(3));
     histBinSizeHeur.setToolTip("Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))");
 
     connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
@@ -298,18 +300,19 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
 }
 
 void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
+    histBinSizeHeuristic heuristic = static_cast<histBinSizeHeuristic> (value);
 
-    if (value == 0) {
+    if (heuristic == histBinSizeHeuristic::MANUAL) {
         histBinSize.setReadOnly(false);
     }
-    else if (value > 0) {
+    else {
         int kernelSize_ = kernelSize.text().toInt();
         int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
-        switch (value)
+        switch (heuristic)
         {
-        case 1: histBinSize.setValue(SqrtBinSize(numLocNeighbors)); break;
-        case 2: histBinSize.setValue(SturgesBinSize(numLocNeighbors)); break;
-        case 3: histBinSize.setValue(RiceBinSize(numLocNeighbors)); break;
+        case histBinSizeHeuristic::SQRT: histBinSize.setValue(SqrtBinSize(numLocNeighbors)); break;
+        case histBinSizeHeuristic::STURGES: histBinSize.setValue(SturgesBinSize(numLocNeighbors)); break;
+        case histBinSizeHeuristic::RICE: histBinSize.setValue(RiceBinSize(numLocNeighbors)); break;
         default:
             break;
         }

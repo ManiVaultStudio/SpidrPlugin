@@ -177,7 +177,7 @@ void SpidrPlugin::onNewEmbedding() {
 
 void SpidrPlugin::initializeAnalysisSettings() {
     // set all the parameters
-    _spidrAnalysis.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentIndex(), _settings->kernelSize.text().toInt(),  \
+    _spidrAnalysis.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().toInt(), _settings->kernelSize.text().toInt(),  \
                                               _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().toInt(), _settings->distanceMetric.currentData().toPoint().y(), \
                                               _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt());
 }
