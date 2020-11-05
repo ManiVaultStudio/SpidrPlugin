@@ -40,6 +40,7 @@ typedef std::vector<hdi::data::MapMemEff<int, float> > sparse_scalar_matrix;
  */
 enum class knn_library : size_t
 {
+    EVAL = 99,          /*!< No knn library in use, full dist matrix and save it to disk */ 
     NONE = 0,           /*!< No knn library in use, no approximation i.e. exact kNN computation */ 
     KNN_HNSW = 1,       /*!< HNSWLib */
 };
@@ -121,10 +122,12 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
  * \param space HNSWLib metric space
  * \param featureSize Size of one data item features
  * \param numPoints Number of points in the data
+ * \param nn Number of nearest neighbors
+ * \param sort Whether to sort the nearest neighbor distances. Default is true. Set to false if nn == numPoints and you want to calculate the full distance matrix
  * \return Tuple of indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn, bool sort = true) {
     std::vector<std::pair<int, float>> indices_distances;
     std::vector<int> knn_indices;
     std::vector<float> knn_distances_squared;
@@ -136,7 +139,6 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
     hnswlib::DISTFUNC<float> distfunc = space->get_dist_func();
     void* params = space->get_dist_func_param();
 
-    
     // For each point, calc distances to all other
     // and take the nn smallest as kNN
     for (int i = 0; i < (int)numPoints; i++) {
@@ -148,8 +150,11 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
             indices_distances[j] = std::make_pair(j, distfunc(dataFeatures->data() + i * featureSize, dataFeatures->data() + j * featureSize, params));
         }
 
-        // sort all distances to point i
-        std::sort(indices_distances.begin(), indices_distances.end(), [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second;});
+        if (sort)
+        {
+            // sort all distances to point i
+            std::sort(indices_distances.begin(), indices_distances.end(), [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second; });
+        }
 
         // Take the first nn indices 
         std::transform(indices_distances.begin(), indices_distances.begin() + nn, knn_indices.begin() + i * nn, [](const std::pair<int, float>& p) { return p.first; });
@@ -160,6 +165,19 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
     return std::make_tuple(knn_indices, knn_distances_squared);
 }
 
+/*! Compute the full distance matrix between all data points
+ * Calls ComputeExactKNN with the correct parameters, basically syntactic sugar
+ * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
+ * \param space HNSWLib metric space
+ * \param featureSize Size of one data item features
+ * \param numPoints Number of points in the data
+ * \return Tuple of indices and respective squared distances
+*/
+template<typename T>
+std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints) {
+    // set nn = numPoints and sort = true
+    return ComputeExactKNN(dataFeatures, space, featureSize, numPoints, numPoints, true);
+}
 
 /*! Creates a metric space used by HNSWLib to build a kNN index
  * 

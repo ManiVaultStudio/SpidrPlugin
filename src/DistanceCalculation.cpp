@@ -104,13 +104,21 @@ void DistanceCalculation::computekNN() {
         std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, featureSize, _numPoints, _nn);
 
     }
+    else if (_knn_lib == knn_library::EVAL) {
+        qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
+        _nn = _numPoints;
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeFullDistMat(_dataFeatures, space, featureSize, _numPoints);
 
-    // Write distance matrices to disk
-    std::string savePath = "D:/Documents/Project 2020a/Spidr/Paper/SpidrEvaluation/Data/";
-    savePath += _embeddingName;
-    std::string infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_nn);
-    writeVecToBinary(_knn_indices, savePath + "_knnInd" + infoStr + ".bin");
-    writeVecToBinary(_knn_distances_squared, savePath + "_knnDist" + infoStr + ".bin");
+        qDebug() << "Distance calculation: Evaluation mode - Write distance matrix to disk";
+
+        // Write distance matrices to disk
+        std::string savePath = "D:/Documents/Project 2020a/Spidr/Paper/SpidrEvaluation/Data/";
+        savePath += _embeddingName;
+        std::string infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_nn);
+        writeVecToBinary(_knn_indices, savePath + "_knnInd" + infoStr + ".bin");
+        writeVecToBinary(_knn_distances_squared, savePath + "_knnDist" + infoStr + ".bin");
+
+    }
 
 
     auto t_end_ComputeDist = std::chrono::steady_clock::now();

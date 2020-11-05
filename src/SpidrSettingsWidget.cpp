@@ -28,6 +28,7 @@ _analysisPlugin(analysisPlugin)
     // add data item according to enum knn_library (KNNUtils)
     knnOptions.addItem("HNSW", QVariant(1));
     knnOptions.addItem("Exact", QVariant(0));
+    knnOptions.addItem("Eval", QVariant(99));
 
     // add options in the order as defined in enums in utils files
     // data values (QPoint) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
