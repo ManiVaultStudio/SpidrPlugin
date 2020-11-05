@@ -52,10 +52,13 @@ _analysisPlugin(analysisPlugin)
     histBinSizeHeur.addItem("Rice", QVariant(3));
     histBinSizeHeur.setToolTip("Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))");
 
-    connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
-    
-    connect(&distanceMetric, SIGNAL(currentIndexChanged(int)), this, SLOT(onDistanceMetricPicked(int)));
 
+    // Initialize data options
+    connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
+    // Initialize distance metric options
+    connect(&distanceMetric, SIGNAL(currentIndexChanged(int)), this, SLOT(onDistanceMetricPicked(int)));
+    // Set embedding default name
+    connect(&dataOptions, SIGNAL(currentIndexChanged(QString)), this, SLOT(setEmbName(QString)));
     // as the kernel changes, the histogram bin number might change if it is not manually set
     connect(&kernelSize, &QSpinBox::textChanged, this, &SpidrSettingsWidget::onKernelSizeChanged);
     // change the hist bin size heuristic
@@ -69,12 +72,17 @@ _analysisPlugin(analysisPlugin)
     connect(&numChecks,     SIGNAL(textChanged(QString)), SLOT(numChecksChanged(QString)));
     connect(&theta,         SIGNAL(textChanged(QString)), SLOT(thetaChanged(QString)));
 
+    // Initialize start button
+    startButton.setText("Start Computation");
+    startButton.setFixedSize(QSize(150, 50));
+    startButton.setCheckable(true);
     connect(&startButton, &QPushButton::toggled, this, &SpidrSettingsWidget::onStartToggled);
 
     // Create group boxes for grouping together various settings
     QGroupBox* settingsBox = new QGroupBox("Basic settings");
     QGroupBox* advancedSettingsBox = new QGroupBox("Advanced Settings");
-    
+    QGroupBox* computeBox = new QGroupBox();
+
     advancedSettingsBox->setCheckable(true);
     advancedSettingsBox->setChecked(false);
     
@@ -87,6 +95,7 @@ _analysisPlugin(analysisPlugin)
     QLabel* expDecayLabel = new QLabel("Exponential Decay");
     QLabel* numTreesLabel = new QLabel("Number of Trees");
     QLabel* numChecksLabel = new QLabel("Number of Checks");
+    QLabel* embNameLabel = new QLabel("Embedding Name");
 
     QLabel* kernelWeightLabel = new QLabel("Kernel Weighting");
     QLabel* kernelSizeLabel = new QLabel("Kernel Size");
@@ -121,9 +130,6 @@ _analysisPlugin(analysisPlugin)
     kernelSize.setValue(1);
     histBinSize.setValue(5);
 
-    startButton.setText("Start Computation");
-    startButton.setFixedSize(QSize(150, 50));
-    startButton.setCheckable(true);
 
     // Add options to their appropriate group box
     auto* const settingsLayout = new QGridLayout();
@@ -165,13 +171,30 @@ _analysisPlugin(analysisPlugin)
     advancedSettingsLayout->addWidget(&numChecks, 3, 1);
     advancedSettingsBox->setLayout(advancedSettingsLayout);
 
+    
+    auto* const computeLayout = new QGridLayout();
+    computeLayout->addWidget(embNameLabel, 0, 0);
+    computeLayout->addWidget(&embNameLine, 1, 0, Qt::AlignTop);
+    computeLayout->addWidget(&startButton, 0, 1, 2, 1, Qt::AlignCenter);
+    computeBox->setLayout(computeLayout);
+
     // Add all the parts of the settings widget together
     addWidget(&dataOptions);
     addWidget(settingsBox);
     addWidget(&_dimensionSelectionWidget);
     addWidget(advancedSettingsBox);
-    addWidget(&startButton);
+    addWidget(computeBox);
 
+}
+
+void SpidrSettingsWidget::setEmbName(QString embName)
+{
+    embNameLine.setText(embName + "_sp-tsne_emb");
+}
+
+QString SpidrSettingsWidget::getEmbName()
+{
+    return embNameLine.text();
 }
 
 void SpidrSettingsWidget::computationStopped()
