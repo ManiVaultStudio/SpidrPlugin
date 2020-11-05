@@ -18,7 +18,7 @@ void SpidrAnalysis::run() {
     spatialAnalysis();
 }
 
-void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize) {
+void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize, const QString embeddingName) {
     // Set data
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
@@ -27,6 +27,7 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
     _params._numPoints = pointIDsGlobal.size();
     _params._numDims = numDimensions;
     _params._imgSize = imgSize;
+    _params._embeddingName = embeddingName.toStdString();
 
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
 }

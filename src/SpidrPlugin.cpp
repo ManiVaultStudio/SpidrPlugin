@@ -118,7 +118,7 @@ void SpidrPlugin::startComputation()
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
 
-    _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize);
+    _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize, _embeddingName);
     initializeAnalysisSettings();
 
     // Start spatial analysis

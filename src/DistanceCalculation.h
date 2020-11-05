@@ -2,6 +2,7 @@
 
 #include <tuple>
 #include <vector>
+#include <string>   
 
 #include <QObject>
 #include <QSize>
@@ -70,9 +71,10 @@ private:
     size_t _numDims;                                /*!<> */
     size_t _numPoints;                              /*!<> */
     size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
-    std::vector<float>* _dataFeatures;        /*!<> */
-    std::vector<unsigned int>* _pointIds;     /*!<> */
-    std::vector<float>* _attribute_data;      /*!<> */
+    std::vector<float>* _dataFeatures;              /*!<> */
+    std::vector<unsigned int>* _pointIds;           /*!<> */
+    std::vector<float>* _attribute_data;            /*!<> */
+    std::string _embeddingName;                     /*!< Name of the embedding */
 
     // Output
     std::vector<int> _knn_indices;                      /*!<> */

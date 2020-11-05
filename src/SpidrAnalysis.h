@@ -32,7 +32,7 @@ public:
      * \param numDimensions
      * \param imgSize
      */
-    void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize);
+    void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize, const QString embeddingName);
 
     // release openGL context of the t-SNE computation
     /*!

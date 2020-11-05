@@ -2,8 +2,10 @@
 
 #include "KNNUtils.h"
 #include "FeatureUtils.h"
-#include <QSize>
 
+#include <string>
+
+#include <QSize>
 
 /*!
  * Stores all parameters used in the Spatial Analysis.
@@ -13,7 +15,7 @@
 class Parameters {
 public:
     Parameters() :
-        _nn(-1), _numPoints(-1), _numDims(-1), _imgSize(-1, -1),
+        _nn(-1), _numPoints(-1), _numDims(-1), _imgSize(-1, -1), _embeddingName(""),
         _featureType(feature_type::TEXTURE_HIST_1D), _neighWeighting(loc_Neigh_Weighting::WEIGHT_UNIF), _numLocNeighbors(-1), _numHistBins(-1),
         _aknn_algorithm(knn_library::KNN_HNSW), _aknn_metric(distance_metric::METRIC_QF),
         _perplexity(30), _perplexity_multiplier(3)
@@ -24,6 +26,7 @@ public:
     size_t              _numPoints;             /*!<> */
     size_t              _numDims;               /*!<> */
     QSize               _imgSize;               /*!<> */
+    std::string         _embeddingName;         /*!< Name of the embedding */
     // features
     feature_type        _featureType;           /*!< texture histogram, LISA */
     loc_Neigh_Weighting _neighWeighting;        /*!<> */

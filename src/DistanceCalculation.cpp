@@ -2,6 +2,7 @@
 
 #include "AnalysisParameters.h"
 #include "KNNUtils.h"
+#include "EvalUtils.h"
 
 #include "hnswlib/hnswlib.h"
 
@@ -15,7 +16,6 @@ DistanceCalculation::DistanceCalculation() :
     _knn_metric(distance_metric::METRIC_QF)
 {
 }
-
 
 DistanceCalculation::~DistanceCalculation()
 {
@@ -39,6 +39,7 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
     _dataFeatures = dataFeatures;
     _pointIds = &pointIds;
     _attribute_data = &attribute_data;
+    _embeddingName = params._embeddingName;
 
     // Output
     //_knn_indices.resize(_numPoints*_nn, -1);              // unnecessary, done in ComputeHNSWkNN
@@ -103,6 +104,14 @@ void DistanceCalculation::computekNN() {
         std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, featureSize, _numPoints, _nn);
 
     }
+
+    // Write distance matrices to disk
+    std::string savePath = "D:/Documents/Project 2020a/Spidr/Paper/SpidrEvaluation/Data/";
+    savePath += _embeddingName;
+    std::string infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_nn);
+    writeVecToBinary(_knn_indices, savePath + "_knnInd" + infoStr + ".bin");
+    writeVecToBinary(_knn_distances_squared, savePath + "_knnDist" + infoStr + ".bin");
+
 
     auto t_end_ComputeDist = std::chrono::steady_clock::now();
     qDebug() << "Distance calculation: Computation duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (t_end_ComputeDist - t_start_ComputeDist).count()) / 1000;
