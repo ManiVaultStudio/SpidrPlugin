@@ -105,18 +105,25 @@ void DistanceCalculation::computekNN() {
 
     }
     else if (_knn_lib == knn_library::EVAL) {
+        // Save the entire distance matrix to disk. Then calc the exact kNN and perform the embedding
+        // Note: You could also sort the distance matrix instead of recalculating it - but I'm lazy and will only use this for small data set where the performance is not an issue.
+
         qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
-        _nn = _numPoints;
-        std::tie(_knn_indices, _knn_distances_squared) = ComputeFullDistMat(_dataFeatures, space, featureSize, _numPoints);
+        std::vector<int> knn_indices_to_Disk;
+        std::vector<float> knn_distances_squared_to_Disk;
+        std::tie(knn_indices_to_Disk, knn_distances_squared_to_Disk) = ComputeFullDistMat(_dataFeatures, space, featureSize, _numPoints);
 
         qDebug() << "Distance calculation: Evaluation mode - Write distance matrix to disk";
 
         // Write distance matrices to disk
         std::string savePath = "D:/Documents/Project 2020a/Spidr/Paper/SpidrEvaluation/Data/";
         savePath += _embeddingName;
-        std::string infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_nn);
-        writeVecToBinary(_knn_indices, savePath + "_knnInd" + infoStr + ".bin");
-        writeVecToBinary(_knn_distances_squared, savePath + "_knnDist" + infoStr + ".bin");
+        std::string infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_numPoints);
+        writeVecToBinary(knn_indices_to_Disk, savePath + "_knnInd" + infoStr + ".bin");
+        writeVecToBinary(knn_distances_squared_to_Disk, savePath + "_knnDist" + infoStr + ".bin");
+        
+        qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, featureSize, _numPoints, _nn);
 
     }
 

@@ -1,6 +1,7 @@
 #include "TsneComputation.h"
 
 #include "AnalysisParameters.h"
+#include "EvalUtils.h"
 
 #include <algorithm>            // std::min, max
 #include <vector>
@@ -92,6 +93,10 @@ void TsneComputation::setup(std::vector<int>* knn_indices, std::vector<float>* k
     _exaggerationIter = params._exaggeration;
     _numPoints = params._numPoints;
     _perplexity_multiplier = params._perplexity_multiplier;
+
+    // Evaluation (for determining the filename when saving the embedding to disk)
+    _embeddingName = params._embeddingName;
+    _numDataDims = params._numDims;
 
     // Data
     _knn_indices = knn_indices;
@@ -205,6 +210,13 @@ void TsneComputation::embed()
     qDebug() << "--------------------------------------------------------------------------------";
     qDebug() << "A-tSNE: Finished embedding of " << "tSNE Analysis" << " in: " << elapsed / 1000 << " seconds ";
     qDebug() << "================================================================================";
+
+    // Write embedding to disk
+    std::string savePath = "D:/Documents/Project 2020a/Spidr/Paper/SpidrEvaluation/Data/";
+    savePath += _embeddingName;
+    std::string infoStr = "_nD_" + std::to_string(_numDataDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_nn);
+    writeVecToBinary(_embedding.getContainer(), savePath + "_emb" + infoStr + ".bin");
+
 }
 
 void TsneComputation::compute() {
