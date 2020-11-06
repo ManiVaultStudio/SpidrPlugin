@@ -175,8 +175,8 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
 */
 template<typename T>
 std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints) {
-    // set nn = numPoints and sort = true
-    return ComputeExactKNN(dataFeatures, space, featureSize, numPoints, numPoints, true);
+    // set nn = numPoints and sort = false
+    return ComputeExactKNN(dataFeatures, space, featureSize, numPoints, numPoints, false);
 }
 
 /*! Creates a metric space used by HNSWLib to build a kNN index
