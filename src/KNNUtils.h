@@ -619,6 +619,7 @@ namespace hnswlib {
         size_t bin;
         ::std::vector<float> D;     // ground distance matrix
         float eps;                  // sinkhorn iteration update threshold
+        unsigned int itMax;         // max sinkhorn iterations
         float gamma;                // entropic regularization multiplier
     };
 
@@ -631,6 +632,7 @@ namespace hnswlib {
         const size_t ndim = sparam->dim;
         const size_t nbin = sparam->bin;
         const float eps = sparam->eps;
+        unsigned int itMax = sparam->itMax;
         const float gamma = sparam->gamma;
         float* pGroundDist = sparam->D.data();                          // no const because of Eigen::Map
 
@@ -667,8 +669,10 @@ namespace hnswlib {
             v_old = v;
 
             // sinkhorn iterations (fixpoint iteration)
-            float iter_diff = 0;
-            do {
+            // introduce an additional break contidion (itCount) in case iter_diff does not converge 
+            float iter_diff;
+            unsigned int itCount;
+            for(iter_diff=2*eps, itCount=0; iter_diff>eps && itCount < itMax; itCount++){
                 // update u, then v
                 u = a.cwiseQuotient(K * v);
                 v = b.cwiseQuotient(K_t * u);
@@ -677,7 +681,7 @@ namespace hnswlib {
                 u_old = u;
                 v_old = v;
 
-            } while (iter_diff > eps);
+            } 
 
             // calculate divergence (inner product of ground distance and transportation matrix)
             P = u.asDiagonal() * K * v.asDiagonal();
@@ -712,9 +716,10 @@ namespace hnswlib {
 
             // these are fast parameters, but not the most accurate
             float eps = 0.1;
+            unsigned int maxSinkhonIt = 10000;
             float gamma = 0.5;
 
-            params_ = { dim, bin, D, eps, gamma };
+            params_ = { dim, bin, D, eps, maxSinkhonIt, gamma };
         }
 
         size_t get_data_size() {

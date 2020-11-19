@@ -91,8 +91,8 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
     }
     else if (knn_metric == distance_metric::METRIC_PCOL)
     {
-        qDebug() << "Distance calculation: EuclidenSpace (PointCollectionSpace) as scalar feature metric";
-        space = new hnswlib::PointCollectionSpace(numDims, neighborhoodSize, neighborhoodWeighting);
+        qDebug() << "Distance calculation: EuclidenSpace (PointCloudSpace) as scalar feature metric";
+        space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting);
     }
     else
     {
