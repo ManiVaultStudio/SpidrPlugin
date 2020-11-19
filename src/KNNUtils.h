@@ -503,10 +503,10 @@ namespace hnswlib {
 
 
     // ---------------
-    //    Point collection distance
+    //    Point cloud distance (Chamfer)
     // ---------------
 
-    // data struct for distance calculation in PointCollectionSpace
+    // data struct for distance calculation in PointCloudSpace
     struct space_params_Col {
         size_t dim;
         ::std::vector<float> A;         // neighborhood similarity matrix
@@ -515,7 +515,7 @@ namespace hnswlib {
     };
 
     static float
-        ColDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        ChamferDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
         float *pVect1 = (float *)pVect1v;   // points to data item: values of neighbors
         float *pVect2 = (float *)pVect2v;   // points to data item: values of neighbors
 
@@ -555,7 +555,7 @@ namespace hnswlib {
         return (res);
     }
 
-    class PointCollectionSpace : public SpaceInterface<float> {
+    class PointCloudSpace : public SpaceInterface<float> {
 
         DISTFUNC<float> fstdistfunc_;
         size_t data_size_;
@@ -563,8 +563,8 @@ namespace hnswlib {
         space_params_Col params_;
 
     public:
-        PointCollectionSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
-            fstdistfunc_ = ColDist;
+        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
+            fstdistfunc_ = ChamferDist;
             data_size_ = dim * neighborhoodSize * sizeof(float);
 
             assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
@@ -605,7 +605,7 @@ namespace hnswlib {
             return &params_;
         }
 
-        ~PointCollectionSpace() {}
+        ~PointCloudSpace() {}
     };
 
 
