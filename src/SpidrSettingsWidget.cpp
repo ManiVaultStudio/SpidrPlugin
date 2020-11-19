@@ -29,17 +29,18 @@ _analysisPlugin(analysisPlugin)
     knnOptions.addItem("HNSW", QVariant(1));
     knnOptions.addItem("Exact", QVariant(0));
     knnOptions.addItem("Eval", QVariant(99));
+    knnOptions.setToolTip("HNSW: Approximate kNN \nExact: precise (slow) \nEval: precise and saves kNN indices&distances to disk (slow)");
 
     // add options in the order as defined in enums in utils files
     // data values (QPoint) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
     // this is used as a nice way to cast this information internally in SpidrAnalysis
-    distanceMetric.addItem("Quadratic form (TH)", QVariant(QPoint(0, 0)));
-    distanceMetric.addItem("Earth Mover (TH)", QVariant(QPoint(0, 1)));
-    distanceMetric.addItem("Hellinger (TH)", QVariant(QPoint(0, 2)));
-    distanceMetric.addItem("Euclidean (LISA)", QVariant(QPoint(1, 3)));
-    distanceMetric.addItem("Euclidean (GC)", QVariant(QPoint(2, 3)));
-    distanceMetric.addItem("Euclidean (PC)", QVariant(QPoint(3, 4)));
-    distanceMetric.setToolTip("TH: Texture Histogram (vector feature) \nLISA: Local Indicator of Spatial Association (scalar feature) \n GC: local Geary's C\n PC: Point Collection Distance (no feature)");
+    distanceMetric.addItem("Texture Hist. (QF)", QVariant(QPoint(0, 0)));
+    distanceMetric.addItem("Texture Hist. (EMD)", QVariant(QPoint(0, 1)));
+    distanceMetric.addItem("Texture Hist. (Hel)", QVariant(QPoint(0, 2)));
+    distanceMetric.addItem("Local Moran's I (L2)", QVariant(QPoint(1, 3)));
+    distanceMetric.addItem("Local Geary's C (L2)", QVariant(QPoint(2, 3)));
+    distanceMetric.addItem("Point Clound (Chamfer)", QVariant(QPoint(3, 4)));
+    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance)");
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
     kernelWeight.addItem("Uniform", QVariant(0));
@@ -90,8 +91,8 @@ _analysisPlugin(analysisPlugin)
     // Build the labels for all the options
     QLabel* iterationLabel = new QLabel("Iteration Count");
     QLabel* perplexityLabel = new QLabel("Perplexity");
-    QLabel* knnAlgorithmLabel = new QLabel("KNN Approx.");
-    QLabel* distanceMetricLabel = new QLabel("KNN Distance Metric");
+    QLabel* knnAlgorithmLabel = new QLabel("KNN Calculation");
+    QLabel* distanceMetricLabel = new QLabel("Distance Measure");
     QLabel* exaggerationLabel = new QLabel("Exaggeration");
     QLabel* expDecayLabel = new QLabel("Exponential Decay");
     QLabel* numTreesLabel = new QLabel("Number of Trees");
