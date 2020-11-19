@@ -81,8 +81,8 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
         qDebug() << "Feature extraction: LISA";
     else if (_featType == feature_type::GEARYC)
         qDebug() << "Feature extraction: local Geary's C";
-    else if (_featType == feature_type::PCOL)
-        qDebug() << "Feature extraction: Collection of points (neighborhood)";
+    else if (_featType == feature_type::PCLOUD)
+        qDebug() << "Feature extraction: Point cloud (just the neighborhood, no transformations)";
     else
         qDebug() << "Feature extraction: unknown feature type";
 }
@@ -117,7 +117,7 @@ void FeatureExtraction::initExtraction() {
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
         _outFeatures.resize(_numPoints * _numDims);
     }
-    else if (_featType == feature_type::PCOL)
+    else if (_featType == feature_type::PCLOUD)
         _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
 
     // fill such that _outFeatures are always initialized to -1
@@ -135,7 +135,7 @@ void FeatureExtraction::extractFeatures() {
         featFunct = &FeatureExtraction::calculateLISA;
     else if (_featType == feature_type::GEARYC)
         featFunct = &FeatureExtraction::calculateGearysC;
-    else if (_featType == feature_type::PCOL)
+    else if (_featType == feature_type::PCLOUD)
         featFunct = &FeatureExtraction::allNeighborhoodVals;
     else
         qDebug() << "Feature extraction: unknown feature Type";

@@ -46,7 +46,7 @@ enum class distance_metric : size_t
     METRIC_EMD = 1,      /*!< Earth mover distance*/
     METRIC_HEL = 2,      /*!< Hellinger distance */
     METRIC_EUC = 3,      /*!< Euclidean distance - not suitable for histogram features */
-    METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
+    METRIC_CHA = 4,     /*!< Chamfer distance (points collection)*/
 };
 
 /*!

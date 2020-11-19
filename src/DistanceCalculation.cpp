@@ -47,19 +47,20 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
 
     assert(params._nn == (size_t)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
-    if (_featureType == feature_type::TEXTURE_HIST_1D)
-    {
-        assert(_dataFeatures->size() == (_numPoints * _numDims * _numHistBins));
-        qDebug() << "Distance calculation: Feature values per point: " << _numDims * _numHistBins << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    size_t featValsPerPoints;
+    if (_featureType == feature_type::TEXTURE_HIST_1D) {
+        featValsPerPoints = _numDims * _numHistBins;
     }
     else if ((_featureType == feature_type::LISA) | (_featureType == feature_type::GEARYC)) {
-        assert(_dataFeatures->size() == (_numPoints * _numDims));
-        qDebug() << "Distance calculation: Feature values per point: " << _numDims << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+        featValsPerPoints = _numDims;
     }
-    else if (_featureType == feature_type::PCOL) {
-        assert(_dataFeatures->size() == (_numPoints * _numDims * _neighborhoodSize));
-        qDebug() << "Distance calculation: Feature values per point: " << _numDims * _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    else if (_featureType == feature_type::PCLOUD) {
+        featValsPerPoints = _numDims * _neighborhoodSize;
     }
+
+    assert(_dataFeatures->size() == (_numPoints * featValsPerPoints));
+
+    qDebug() << "Distance calculation: Feature values per point: " << _numDims * _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
 
     // -1 would mark an unset feature
     assert(std::none_of(_dataFeatures->begin(), _dataFeatures->end(), [](float i) {return i == -1.0f; }));

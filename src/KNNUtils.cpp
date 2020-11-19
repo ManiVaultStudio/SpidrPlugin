@@ -89,9 +89,9 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
         qDebug() << "Distance calculation: EuclidenSpace (L2Space) as scalar feature metric";
         space = new hnswlib::L2Space(numDims);
     }
-    else if (knn_metric == distance_metric::METRIC_PCOL)
+    else if (knn_metric == distance_metric::METRIC_CHA)
     {
-        qDebug() << "Distance calculation: EuclidenSpace (PointCloudSpace) as scalar feature metric";
+        qDebug() << "Distance calculation: EuclidenSpace (PointCloudSpace, Chamfer distsnce) as scalar feature metric";
         space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting);
     }
     else
@@ -109,7 +109,7 @@ size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBi
     case feature_type::TEXTURE_HIST_1D: featureSize = numDims * numHistBins; break;
     case feature_type::LISA:            // same as Geary's C
     case feature_type::GEARYC:          featureSize = numDims; break;
-    case feature_type::PCOL:            featureSize = numDims * neighborhoodSize; break;
+    case feature_type::PCLOUD:            featureSize = numDims * neighborhoodSize; break;
     }
 
     return featureSize;
