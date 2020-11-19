@@ -110,7 +110,7 @@ void SpidrPlugin::startComputation()
     // Create a new data set and hand it to the hdps core
     qDebug() << "SpidrPlugin: Create new data set for embedding";
 
-    _embeddingName = _core->createDerivedData("Points", "Embedding", dataName);
+    _embeddingName = _core->createDerivedData("Points", _settings->getEmbName(), dataName);
     Points& embedding = _core->requestData<Points>(_embeddingName);
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);
@@ -118,7 +118,7 @@ void SpidrPlugin::startComputation()
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
 
-    _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize);
+    _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize, _embeddingName);
     initializeAnalysisSettings();
 
     // Start spatial analysis

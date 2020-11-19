@@ -101,6 +101,10 @@ private:
     int _numDimensionsOutput;
     int _nn;                                            /*!<> */
 
+    // Evaluation (for determining the filename when saving the embedding to disk)
+    std::string _embeddingName;                     /*!< Name of the embedding */
+    size_t _numDataDims;
+
     // Flags
     bool _verbose;
     bool _isGradientDescentRunning;

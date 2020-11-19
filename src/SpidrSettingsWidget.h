@@ -58,6 +58,8 @@ public:
 
     QString currentData();
     void dataChanged(const Points& points);
+    QString getEmbName();
+
 private:
     void checkInputStyle(QLineEdit& input);
 
@@ -66,6 +68,7 @@ signals:
 
 public slots:
     void computationStopped();
+    void setEmbName(QString embName);
 
 private slots:
     void onStartToggled(bool pressed);
@@ -100,6 +103,7 @@ public:
     QLineEdit numChecks;
     QLineEdit theta;
 
+    QLineEdit embNameLine;
     QPushButton startButton;
 
 private:

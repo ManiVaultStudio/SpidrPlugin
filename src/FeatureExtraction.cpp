@@ -81,8 +81,8 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
         qDebug() << "Feature extraction: LISA";
     else if (_featType == feature_type::GEARYC)
         qDebug() << "Feature extraction: local Geary's C";
-    else if (_featType == feature_type::PCOL)
-        qDebug() << "Feature extraction: Collection of points (neighborhood)";
+    else if (_featType == feature_type::PCLOUD)
+        qDebug() << "Feature extraction: Point cloud (just the neighborhood, no transformations)";
     else
         qDebug() << "Feature extraction: unknown feature type";
 }
@@ -117,7 +117,7 @@ void FeatureExtraction::initExtraction() {
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
         _outFeatures.resize(_numPoints * _numDims);
     }
-    else if (_featType == feature_type::PCOL)
+    else if (_featType == feature_type::PCLOUD)
         _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
 
     // fill such that _outFeatures are always initialized to -1
@@ -135,12 +135,10 @@ void FeatureExtraction::extractFeatures() {
         featFunct = &FeatureExtraction::calculateLISA;
     else if (_featType == feature_type::GEARYC)
         featFunct = &FeatureExtraction::calculateGearysC;
-    else if (_featType == feature_type::PCOL)
+    else if (_featType == feature_type::PCLOUD)
         featFunct = &FeatureExtraction::allNeighborhoodVals;
     else
         qDebug() << "Feature extraction: unknown feature Type";
-
-    qDebug() << QVector<float>::fromStdVector(_neighborhoodWeights);
 
     // convolve over all selected data points
 #pragma omp parallel for
@@ -219,6 +217,8 @@ void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighb
             neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
         }
         diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
+        // given that the _neighborhoodWeights sum up to 1, _varVals is the proportionality factor between the local LISA and the global Moran's I
+        // such that sum LISA = _varVals * I. Thus, the division by _varVals in the next line yields sum LISA = I. Cf. 10.1111/j.1538-4632.1995.tb00338.x
         _outFeatures[pointInd * _numDims + dim] = diff_from_mean * neigh_diff_from_mean_sum / _varVals[dim];
     }
 }
@@ -239,6 +239,8 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
             diff_from_neigh = _attribute_data[pointInd * _numDims + dim] - neighborValues[neighbor * _numDims + dim];
             diff_from_neigh_sum += _neighborhoodWeights[neighbor] * (diff_from_neigh * diff_from_neigh);
         }
+        // given that the _neighborhoodWeights sum up to 1, _varVals is the proportionality factor between the local Geary and the global Geary's C
+        // such that sum lC = _varVals * gC. Thus, the division by _varVals in the next line yields sum lC = gC. Cf. 10.1111/j.1538-4632.1995.tb00338.x
         _outFeatures[pointInd * _numDims + dim] = diff_from_neigh_sum / _varVals[dim];
     }
 }

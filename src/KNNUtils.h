@@ -28,18 +28,12 @@
 
 #include "FeatureUtils.h"
 
-namespace Counter {
-    static unsigned int co = 1;
-    static unsigned int ci = 0;
-}
-
-typedef std::vector<hdi::data::MapMemEff<int, float> > sparse_scalar_matrix;
-
 /*! kNN library that is used kNN computations
  * The librarires are extended in order to work with different feature types
  */
 enum class knn_library : size_t
 {
+    EVAL = 99,          /*!< No knn library in use, full dist matrix and save it to disk */ 
     NONE = 0,           /*!< No knn library in use, no approximation i.e. exact kNN computation */ 
     KNN_HNSW = 1,       /*!< HNSWLib */
 };
@@ -52,7 +46,7 @@ enum class distance_metric : size_t
     METRIC_EMD = 1,      /*!< Earth mover distance*/
     METRIC_HEL = 2,      /*!< Hellinger distance */
     METRIC_EUC = 3,      /*!< Euclidean distance - not suitable for histogram features */
-    METRIC_PCOL = 4,     /*!< Collection distance between the neighborhoods around two items*/
+    METRIC_CHA = 4,     /*!< Chamfer distance (points collection)*/
 };
 
 /*!
@@ -121,10 +115,12 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
  * \param space HNSWLib metric space
  * \param featureSize Size of one data item features
  * \param numPoints Number of points in the data
+ * \param nn Number of nearest neighbors
+ * \param sort Whether to sort the nearest neighbor distances. Default is true. Set to false if nn == numPoints and you want to calculate the full distance matrix
  * \return Tuple of indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn, bool sort = true) {
     std::vector<std::pair<int, float>> indices_distances;
     std::vector<int> knn_indices;
     std::vector<float> knn_distances_squared;
@@ -136,7 +132,6 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
     hnswlib::DISTFUNC<float> distfunc = space->get_dist_func();
     void* params = space->get_dist_func_param();
 
-    
     // For each point, calc distances to all other
     // and take the nn smallest as kNN
     for (int i = 0; i < (int)numPoints; i++) {
@@ -148,8 +143,11 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
             indices_distances[j] = std::make_pair(j, distfunc(dataFeatures->data() + i * featureSize, dataFeatures->data() + j * featureSize, params));
         }
 
-        // sort all distances to point i
-        std::sort(indices_distances.begin(), indices_distances.end(), [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second;});
+        if (sort)
+        {
+            // sort all distances to point i
+            std::sort(indices_distances.begin(), indices_distances.end(), [](std::pair<int, float> a, std::pair<int, float> b) {return a.second < b.second; });
+        }
 
         // Take the first nn indices 
         std::transform(indices_distances.begin(), indices_distances.begin() + nn, knn_indices.begin() + i * nn, [](const std::pair<int, float>& p) { return p.first; });
@@ -160,6 +158,19 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
     return std::make_tuple(knn_indices, knn_distances_squared);
 }
 
+/*! Compute the full distance matrix between all data points
+ * Calls ComputeExactKNN with the correct parameters, basically syntactic sugar
+ * \param dataFeatures Features used for distance calculation, dataFeatures->size() == (numPoints * indMultiplier)
+ * \param space HNSWLib metric space
+ * \param featureSize Size of one data item features
+ * \param numPoints Number of points in the data
+ * \return Tuple of indices and respective squared distances
+*/
+template<typename T>
+std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints) {
+    // set nn = numPoints and sort = false
+    return ComputeExactKNN(dataFeatures, space, featureSize, numPoints, numPoints, false);
+}
 
 /*! Creates a metric space used by HNSWLib to build a kNN index
  * 
@@ -485,10 +496,10 @@ namespace hnswlib {
 
 
     // ---------------
-    //    Point collection distance
+    //    Point cloud distance (Chamfer)
     // ---------------
 
-    // data struct for distance calculation in PointCollectionSpace
+    // data struct for distance calculation in PointCloudSpace
     struct space_params_Col {
         size_t dim;
         ::std::vector<float> A;         // neighborhood similarity matrix
@@ -497,7 +508,7 @@ namespace hnswlib {
     };
 
     static float
-        ColDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        ChamferDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
         float *pVect1 = (float *)pVect1v;   // points to data item: values of neighbors
         float *pVect2 = (float *)pVect2v;   // points to data item: values of neighbors
 
@@ -537,7 +548,7 @@ namespace hnswlib {
         return (res);
     }
 
-    class PointCollectionSpace : public SpaceInterface<float> {
+    class PointCloudSpace : public SpaceInterface<float> {
 
         DISTFUNC<float> fstdistfunc_;
         size_t data_size_;
@@ -545,8 +556,8 @@ namespace hnswlib {
         space_params_Col params_;
 
     public:
-        PointCollectionSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
-            fstdistfunc_ = ColDist;
+        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
+            fstdistfunc_ = ChamferDist;
             data_size_ = dim * neighborhoodSize * sizeof(float);
 
             assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
@@ -587,7 +598,7 @@ namespace hnswlib {
             return &params_;
         }
 
-        ~PointCollectionSpace() {}
+        ~PointCloudSpace() {}
     };
 
 
@@ -601,6 +612,7 @@ namespace hnswlib {
         size_t bin;
         ::std::vector<float> D;     // ground distance matrix
         float eps;                  // sinkhorn iteration update threshold
+        unsigned int itMax;         // max sinkhorn iterations
         float gamma;                // entropic regularization multiplier
     };
 
@@ -613,6 +625,7 @@ namespace hnswlib {
         const size_t ndim = sparam->dim;
         const size_t nbin = sparam->bin;
         const float eps = sparam->eps;
+        unsigned int itMax = sparam->itMax;
         const float gamma = sparam->gamma;
         float* pGroundDist = sparam->D.data();                          // no const because of Eigen::Map
 
@@ -649,8 +662,10 @@ namespace hnswlib {
             v_old = v;
 
             // sinkhorn iterations (fixpoint iteration)
-            float iter_diff = 0;
-            do {
+            // introduce an additional break contidion (itCount) in case iter_diff does not converge 
+            float iter_diff;
+            unsigned int itCount;
+            for(iter_diff=2*eps, itCount=0; iter_diff>eps && itCount < itMax; itCount++){
                 // update u, then v
                 u = a.cwiseQuotient(K * v);
                 v = b.cwiseQuotient(K_t * u);
@@ -659,7 +674,7 @@ namespace hnswlib {
                 u_old = u;
                 v_old = v;
 
-            } while (iter_diff > eps);
+            } 
 
             // calculate divergence (inner product of ground distance and transportation matrix)
             P = u.asDiagonal() * K * v.asDiagonal();
@@ -694,9 +709,10 @@ namespace hnswlib {
 
             // these are fast parameters, but not the most accurate
             float eps = 0.1;
+            unsigned int maxSinkhonIt = 10000;
             float gamma = 0.5;
 
-            params_ = { dim, bin, D, eps, gamma };
+            params_ = { dim, bin, D, eps, maxSinkhonIt, gamma };
         }
 
         size_t get_data_size() {

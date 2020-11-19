@@ -2,6 +2,7 @@
 
 #include <tuple>
 #include <vector>
+#include <string>   
 
 #include <QObject>
 #include <QSize>
@@ -63,16 +64,17 @@ private:
     distance_metric _knn_metric;                /*!<> */
     unsigned int _nn;                               /*!<> */
     size_t _neighborhoodSize;                       /*!< might be used for some distance metrics */
-    loc_Neigh_Weighting _neighborhoodWeighting;     /*!< used when calculating distance directly from high-dim points (_featureType is no feature/PCOL) */
+    loc_Neigh_Weighting _neighborhoodWeighting;     /*!< used when calculating distance directly from high-dim points (_featureType is no feature/PCLOUD) */
 
     // Data
     // Input
     size_t _numDims;                                /*!<> */
     size_t _numPoints;                              /*!<> */
     size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
-    std::vector<float>* _dataFeatures;        /*!<> */
-    std::vector<unsigned int>* _pointIds;     /*!<> */
-    std::vector<float>* _attribute_data;      /*!<> */
+    std::vector<float>* _dataFeatures;              /*!<> */
+    std::vector<unsigned int>* _pointIds;           /*!<> */
+    std::vector<float>* _attribute_data;            /*!<> */
+    std::string _embeddingName;                     /*!< Name of the embedding */
 
     // Output
     std::vector<int> _knn_indices;                      /*!<> */

@@ -17,12 +17,12 @@ enum class feature_type : unsigned int
     TEXTURE_HIST_1D = 0,    /*!< Histograms of data point neighborhood, vector feature */
     LISA = 1,               /*!< Local Indicator of Spatial Associations, scalar feaure */
     GEARYC = 2,             /*!< Geary's, scalar feature */
-    PCOL = 3,               /*!< Collection of points (neighborhood), i.e. no feature but a view of the data*/
+    PCLOUD = 3,             /*!< Point cloud, i.e. just the neighborhood, no transformations*/
 };
 
 
 /*! Weighting of local neighborhoods
- * Used e.g. in histogram creation, spatial weighting in LISA and Point collection distance
+ * Used e.g. in histogram creation, spatial weighting in LISA and Point cloud distance
  */
 enum class loc_Neigh_Weighting : unsigned int
 {
