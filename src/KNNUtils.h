@@ -28,13 +28,6 @@
 
 #include "FeatureUtils.h"
 
-namespace Counter {
-    static unsigned int co = 1;
-    static unsigned int ci = 0;
-}
-
-typedef std::vector<hdi::data::MapMemEff<int, float> > sparse_scalar_matrix;
-
 /*! kNN library that is used kNN computations
  * The librarires are extended in order to work with different feature types
  */
