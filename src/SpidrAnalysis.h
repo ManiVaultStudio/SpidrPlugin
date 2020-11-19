@@ -42,15 +42,50 @@ public:
     void stopComputation();
 
     // Setter
-    void setFeatureType(const int index);
-    void setKernelWeight(const int index);
-    void setNumLocNeighbors(const size_t index);
-    void setNumHistBins(const size_t index);
-    void setKnnAlgorithm(const int index);
-    void setDistanceMetric(const int index);
-    void setPerplexity(const unsigned  index);
-    void setNumIterations(const unsigned  index);
-    void setExaggeration(const unsigned  index);
+ 
+    /*! Sets feature type as in enum class feature_type in FeatureUtils.h
+    *
+    * \param feature_type_index, see enum class feature_type in FeatureUtils.h
+    */
+    void setFeatureType(const int feature_type_index);
+    
+    /*! Sets feature type as in enum class loc_Neigh_Weighting in FeatureUtils.h
+    *
+    * \param loc_Neigh_Weighting_index, see enum class loc_Neigh_Weighting in FeatureUtils.h
+    */
+    void setKernelWeight(const int loc_Neigh_Weighting_index);
+    
+    /*! Sets the number of spatially local pixel neighbors in each direction*/
+    void setNumLocNeighbors(const size_t num);
+    
+    /*! Sets the number of histogram bins */
+    void setNumHistBins(const size_t num);
+    
+    /*! Sets knn algorithm type as in enum class feature_type in KNNUtils.h
+    *
+    * \param knn_library_index, see enum class feature_type in KNNUtils.h
+    */
+    void setKnnAlgorithm(const int knn_library_index);
+    
+    /*! Sets knn algorithm type as in enum class distance_metric in KNNUtils.h
+    *
+    * \param distance_metric_index, see enum class distance_metric in KNNUtils.h
+    */
+    void setDistanceMetric(const int distance_metric_index);
+
+    /*! Sets the perplexity and automatically determines the number of approximated kNN
+    * nn = 3 * perplexity
+    *
+    * \param perplexity
+    */
+    void setPerplexity(const unsigned perplexity);
+    /*! Sets the number of histogram bins */
+
+    /*! Sets the number of gradient descent iteration */
+    void setNumIterations(const unsigned numIt);
+
+    /*! Sets the exageration during gradient descent */
+    void setExaggeration(const unsigned exag);
 
     /*! Set the parameters of the entire Analysis
      * Use the input from e.g a GUI

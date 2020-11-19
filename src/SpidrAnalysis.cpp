@@ -71,12 +71,12 @@ void SpidrAnalysis::spatialAnalysis() {
     _tsne.compute();
 }
 
-void SpidrAnalysis::setFeatureType(const int index) {
-    _params._featureType = static_cast<feature_type> (index);
+void SpidrAnalysis::setFeatureType(const int feature_type_index) {
+    _params._featureType = static_cast<feature_type> (feature_type_index);
 }
 
-void SpidrAnalysis::setKernelWeight(const int index) {
-    _params._neighWeighting = static_cast<loc_Neigh_Weighting> (index);
+void SpidrAnalysis::setKernelWeight(const int loc_Neigh_Weighting_index) {
+    _params._neighWeighting = static_cast<loc_Neigh_Weighting> (loc_Neigh_Weighting_index);
 }
 
 void SpidrAnalysis::setNumLocNeighbors(const size_t num) {
@@ -87,25 +87,25 @@ void SpidrAnalysis::setNumHistBins(const size_t num) {
     _params._numHistBins = num;
 }
 
-void SpidrAnalysis::setKnnAlgorithm(const int index) {
-    _params._aknn_algorithm = static_cast<knn_library> (index);
+void SpidrAnalysis::setKnnAlgorithm(const int knn_library_index) {
+    _params._aknn_algorithm = static_cast<knn_library> (knn_library_index);
 }
 
-void SpidrAnalysis::setDistanceMetric(const int index) {
-    _params._aknn_metric = static_cast<distance_metric> (index);
+void SpidrAnalysis::setDistanceMetric(const int distance_metric_index) {
+    _params._aknn_metric = static_cast<distance_metric> (distance_metric_index);
 }
 
 void SpidrAnalysis::setPerplexity(const unsigned perplexity) {
     _params._perplexity = perplexity;
-    _params._nn = (perplexity * _params._perplexity_multiplier) + 1;
+    _params._nn = (perplexity * _params._perplexity_multiplier) + 1;    // see Van Der Maaten, L. (2014). Accelerating t-SNE using tree-based algorithms. The Journal of Machine Learning Research, 15(1), 3221-3245.
 
     // For small images, use less kNN
     if (_params._nn > _params._numPoints)
         _params._nn = _params._numPoints;
 }
 
-void SpidrAnalysis::setNumIterations(const unsigned num) {
-    _params._numIterations = num;
+void SpidrAnalysis::setNumIterations(const unsigned numIt) {
+    _params._numIterations = numIt;
 }
 
 void SpidrAnalysis::setExaggeration(const unsigned exag) {
