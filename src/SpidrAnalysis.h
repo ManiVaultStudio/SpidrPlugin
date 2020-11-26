@@ -31,8 +31,11 @@ public:
      * \param pointIDsGlobal
      * \param numDimensions
      * \param imgSize
+     * \param embeddingName
+     * \param backgroundIDsGlobal ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
      */
-    void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize, const QString embeddingName);
+    void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
+                   const size_t numDimensions, const QSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal);
 
     // release openGL context of the t-SNE computation
     /*!
@@ -136,6 +139,7 @@ private:
     // data and setting
     std::vector<float> _attribute_data;         /*!<> */
     std::vector<unsigned int> _pointIDsGlobal;  /*!<> */
+    std::vector<unsigned int> _backgroundIDsGlobal;  /*!< ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation > */
     Parameters _params;                         /*!<> */
 };
 

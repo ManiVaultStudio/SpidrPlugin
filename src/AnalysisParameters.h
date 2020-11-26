@@ -18,7 +18,7 @@ public:
         _nn(-1), _numPoints(-1), _numDims(-1), _imgSize(-1, -1), _embeddingName(""),
         _featureType(feature_type::TEXTURE_HIST_1D), _neighWeighting(loc_Neigh_Weighting::WEIGHT_UNIF), _numLocNeighbors(-1), _numHistBins(-1),
         _aknn_algorithm(knn_library::KNN_HNSW), _aknn_metric(distance_metric::METRIC_QF),
-        _perplexity(30), _perplexity_multiplier(3)
+        _perplexity(30), _perplexity_multiplier(3), _numIterations(1000), _exaggeration(250)
     {}
 
 public:
@@ -39,6 +39,6 @@ public:
     // embeddings
     float               _perplexity;            //! Perplexity value in evert distribution.
     int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
-    int                 _numIterations;         /*!<> */
-    int                 _exaggeration;          /*!<> */
+    int                 _numIterations;         /*!< Number of gradient descent iterations> */
+    int                 _exaggeration;          /*!< Number of iterations for early exxageration> */
 };

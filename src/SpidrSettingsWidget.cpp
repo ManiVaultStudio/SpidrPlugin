@@ -18,8 +18,8 @@
 #include <QStandardItemModel> 
 
 SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
-:
-_analysisPlugin(analysisPlugin)
+    : _analysisPlugin(analysisPlugin),
+    backgroundNameLine(""), embNameLine("")
 {
     const auto minimumWidth = 200;
     setMinimumWidth(minimumWidth);
@@ -53,7 +53,6 @@ _analysisPlugin(analysisPlugin)
     histBinSizeHeur.addItem("Sturges", QVariant(2));
     histBinSizeHeur.addItem("Rice", QVariant(3));
     histBinSizeHeur.setToolTip("Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))");
-
 
     // Initialize data options
     connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
@@ -98,6 +97,7 @@ _analysisPlugin(analysisPlugin)
     QLabel* numTreesLabel = new QLabel("Number of Trees");
     QLabel* numChecksLabel = new QLabel("Number of Checks");
     QLabel* embNameLabel = new QLabel("Embedding Name");
+    QLabel* backgroundNameLabel = new QLabel("Backround Data Set Name");
 
     QLabel* kernelWeightLabel = new QLabel("Kernel Weighting");
     QLabel* kernelSizeLabel = new QLabel("Kernel Size");
@@ -171,6 +171,8 @@ _analysisPlugin(analysisPlugin)
     advancedSettingsLayout->addWidget(&numTrees, 3, 0);
     advancedSettingsLayout->addWidget(numChecksLabel, 2, 1);
     advancedSettingsLayout->addWidget(&numChecks, 3, 1);
+    advancedSettingsLayout->addWidget(backgroundNameLabel, 4, 0);
+    advancedSettingsLayout->addWidget(&backgroundNameLine, 5, 0, 1, 2);
     advancedSettingsBox->setLayout(advancedSettingsLayout);
 
     

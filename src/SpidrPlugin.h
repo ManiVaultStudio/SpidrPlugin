@@ -71,8 +71,9 @@ private:
      * \param attribute_data
      * \param numDims
      * \param imgSize
+     * \param backgroundIDsGlobal
      */
-    void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize);
+    void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
 
     SpidrAnalysis _spidrAnalysis;                       /*!<> */
     std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */

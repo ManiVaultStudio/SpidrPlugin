@@ -18,10 +18,11 @@ void SpidrAnalysis::run() {
     spatialAnalysis();
 }
 
-void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize, const QString embeddingName) {
+void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal) {
     // Set data
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
+    _backgroundIDsGlobal = backgroundIDsGlobal;
 
     // Set parameters
     _params._numPoints = pointIDsGlobal.size();
@@ -67,7 +68,7 @@ void SpidrAnalysis::spatialAnalysis() {
     std::vector<float>* distances_squared = _distCalc.get_knn_distances_squared();
 
     // Compute t-SNE with the given data
-    _tsne.setup(indices, distances_squared, _params);
+    _tsne.setup(indices, distances_squared, &_backgroundIDsGlobal, _params);
     _tsne.compute();
 }
 

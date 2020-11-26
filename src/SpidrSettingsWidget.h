@@ -103,6 +103,8 @@ public:
     QLineEdit numChecks;
     QLineEdit theta;
 
+    QLineEdit backgroundNameLine;
+
     QLineEdit embNameLine;
     QPushButton startButton;
 
