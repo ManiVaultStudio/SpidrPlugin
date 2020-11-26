@@ -39,10 +39,9 @@ public:
      * 
      * \param knn_indices
      * \param knn_distances
-     * \param backgroundIDsGlobal
      * \param params
      */
-    void setup(std::vector<int>* knn_indices, std::vector<float>* knn_distances, std::vector<unsigned int>* backgroundIDsGlobal, Parameters params);
+    void setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const Parameters params);
     
     /*!
      * 
@@ -87,8 +86,8 @@ private:
     hdi::data::Embedding<float> _embedding;
 
     // Data
-    std::vector<int>* _knn_indices;               /*!<> */
-    std::vector<float>* _knn_distances;           /*!<> */
+    std::vector<int> _knn_indices;               /*!<> */
+    std::vector<float> _knn_distances;           /*!<> */
     size_t _numPoints;                            /*!<> */
     std::vector<float> _outputData;                     /*!<> */
 

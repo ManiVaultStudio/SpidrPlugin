@@ -59,16 +59,17 @@ void SpidrAnalysis::spatialAnalysis() {
     // Extract features
     _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params);
     _featExtraction.compute();
-    std::vector<float>* dataFeats = _featExtraction.output();
+    const std::vector<float> dataFeats = _featExtraction.output();
 
     // Caclculate distances and kNN
-    _distCalc.setup(_pointIDsGlobal, _attribute_data, dataFeats, _params);
+    //_backgroundIDsGlobal = { 0 };
+    _distCalc.setup(dataFeats, _backgroundIDsGlobal, _params);
     _distCalc.compute();
-    std::vector<int>* indices = _distCalc.get_knn_indices();
-    std::vector<float>* distances_squared = _distCalc.get_knn_distances_squared();
+    const std::vector<int> knn_indices = _distCalc.get_knn_indices();
+    const std::vector<float> knn_distances_squared = _distCalc.get_knn_distances_squared();
 
     // Compute t-SNE with the given data
-    _tsne.setup(indices, distances_squared, &_backgroundIDsGlobal, _params);
+    _tsne.setup(knn_indices, knn_distances_squared, _params);
     _tsne.compute();
 }
 
@@ -114,7 +115,7 @@ void SpidrAnalysis::setExaggeration(const unsigned exag) {
 }
 
 const size_t SpidrAnalysis::getNumPoints() {
-    return _pointIDsGlobal.size();
+    return _params._numPoints;
 }
 
 bool SpidrAnalysis::embeddingIsRunning() {

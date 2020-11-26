@@ -2,7 +2,7 @@
 #include "KNNUtils.h"
 
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
 
     std::vector<int> indices(numPoints * nn, -1);
     std::vector<float> distances_squared(numPoints * nn, -1);
@@ -12,19 +12,19 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     hnswlib::HierarchicalNSW<float> appr_alg(space, numPoints);   // use default HNSW values for M, ef_construction random_seed
 
     // add data points: each data point holds _numDims*_numHistBins values
-    appr_alg.addPoint((void*)dataFeatures->data(), (std::size_t) 0);
+    appr_alg.addPoint((void*)dataFeatures.data(), (std::size_t) 0);
 
 #ifdef NDEBUG
     // This loop is for release mode, it's parallel loop implementation from hnswlib
     int num_threads = std::thread::hardware_concurrency();
     hnswlib::ParallelFor(1, numPoints, num_threads, [&](size_t i, size_t threadId) {
-        appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
+        appr_alg.addPoint((void*)(dataFeatures.data() + (i*indMultiplier)), (hnswlib::labeltype) i);
     });
 #else
 // This loop is for debugging, when you want to sequentially add points
     for (int i = 1; i < numPoints; ++i)
     {
-        appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
+        appr_alg.addPoint((void*)(dataFeatures.data() + (i*indMultiplier)), (hnswlib::labeltype) i);
     }
 #endif
     qDebug() << "ComputeHNSWkNN: Search akNN Index";
@@ -36,7 +36,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     for (int i = 0; i < numPoints; ++i)
     {
         // find nearest neighbors
-        auto top_candidates = appr_alg.searchKnn((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype)nn);
+        auto top_candidates = appr_alg.searchKnn((void*)(dataFeatures.data() + (i*indMultiplier)), (hnswlib::labeltype)nn);
         while (top_candidates.size() > nn) {
             top_candidates.pop();
         }
@@ -59,11 +59,11 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     return std::make_tuple(indices, distances_squared);
 }
 // Resolve linker errors with explicit instantiation, https://isocpp.org/wiki/faq/templates#separate-template-fn-defn-from-decl
-template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(const std::vector<float>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
-template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(const std::vector<float> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data, size_t numHistBins) {
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins) {
     // chose distance metric
     hnswlib::SpaceInterface<float> *space = NULL;
     if (knn_metric == distance_metric::METRIC_QF)

@@ -24,7 +24,7 @@ public:
      * 
      * \return 
      */
-    std::vector<float>* output();
+    std::vector<float> output();
 
     void setNumLocNeighbors(size_t size);
     void setNeighborhoodWeighting(loc_Neigh_Weighting weighting);

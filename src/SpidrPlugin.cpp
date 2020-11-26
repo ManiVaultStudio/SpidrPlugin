@@ -111,7 +111,8 @@ void SpidrPlugin::startComputation()
     // Create a new data set and hand it to the hdps core
     qDebug() << "SpidrPlugin: Create new data set for embedding";
 
-    _embeddingName = _core->createDerivedData("Points", _settings->getEmbName(), dataName);
+    // _embeddingName = _core->createDerivedData("Points", _settings->getEmbName(), dataName);
+    _embeddingName = _core->addData("Points", _settings->getEmbName());
     Points& embedding = _core->requestData<Points>(_embeddingName);
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);

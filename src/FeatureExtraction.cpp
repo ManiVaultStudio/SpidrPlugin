@@ -304,9 +304,9 @@ loc_Neigh_Weighting FeatureExtraction::getNeighborhoodWeighting()
     return _neighborhoodWeighting;
 }
 
-std::vector<float>* FeatureExtraction::output()
+std::vector<float> FeatureExtraction::output()
 {
-    return &_outFeatures;
+    return _outFeatures;
 }
 
 void FeatureExtraction::stopFeatureCopmutation()

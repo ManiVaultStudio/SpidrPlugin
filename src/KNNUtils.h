@@ -107,7 +107,7 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
  * \return Tuple of knn Indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
 
 /*! Compute exact kNNs 
  * Calculate the distances between all point pairs and find closest neighbors
@@ -120,7 +120,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
  * \return Tuple of indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn, bool sort = true) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn, bool sort = true) {
     std::vector<std::pair<int, float>> indices_distances;
     std::vector<int> knn_indices;
     std::vector<float> knn_distances_squared;
@@ -140,7 +140,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
 #pragma omp parallel for
 #endif
         for (int j = 0; j < (int)numPoints; j++) {
-            indices_distances[j] = std::make_pair(j, distfunc(dataFeatures->data() + i * featureSize, dataFeatures->data() + j * featureSize, params));
+            indices_distances[j] = std::make_pair(j, distfunc(dataFeatures.data() + i * featureSize, dataFeatures.data() + j * featureSize, params));
         }
 
         if (sort)
@@ -167,7 +167,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
  * \return Tuple of indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints) {
     // set nn = numPoints and sort = false
     return ComputeExactKNN(dataFeatures, space, featureSize, numPoints, numPoints, false);
 }
@@ -183,7 +183,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::v
  * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
  * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
  */
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data, size_t numHistBins=0);
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins=0);
 
 
 /*! Calculates the size of an feature wrt to the feature type

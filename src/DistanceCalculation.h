@@ -30,8 +30,8 @@ public:
      */
     const std::tuple< std::vector<int>, std::vector<float>> output(); // tuple of indices and dists
     
-    std::vector<int>* get_knn_indices();
-    std::vector<float>* get_knn_distances_squared();
+    std::vector<int> get_knn_indices();
+    std::vector<float> get_knn_distances_squared();
 
     void setKnnAlgorithm(knn_library knn);
     void setDistanceMetric(distance_metric metric);
@@ -39,10 +39,12 @@ public:
     /*!
      * 
      * 
-     * \param histogramFeatures
-     * \param params
+     * \param pointIds
+     * \param dataFeatures
+     * \param dataFeatures
+     * \param backgroundIDsGlobal
      */
-    void setup(std::vector<unsigned int>& pointIds, std::vector<float>& attribute_data, std::vector<float>* dataFeatures, Parameters& params);
+    void setup(const std::vector<float> dataFeatures, const std::vector<unsigned int> backgroundIDsGlobal, Parameters& params);
 
     /*!
      * 
@@ -71,9 +73,7 @@ private:
     size_t _numDims;                                /*!<> */
     size_t _numPoints;                              /*!<> */
     size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
-    std::vector<float>* _dataFeatures;              /*!<> */
-    std::vector<unsigned int>* _pointIds;           /*!<> */
-    std::vector<float>* _attribute_data;            /*!<> */
+    std::vector<float>  _dataFeatures;              /*!<> */
     std::string _embeddingName;                     /*!< Name of the embedding */
 
     // Output

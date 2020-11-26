@@ -4,7 +4,6 @@
 #include "EvalUtils.h"
 
 #include <algorithm>            // std::min, max
-#include <iterator>             // std::make_move_iterator, find
 #include <vector>
 #include <assert.h>
 
@@ -87,7 +86,7 @@ void TsneComputation::computeGradientDescent()
     embed();
 }
 
-void TsneComputation::setup(std::vector<int>* knn_indices, std::vector<float>* knn_distances, std::vector<unsigned int>* backgroundIDsGlobal, Parameters params) {
+void TsneComputation::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const Parameters params) {
     // Parameters
     _iterations = params._numIterations;
     _perplexity = params._perplexity;
@@ -101,28 +100,12 @@ void TsneComputation::setup(std::vector<int>* knn_indices, std::vector<float>* k
     _numDataDims = params._numDims;
 
     // Data
-    if(backgroundIDsGlobal->empty()) { 
-        _knn_indices = knn_indices;
-        _knn_distances = knn_distances;
-    }
-    else {
-        // if background IDs are given, delete the respective knn indices and distances
-        std::vector<int> knn_indices_filt;
-        std::vector<float> knn_distances_filt;
-        for(unsigned int i=0; i < _numPoints; i++) {
-            // value is not in the background, use it for the embedding
-            if (std::find(backgroundIDsGlobal->begin(), backgroundIDsGlobal->end(), i) == backgroundIDsGlobal->end()) {
-                knn_indices_filt.insert(knn_indices_filt.end(), std::make_move_iterator(knn_indices->begin() + i * _nn), std::make_move_iterator(knn_indices->begin() + (i+1) * _nn ));
-                knn_distances_filt.insert(knn_distances_filt.end(), std::make_move_iterator(knn_distances->begin() + i * _nn), std::make_move_iterator(knn_distances->begin() + (i + 1) * _nn ));
-            }
-        }
-
-        _knn_indices = &knn_indices_filt;
-        _knn_distances = &knn_distances_filt;
-    }
+    _knn_indices = knn_indices;
+    _knn_distances = knn_distances;
 
     qDebug() << "t-SNE computation: Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors. Perplexity: " << _perplexity << ", Iterations: " << _iterations;
 
+    assert(_knn_indices.size() == _numPoints * _nn);
 }
 
 
@@ -147,7 +130,7 @@ void TsneComputation::initTSNE()
         double t = 0.0;
         {
             hdi::utils::ScopedTimer<double> timer(t);
-            probabilityGenerator.computeGaussianDistributions(*_knn_distances, *_knn_indices, _nn, _probabilityDistribution, probGenParams);
+            probabilityGenerator.computeGaussianDistributions(_knn_distances, _knn_indices, _nn, _probabilityDistribution, probGenParams);
         }
         qDebug() << "Probability distributions calculated.";
         qDebug() << "================================================================================";
