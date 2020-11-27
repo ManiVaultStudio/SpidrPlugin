@@ -7,6 +7,8 @@
 
 #include <utility>      // std::as_const
 #include <vector>       // std::vector
+#include <iterator>
+
 #include <windows.h>
 Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 #include <set>
@@ -36,8 +38,9 @@ void SpidrPlugin::init()
     connect(_settings.get(), &SpidrSettingsWidget::dataSetPicked, this, &SpidrPlugin::dataSetPicked);
 
     // Connect embedding
-    connect(&_spidrAnalysis, &SpidrAnalysis::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
     connect(&_spidrAnalysis, &SpidrAnalysis::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
+    connect(&_spidrAnalysis, &SpidrAnalysis::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
+    //connect(this, &SpidrPlugin::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
 }
 
 void SpidrPlugin::dataAdded(const QString name)
@@ -111,8 +114,8 @@ void SpidrPlugin::startComputation()
     // Create a new data set and hand it to the hdps core
     qDebug() << "SpidrPlugin: Create new data set for embedding";
 
-    // _embeddingName = _core->createDerivedData("Points", _settings->getEmbName(), dataName);
-    _embeddingName = _core->addData("Points", _settings->getEmbName());
+    _embeddingName = _core->createDerivedData("Points", _settings->getEmbName(), dataName);
+    // _embeddingName = _core->addData("Points", _settings->getEmbName());
     Points& embedding = _core->requestData<Points>(_embeddingName);
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);
@@ -179,10 +182,30 @@ void SpidrPlugin::onNewEmbedding() {
     const std::vector<float>& outputData = _spidrAnalysis.output();
     Points& embedding = _core->requestData<Points>(_embeddingName);
     
-    embedding.setData(outputData.data(), _spidrAnalysis.getNumPoints(), 2);
+    embedding.setData(outputData.data(), _spidrAnalysis.getNumEmbPoints(), 2);
 
     _core->notifyDataChanged(_embeddingName);
 }
+
+void SpidrPlugin::onFinishedEmbedding() {
+    const std::vector<float>& outputData = _spidrAnalysis.outputWithBackground();
+
+    assert(outputData.size() % 2 == 0);
+    assert(outputData.size() == _spidrAnalysis.getNumImagePoints() * 2);
+
+    qDebug() << "SpidrPlugin: Publishing final embedding";
+
+    Points& embedding = _core->requestData<Points>(_embeddingName);
+    embedding.setData(outputData.data(), _spidrAnalysis.getNumImagePoints(), 2);
+    _core->notifyDataChanged(_embeddingName);
+
+    _settings.get()->computationStopped();
+
+    //emit embeddingComputationStopped();
+
+    qDebug() << "SpidrPlugin: Done.";
+}
+
 
 void SpidrPlugin::initializeAnalysisSettings() {
     // set all the parameters

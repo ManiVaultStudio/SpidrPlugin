@@ -206,7 +206,7 @@ void TsneComputation::embed()
         _isGradientDescentRunning = false;
         _isTsneRunning = false;
 
-        emit computationStopped();
+        // emit computationStopped();
     }
 
     qDebug() << "--------------------------------------------------------------------------------";

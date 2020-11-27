@@ -5,7 +5,7 @@
 SpidrAnalysis::SpidrAnalysis(QObject* parent) : QThread(parent)
 {
     // Connect embedding
-    connect(&_tsne, &TsneComputation::computationStopped, this, &SpidrAnalysis::embeddingComputationStopped);
+    // connect(&_tsne, &TsneComputation::computationStopped, this, &SpidrAnalysis::embeddingComputationStopped);
     connect(&_tsne, &TsneComputation::newEmbedding, this, &SpidrAnalysis::newEmbedding);
 
 }
@@ -71,6 +71,12 @@ void SpidrAnalysis::spatialAnalysis() {
     // Compute t-SNE with the given data
     _tsne.setup(knn_indices, knn_distances_squared, _params);
     _tsne.compute();
+
+    emit finishedEmbedding();
+}
+
+void SpidrAnalysis::embeddingComputationStopped() {
+    
 }
 
 void SpidrAnalysis::setFeatureType(const int feature_type_index) {
@@ -114,8 +120,13 @@ void SpidrAnalysis::setExaggeration(const unsigned exag) {
     _params._exaggeration = exag;
 }
 
-const size_t SpidrAnalysis::getNumPoints() {
+const size_t SpidrAnalysis::getNumEmbPoints() {
     return _params._numPoints;
+}
+
+const size_t SpidrAnalysis::getNumImagePoints() {
+    assert(_pointIDsGlobal.size() == _params._numPoints + _backgroundIDsGlobal.size());
+    return _pointIDsGlobal.size();
 }
 
 bool SpidrAnalysis::embeddingIsRunning() {
@@ -124,6 +135,56 @@ bool SpidrAnalysis::embeddingIsRunning() {
 
 const std::vector<float>& SpidrAnalysis::output() {
     return _tsne.output();
+}
+
+const std::vector<float>& SpidrAnalysis::outputWithBackground() {
+    const std::vector<float>& emb = _tsne.output();
+    _emd_with_backgound.resize(_pointIDsGlobal.size() * 2);
+
+    if (_backgroundIDsGlobal.empty())
+    {
+        return emb;
+    }
+    else
+    {
+        qDebug() << "SpidrAnalysis: Add background back to embedding";
+
+        qDebug() << "SpidrAnalysis: Determine background position in embedding";
+
+        // find min x and min y embedding positions
+        float minx = emb[0];
+        float miny = emb[1];
+
+        for (size_t i = 0; i < emb.size(); i += 2) {
+            if (emb[i] < minx)
+                minx = emb[i];
+
+            if (emb[i+1] < miny)
+                miny = emb[i+1];
+        }
+
+        minx -= minx * 0.05;
+        miny -= miny * 0.05;
+
+        qDebug() << "SpidrAnalysis: Inserting background in embedding";
+
+        // add (0,0) to embedding at background positions
+        size_t emdCounter = 0;
+        for (size_t globalIDCounter = 0; globalIDCounter < _pointIDsGlobal.size(); globalIDCounter++) {
+            // if background, insert (0,0)
+            if (std::find(_backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end(), globalIDCounter) != _backgroundIDsGlobal.end()) {
+                _emd_with_backgound[2 * globalIDCounter] = minx;
+                _emd_with_backgound[2 * globalIDCounter + 1] = miny;
+            }
+            else {
+                _emd_with_backgound[2 * globalIDCounter] = emb[2 * emdCounter];
+                _emd_with_backgound[2 * globalIDCounter + 1] = emb[2 * emdCounter + 1];
+                emdCounter++;
+            }
+        }
+
+        return _emd_with_backgound;
+    }
 }
 
 void SpidrAnalysis::stopComputation() {

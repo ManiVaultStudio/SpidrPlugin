@@ -108,7 +108,8 @@ public:
                                     const int numIterations, const int perplexity, const int exaggeration);
 
     // Getter
-    const size_t getNumPoints();
+    const size_t getNumEmbPoints();
+    const size_t getNumImagePoints();
     bool embeddingIsRunning();
     /*!
      * 
@@ -116,11 +117,17 @@ public:
      * \return 
      */
     const std::vector<float> &output();
+
+    const std::vector<float> &outputWithBackground();
+
     const Parameters getParameters();
 
-signals:
+public slots:
     void embeddingComputationStopped();
+
+signals:
     void newEmbedding();
+    void finishedEmbedding();
 
 private:
     void run() override;
@@ -141,6 +148,7 @@ private:
     std::vector<unsigned int> _pointIDsGlobal;  /*!<> */
     std::vector<unsigned int> _backgroundIDsGlobal;  /*!< ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation > */
     Parameters _params;                         /*!<> */
+    std::vector<float> _emd_with_backgound;
 };
 
 

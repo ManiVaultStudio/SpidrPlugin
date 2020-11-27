@@ -47,6 +47,10 @@ public:
 public slots:
     void dataSetPicked(const QString& name);
     void onNewEmbedding();
+    void onFinishedEmbedding();
+
+signals:
+    void embeddingComputationStopped();
 
 private:
     /*!
