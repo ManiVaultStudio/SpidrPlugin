@@ -1,5 +1,7 @@
 #include "SpidrAnalysis.h"
 
+#include <cmath>
+
 #include <QDebug>
 
 SpidrAnalysis::SpidrAnalysis(QObject* parent) : QThread(parent)
@@ -163,8 +165,8 @@ const std::vector<float>& SpidrAnalysis::outputWithBackground() {
                 miny = emb[i+1];
         }
 
-        minx -= minx * 0.05;
-        miny -= miny * 0.05;
+        minx -= std::abs(minx) * 0.05;
+        miny -= std::abs(miny) * 0.05;
 
         qDebug() << "SpidrAnalysis: Inserting background in embedding";
 

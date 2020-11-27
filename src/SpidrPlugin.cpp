@@ -7,9 +7,8 @@
 
 #include <utility>      // std::as_const
 #include <vector>       // std::vector
-#include <iterator>
 
-#include <windows.h>
+//#include <windows.h>
 Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 #include <set>
 
