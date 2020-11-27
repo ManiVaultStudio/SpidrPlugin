@@ -64,7 +64,6 @@ void SpidrAnalysis::spatialAnalysis() {
     const std::vector<float> dataFeats = _featExtraction.output();
 
     // Caclculate distances and kNN
-    //_backgroundIDsGlobal = { 0 };
     _distCalc.setup(dataFeats, _backgroundIDsGlobal, _params);
     _distCalc.compute();
     const std::vector<int> knn_indices = _distCalc.get_knn_indices();

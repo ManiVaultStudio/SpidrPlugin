@@ -97,7 +97,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
     QLabel* numTreesLabel = new QLabel("Number of Trees");
     QLabel* numChecksLabel = new QLabel("Number of Checks");
     QLabel* embNameLabel = new QLabel("Embedding Name");
-    QLabel* backgroundNameLabel = new QLabel("Backround Data Set Name");
+    QLabel* backgroundNameLabel = new QLabel("Background Dataset Name");
+    QLabel* backgroundTickLabel = new QLabel("Background Indices In Data");
 
     QLabel* kernelWeightLabel = new QLabel("Kernel Weighting");
     QLabel* kernelSizeLabel = new QLabel("Kernel Size");
@@ -173,6 +174,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
     advancedSettingsLayout->addWidget(&numChecks, 3, 1);
     advancedSettingsLayout->addWidget(backgroundNameLabel, 4, 0);
     advancedSettingsLayout->addWidget(&backgroundNameLine, 5, 0, 1, 2);
+    advancedSettingsLayout->addWidget(backgroundTickLabel, 6, 0);
+    advancedSettingsLayout->addWidget(&backgroundFromData, 6, 1);
     advancedSettingsBox->setLayout(advancedSettingsLayout);
 
     

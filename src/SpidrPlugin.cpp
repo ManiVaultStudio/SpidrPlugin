@@ -170,8 +170,26 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
     // If a background data set is given, store the background indices
     QString backgroundName = _settings->backgroundNameLine.text();
     if (!backgroundName.isEmpty()) {
+        qDebug() << backgroundName;
         Points& backgroundPoints = _core->requestData<Points>(backgroundName);
-        backgroundIDsGlobal = backgroundPoints.indices;
+
+        if (_settings->backgroundFromData.isChecked())
+        {
+            auto totalNumPoints = backgroundPoints.getNumPoints();
+            backgroundIDsGlobal.clear();
+            backgroundIDsGlobal.reserve(totalNumPoints);
+            backgroundPoints.visitFromBeginToEnd([&backgroundIDsGlobal, totalNumPoints](auto beginOfData, auto endOfData)
+            {
+                for (unsigned int i = 0; i < totalNumPoints; i++)
+                {
+                    backgroundIDsGlobal.push_back(beginOfData[i]);
+                }
+            });
+        }
+        else
+        {
+            backgroundIDsGlobal = backgroundPoints.indices;
+        }
     }
 
 }
