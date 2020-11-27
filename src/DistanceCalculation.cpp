@@ -56,8 +56,6 @@ void DistanceCalculation::setup(const std::vector<float> dataFeatures, const std
         _dataFeatures = dataFeatures;
     }
     else {
-        qDebug() << backgroundIDsGlobal;
-
         // if background IDs are given, delete the respective knn indices and distances
         std::vector<float> dataFeaturesFilt;
         for (unsigned int i = 0; i < _numPoints; i++) {
