@@ -170,11 +170,11 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
     // If a background data set is given, store the background indices
     QString backgroundName = _settings->backgroundNameLine.text();
     if (!backgroundName.isEmpty()) {
-        qDebug() << backgroundName;
         Points& backgroundPoints = _core->requestData<Points>(backgroundName);
 
         if (_settings->backgroundFromData.isChecked())
         {
+            qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set values)";
             auto totalNumPoints = backgroundPoints.getNumPoints();
             backgroundIDsGlobal.clear();
             backgroundIDsGlobal.reserve(totalNumPoints);
@@ -188,8 +188,11 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
         }
         else
         {
+            qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set indices)";
             backgroundIDsGlobal = backgroundPoints.indices;
         }
+
+        qDebug() << "SpidrPlugin: " << backgroundIDsGlobal.size() << " points are excluded from feature extraction & distance calculation";
     }
 
 }
