@@ -191,8 +191,6 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
             qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set indices)";
             backgroundIDsGlobal = backgroundPoints.indices;
         }
-
-        qDebug() << "SpidrPlugin: " << backgroundIDsGlobal.size() << " points are excluded from feature extraction & distance calculation";
     }
 
 }
