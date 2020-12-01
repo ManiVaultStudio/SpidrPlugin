@@ -85,7 +85,7 @@ void DistanceCalculation::setup(const std::vector<float> dataFeatures, const std
 
     assert(_dataFeatures.size() == (_numPoints * featValsPerPoints));
 
-    qDebug() << "Distance calculation: Feature values per point: " << _numDims * featValsPerPoints << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    qDebug() << "Distance calculation: Feature values per point: " << featValsPerPoints << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
 
     // -1 would mark an unset feature
     assert(std::none_of(_dataFeatures.begin(), _dataFeatures.end(), [](float i) {return i == -1.0f; }));
