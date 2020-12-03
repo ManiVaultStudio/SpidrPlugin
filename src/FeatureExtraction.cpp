@@ -141,7 +141,9 @@ void FeatureExtraction::extractFeatures() {
         qDebug() << "Feature extraction: unknown feature Type";
 
     // convolve over all selected data points
+#ifdef NDEBUG
 #pragma omp parallel for
+#endif
     for (int pointID = 0; pointID < (int)_numPoints; pointID++) {
         // get neighborhood ids of the current point
         std::vector<int> neighborIDs = neighborhoodIndices(_pointIds[pointID], _locNeighbors, _imgSize, _pointIds);
