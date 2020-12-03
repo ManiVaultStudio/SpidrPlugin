@@ -167,7 +167,12 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
 
     // 1D histograms for each dimension
     for (size_t dim = 0; dim < _numDims; dim++) {
-        auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, _minMaxVals[2 * dim], _minMaxVals[2 * dim + 1]));
+        float minHist = _minMaxVals[2 * dim];
+        float maxHist = _minMaxVals[2 * dim + 1];
+        if (maxHist == minHist)     // ensure that the histogram can be made
+            maxHist += 0.01;
+
+        auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, minHist, maxHist));
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             h(neighborValues[neighbor * _numDims + dim], boost::histogram::weight(_neighborhoodWeights[neighbor]));
         }
