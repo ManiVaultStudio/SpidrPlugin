@@ -142,8 +142,7 @@ void DistanceCalculation::computekNN() {
         qDebug() << "Distance calculation: Evaluation mode - Write distance matrix to disk";
 
         // Write distance matrices to disk
-        std::string savePath = "D:/Documents/Project 2020a/Spidr/Paper/SpidrEvaluation/Data/";
-        savePath += _embeddingName;
+        std::string savePath = _embeddingName;
         std::string infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_numPoints);
         writeVecToBinary(knn_indices_to_Disk, savePath + "_knnInd" + infoStr + ".bin");
         writeVecToBinary(knn_distances_squared_to_Disk, savePath + "_knnDist" + infoStr + ".bin");
