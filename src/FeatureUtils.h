@@ -216,7 +216,7 @@ std::vector<float> CalcVarEstimate(size_t numPoints, size_t numDims, const std::
             sum += (temp_diff * temp_diff);
         }
 
-        varVals[dimCount] = sum / numPoints;
+        varVals[dimCount] = (sum > 0) ? sum / numPoints : 0.00000001f;   // make sure that variance is not zero for noise-free data
 
     }
 
