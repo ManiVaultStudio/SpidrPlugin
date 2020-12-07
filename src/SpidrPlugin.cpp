@@ -219,8 +219,6 @@ void SpidrPlugin::onFinishedEmbedding() {
 
     _settings.get()->computationStopped();
 
-    //emit embeddingComputationStopped();
-
     qDebug() << "SpidrPlugin: Done.";
 }
 

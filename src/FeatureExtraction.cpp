@@ -174,13 +174,15 @@ void FeatureExtraction::calculateHistogram(size_t pointInd, std::vector<float> n
 
         auto h = boost::histogram::make_histogram(boost::histogram::axis::regular(_numHistBins, minHist, maxHist));
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
+            if (neighborIDs[neighbor] == -1)
+                continue; // skip if neighbor is outside image
             h(neighborValues[neighbor * _numDims + dim], boost::histogram::weight(_neighborhoodWeights[neighbor]));
         }
 
         assert(h.rank() == 1);                      // 1D hist
         assert(h.axis().size() == _numHistBins);    // right number of bins
-        // check if weighting works: sum(hist) == sum(weights)
-        assert(std::accumulate(h.begin(), h.end(), 0.0f) - std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f) < 0.01);
+        // check if weighting works: sum(hist) == sum(weights) for full spatial neighborhoods
+        assert((std::find(neighborIDs.begin(), neighborIDs.end(), -1) == neighborIDs.end()) ? (std::abs(std::accumulate(h.begin(), h.end(), 0.0f) - std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f)) < 0.01f) : true);
 
         // normalize the histogram: sum(hist) := 1
         histSum = std::accumulate(h.begin(), h.end(), 0.0f);
