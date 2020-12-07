@@ -14,6 +14,8 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     // add data points: each data point holds _numDims*_numHistBins values
     appr_alg.addPoint((void*)dataFeatures.data(), (std::size_t) 0);
 
+
+
 #ifdef NDEBUG
     // This loop is for release mode, it's parallel loop implementation from hnswlib
     int num_threads = std::thread::hardware_concurrency();
@@ -63,7 +65,7 @@ template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(
 template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins) {
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins, const float* dataVecBegin) {
     // chose distance metric
     hnswlib::SpaceInterface<float> *space = NULL;
     if (knn_metric == distance_metric::METRIC_QF)
@@ -92,7 +94,7 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
     else if (knn_metric == distance_metric::METRIC_CHA)
     {
         qDebug() << "Distance calculation: EuclidenSpace (PointCloudSpace, Chamfer distsnce) as scalar feature metric";
-        space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting);
+        space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin);
     }
     else
     {
@@ -109,7 +111,7 @@ size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBi
     case feature_type::TEXTURE_HIST_1D: featureSize = numDims * numHistBins; break;
     case feature_type::LISA:            // same as Geary's C
     case feature_type::GEARYC:          featureSize = numDims; break;
-    case feature_type::PCLOUD:            featureSize = numDims * neighborhoodSize; break;
+    case feature_type::PCLOUD:          featureSize = neighborhoodSize; break; // numDims * neighborhoodSize for copying data instead of IDs
     }
 
     return featureSize;

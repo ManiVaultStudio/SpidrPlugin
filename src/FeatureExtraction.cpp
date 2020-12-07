@@ -118,7 +118,8 @@ void FeatureExtraction::initExtraction() {
         _outFeatures.resize(_numPoints * _numDims);
     }
     else if (_featType == feature_type::PCLOUD)
-        _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
+        _outFeatures.resize(_numPoints * _neighborhoodSize);     // IDs copied
+        //_outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);  // data copied
 
     // fill such that _outFeatures are always initialized to -1
     std::fill(_outFeatures.begin(), _outFeatures.end(), -1.0f);
@@ -136,7 +137,7 @@ void FeatureExtraction::extractFeatures() {
     else if (_featType == feature_type::GEARYC)
         featFunct = &FeatureExtraction::calculateGearysC;
     else if (_featType == feature_type::PCLOUD)
-        featFunct = &FeatureExtraction::allNeighborhoodVals;
+        featFunct = &FeatureExtraction::allNeighborhoodIDs; // allNeighborhoodVals
     else
         qDebug() << "Feature extraction: unknown feature Type";
 
@@ -233,8 +234,9 @@ void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighb
             neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
         }
         diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
-        // given that the _neighborhoodWeights sum up to 1, _varVals is the proportionality factor between the local LISA and the global Moran's I
-        // such that sum LISA = _varVals * I. Thus, the division by _varVals in the next line yields sum LISA = I. Cf. 10.1111/j.1538-4632.1995.tb00338.x
+        // (local_neighborhoodWeightsSum / _varVals[dim]) is the proportionality factor between the local LISA and the global Moran's I
+        // such that sum LISA = (local_neighborhoodWeightsSum / _varVals[dim]) * I. Thus, the division by _varVals in the next line yields sum LISA = I. 
+        // Cf. 10.1111/j.1538-4632.1995.tb00338.x
         _outFeatures[pointInd * _numDims + dim] = (local_neighborhoodWeightsSum / _varVals[dim]) * diff_from_mean * neigh_diff_from_mean_sum;
 
         // check if local_neighborhoodWeightsSum equals _neighborhoodWeightsSum for full spatial neighborhoods

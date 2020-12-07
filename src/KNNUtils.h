@@ -183,7 +183,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::v
  * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
  * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
  */
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins=0);
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins=0, const float* dataVecBegin=NULL);
 
 
 /*! Calculates the size of an feature wrt to the feature type
@@ -501,6 +501,7 @@ namespace hnswlib {
 
     // data struct for distance calculation in PointCloudSpace
     struct space_params_Col {
+        const float* dataVectorBegin;
         size_t dim;
         ::std::vector<float> A;         // neighborhood similarity matrix
         size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
@@ -509,13 +510,14 @@ namespace hnswlib {
 
     static float
         ChamferDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        float *pVect1 = (float *)pVect1v;   // points to data item: values of neighbors
-        float *pVect2 = (float *)pVect2v;   // points to data item: values of neighbors
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood
 
         const space_params_Col* sparam = (space_params_Col*)qty_ptr;
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
         const float* pWeight = sparam->A.data();
+        const float* dataVectorBegin = sparam->dataVectorBegin;
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
         float res = 0;
@@ -523,14 +525,26 @@ namespace hnswlib {
         std::vector<float> rowDist(neighborhoodSize, FLT_MAX);
         float tmpDist = 0;
 
+        int numNeighbors1 = 0;
+        int numNeighbors2 = 0;
+
         // Euclidean dist between all neighbor pairs
-        // Take the min of all dists from a item in neigh1 to all items in Neigh2
-        // (the above can be written in a distance matrix)
-        // Sum over all the column-wise and row-wise minima
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2 (colDist) and vice versa (rowDist)
+        // Weight the colDist and rowDist with the inverse of the number of items in the neighborhood
         for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+            int test = (float) *(pVect1 + n1);
+            if (*(pVect1 + n1) == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
+                continue; // skip if neighbor is outside image
+            
             colDist = FLT_MAX;
+            numNeighbors1++;
+            numNeighbors2 = 0;
             for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
-                tmpDist = L2distfunc_( (pVect1 +(n1*ndim)), (pVect2 + (n2*ndim)), &ndim);
+                if (*(pVect2 + n2) == -2.0f)
+                    continue; // skip if neighbor is outside image
+                numNeighbors2++;
+
+                tmpDist = L2distfunc_( dataVectorBegin + ((int)*(pVect1 + n1) * ndim), dataVectorBegin + ((int)*(pVect2 + n1) * ndim), &ndim);
 
                 if (tmpDist < colDist)
                     colDist = tmpDist;
@@ -542,8 +556,10 @@ namespace hnswlib {
             // add (weighted) min of col
             res += colDist * *(pWeight + n1);
         }
-        // add (weighted) min of all rows
-        res += std::inner_product(rowDist.begin(), rowDist.end(), pWeight, 0.0f);
+        // weight sum of colDist with numbers of neighbors in first neighborhood
+        res /= numNeighbors1;
+        // add (weighted) min of all rows weight with weight sum of colDist with numbers of neighbors in second neighborhood
+        res += std::inner_product(rowDist.begin(), rowDist.end(), pWeight, 0.0f) / numNeighbors2;
 
         return (res);
     }
@@ -556,7 +572,7 @@ namespace hnswlib {
         space_params_Col params_;
 
     public:
-        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
+        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin) {
             fstdistfunc_ = ChamferDist;
             data_size_ = dim * neighborhoodSize * sizeof(float);
 
@@ -572,7 +588,7 @@ namespace hnswlib {
             default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
             }
 
-            params_ = { dim, A, neighborhoodSize, L2Sqr };
+            params_ = { dataVectorBegin, dim, A, neighborhoodSize, L2Sqr };
 
 #if defined(USE_SSE) || defined(USE_AVX)
             if (dim % 16 == 0)

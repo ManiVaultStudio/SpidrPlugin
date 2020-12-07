@@ -74,6 +74,7 @@ private:
     size_t _numPoints;                              /*!<> */
     size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
     std::vector<float>  _dataFeatures;              /*!<> */
+    const float* _dataVecBegin;                     /*!<> */
     std::string _embeddingName;                     /*!< Name of the embedding */
 
     // Output
