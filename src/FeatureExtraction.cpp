@@ -219,16 +219,26 @@ void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighb
 
     float neigh_diff_from_mean_sum = 0;
     float diff_from_mean = 0;
+    float local_neighborhoodWeightsSum = 0;
 
     for (size_t dim = 0; dim < _numDims; dim++) {
         neigh_diff_from_mean_sum = 0;
+        local_neighborhoodWeightsSum = _neighborhoodWeightsSum;
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
+            if (neighborIDs[neighbor] == -1)
+            {
+                local_neighborhoodWeightsSum -= _neighborhoodWeights[neighbor];
+                continue; // skip if neighbor is outside image
+            }
             neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
         }
         diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
         // given that the _neighborhoodWeights sum up to 1, _varVals is the proportionality factor between the local LISA and the global Moran's I
         // such that sum LISA = _varVals * I. Thus, the division by _varVals in the next line yields sum LISA = I. Cf. 10.1111/j.1538-4632.1995.tb00338.x
-        _outFeatures[pointInd * _numDims + dim] = diff_from_mean * neigh_diff_from_mean_sum / _varVals[dim];
+        _outFeatures[pointInd * _numDims + dim] = (local_neighborhoodWeightsSum / _varVals[dim]) * diff_from_mean * neigh_diff_from_mean_sum;
+
+        // check if local_neighborhoodWeightsSum equals _neighborhoodWeightsSum for full spatial neighborhoods
+        assert((std::find(neighborIDs.begin(), neighborIDs.end(), -1) == neighborIDs.end()) ? (local_neighborhoodWeightsSum == _neighborhoodWeightsSum) : true);
     }
 }
 
@@ -240,17 +250,24 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
 
     float diff_from_neigh_sum = 0;
     float diff_from_neigh = 0;
+    float local_neighborhoodWeightsSum = 0;
 
     for (size_t dim = 0; dim < _numDims; dim++) {
         diff_from_neigh_sum = 0;
         diff_from_neigh = 0;
+        local_neighborhoodWeightsSum = _neighborhoodWeightsSum;
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
+            if (neighborIDs[neighbor] == -1)
+            {
+                local_neighborhoodWeightsSum -= _neighborhoodWeights[neighbor];
+                continue; // skip if neighbor is outside image
+            }
             diff_from_neigh = _attribute_data[pointInd * _numDims + dim] - neighborValues[neighbor * _numDims + dim];
             diff_from_neigh_sum += _neighborhoodWeights[neighbor] * (diff_from_neigh * diff_from_neigh);
         }
         // given that the _neighborhoodWeights sum up to 1, _varVals is the proportionality factor between the local Geary and the global Geary's C
         // such that sum lC = _varVals * gC. Thus, the division by _varVals in the next line yields sum lC = gC. Cf. 10.1111/j.1538-4632.1995.tb00338.x
-        _outFeatures[pointInd * _numDims + dim] = diff_from_neigh_sum / _varVals[dim];
+        _outFeatures[pointInd * _numDims + dim] = ( (2* local_neighborhoodWeightsSum / (_numPoints -1))  / _varVals[dim]) * diff_from_neigh_sum;
     }
 }
 
@@ -282,14 +299,17 @@ void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
     }
 
     // Some features do not take into account the current point but only the neighborhood values
+    // Therefor set the weight of the neighborhood center (the current point) to 0
     if ((_featType == feature_type::LISA) || (_featType == feature_type::GEARYC)) {
         int centralID = (int)std::sqrt(_neighborhoodSize) + 1;
         assert(_neighborhoodWeights.size() == (centralID-1)*(centralID-1));
         _neighborhoodWeights[centralID] = 0;
 
-        // normalize neighborhood to the sum w/o the center
-        NormVector(_neighborhoodWeights, std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f));
+        // DEPRECATED normalize neighborhood to the sum w/o the center
+        // NormVector(_neighborhoodWeights, std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f));
     }
+
+    _neighborhoodWeightsSum = std::accumulate(_neighborhoodWeights.begin(), _neighborhoodWeights.end(), 0.0f);
 }
 
 void FeatureExtraction::setNeighborhoodWeighting(loc_Neigh_Weighting weighting) {

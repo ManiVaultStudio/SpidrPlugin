@@ -131,6 +131,7 @@ private:
     size_t       _neighborhoodSize;                 /*!< Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom */
     loc_Neigh_Weighting _neighborhoodWeighting;     /*!< Weighting type of neighborhood kernel */
     std::vector<float> _neighborhoodWeights;        /*!< Weightings of neighborhood kernel */
+    float _neighborhoodWeightsSum;                  /*!< Sum of weightings in neighborhood kernel */
     size_t       _numHistBins;                      /*!< Number of bins in each histogram */
 
     // Data
