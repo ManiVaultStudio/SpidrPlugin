@@ -17,6 +17,7 @@ public:
     Parameters() :
         _nn(-1), _numPoints(-1), _numDims(-1), _imgSize(-1, -1), _embeddingName(""), _dataVecBegin(NULL),
         _featureType(feature_type::TEXTURE_HIST_1D), _neighWeighting(loc_Neigh_Weighting::WEIGHT_UNIF), _numLocNeighbors(-1), _numHistBins(-1),
+        _kernelWidth(0), _neighborhoodSize(0), _numFeatureValsPerPoint(0),
         _aknn_algorithm(knn_library::KNN_HNSW), _aknn_metric(distance_metric::METRIC_QF),
         _perplexity(30), _perplexity_multiplier(3), _numIterations(1000), _exaggeration(250)
     {}
@@ -30,7 +31,10 @@ public:
     const float*        _dataVecBegin;          /*!< Points to the first element in the data vector */
     // features
     feature_type        _featureType;           /*!< texture histogram, LISA */
+    size_t              _numFeatureValsPerPoint;/*!< depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)> */
     loc_Neigh_Weighting _neighWeighting;        /*!<> */
+    size_t              _kernelWidth;           /*!<> */
+    size_t              _neighborhoodSize;      /*!<> */
     size_t              _numLocNeighbors;       /*!<> */
     size_t              _numHistBins;           /*!<> */
     // distance

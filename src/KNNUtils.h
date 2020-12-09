@@ -195,7 +195,7 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric
  * \param neighborhoodSize Size of neighborhood, must be a perfect square
  * \return 
  */
-size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBins, size_t neighborhoodSize);
+const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t numDims, const size_t numHistBins, const size_t neighborhoodSize);
 
 namespace hnswlib {
 

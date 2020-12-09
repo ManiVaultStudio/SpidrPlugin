@@ -103,13 +103,13 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric
     return space;
 }
 
-size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBins, size_t neighborhoodSize) {
+const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t numDims, const size_t numHistBins, const size_t neighborhoodSize) {
     size_t featureSize = 0;
     switch (featureType) {
     case feature_type::TEXTURE_HIST_1D: featureSize = numDims * numHistBins; break;
     case feature_type::LISA:            // same as Geary's C
     case feature_type::GEARYC:          featureSize = numDims; break;
-    case feature_type::PCLOUD:            featureSize = numDims * neighborhoodSize; break;
+    case feature_type::PCLOUD:          featureSize = numDims * neighborhoodSize; break;
     }
 
     return featureSize;

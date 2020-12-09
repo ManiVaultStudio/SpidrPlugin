@@ -25,12 +25,13 @@ DistanceCalculation::~DistanceCalculation()
 
 void DistanceCalculation::setup(const std::vector<float> dataFeatures, const std::vector<unsigned int> backgroundIDsGlobal, Parameters& params) {
     _featureType = params._featureType;
+    _numFeatureValsPerPoint = params._numFeatureValsPerPoint;
 
     // Parameters
     _knn_lib = params._aknn_algorithm;
     _knn_metric = params._aknn_metric;
     _nn = params._nn;
-    _neighborhoodSize = (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1); // square neighborhood with _numLocNeighbors to each side from the center
+    _neighborhoodSize = params._neighborhoodSize;    // square neighborhood with _numLocNeighbors to each side from the center
     _neighborhoodWeighting = params._neighWeighting;
 
     // Data
@@ -40,9 +41,6 @@ void DistanceCalculation::setup(const std::vector<float> dataFeatures, const std
     _numHistBins = params._numHistBins;
     _embeddingName = params._embeddingName;
     _dataVecBegin = params._dataVecBegin;
-
-    // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
-    _featureSize = SetFeatureSize(_featureType, _numDims, _numHistBins, _neighborhoodSize);
 
     // consider background if specified - remove those points as well as their attribute and features
     if (backgroundIDsGlobal.empty()) {
@@ -54,7 +52,7 @@ void DistanceCalculation::setup(const std::vector<float> dataFeatures, const std
         for (unsigned int i = 0; i < _numPoints; i++) {
             // value is not in the background, use it for the embedding
             if (std::find(backgroundIDsGlobal.begin(), backgroundIDsGlobal.end(), i) == backgroundIDsGlobal.end()) {
-                dataFeaturesFilt.insert(dataFeaturesFilt.end(), std::make_move_iterator(dataFeatures.begin() + i * _featureSize), std::make_move_iterator(dataFeatures.begin() + (i + 1) * _featureSize));
+                dataFeaturesFilt.insert(dataFeaturesFilt.end(), std::make_move_iterator(dataFeatures.begin() + i * _numFeatureValsPerPoint), std::make_move_iterator(dataFeatures.begin() + (i + 1) * _numFeatureValsPerPoint));
             }
         }
 
@@ -76,9 +74,9 @@ void DistanceCalculation::setup(const std::vector<float> dataFeatures, const std
 
     assert(params._nn == (size_t)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
-    assert(_dataFeatures.size() == (_numPoints * featValsPerPoints));
+    assert(_dataFeatures.size() == (_numPoints * _numFeatureValsPerPoint));
 
-    qDebug() << "Distance calculation: Feature values per point: " << _featureSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    qDebug() << "Distance calculation: Feature values per point: " << _numFeatureValsPerPoint << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
 
     // -1 would mark an unset feature
     assert(std::none_of(_dataFeatures.begin(), _dataFeatures.end(), [](float i) {return i == -1.0f; }));
@@ -111,13 +109,13 @@ void DistanceCalculation::computekNN() {
     if (_knn_lib == knn_library::KNN_HNSW) {
         qDebug() << "Distance calculation: HNSWLib for knn computation";
 
-        std::tie(_knn_indices, _knn_distances_squared) = ComputeHNSWkNN(_dataFeatures, space, _featureSize, _numPoints, _nn);
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeHNSWkNN(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints, _nn);
 
     }
     else if (_knn_lib == knn_library::NONE) {
         qDebug() << "Distance calculation: Exact kNN computation";
 
-        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, _featureSize, _numPoints, _nn);
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints, _nn);
 
     }
     else if (_knn_lib == knn_library::EVAL) {
@@ -127,7 +125,7 @@ void DistanceCalculation::computekNN() {
         qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
         std::vector<int> knn_indices_to_Disk;
         std::vector<float> knn_distances_squared_to_Disk;
-        std::tie(knn_indices_to_Disk, knn_distances_squared_to_Disk) = ComputeFullDistMat(_dataFeatures, space, _featureSize, _numPoints);
+        std::tie(knn_indices_to_Disk, knn_distances_squared_to_Disk) = ComputeFullDistMat(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints);
 
         qDebug() << "Distance calculation: Evaluation mode - Write distance matrix to disk";
 
@@ -138,7 +136,7 @@ void DistanceCalculation::computekNN() {
         writeVecToBinary(knn_distances_squared_to_Disk, savePath + "_knnDist" + infoStr + ".bin");
         
         qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
-        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, _featureSize, _numPoints, _nn);
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints, _nn);
 
     }
 

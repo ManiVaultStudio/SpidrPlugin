@@ -53,6 +53,7 @@ void FeatureExtraction::compute() {
 
 void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const std::vector<float>& attribute_data, const Parameters& params) {
     _featType = params._featureType;
+    _numFeatureValsPerPoint = params._numFeatureValsPerPoint; 
 
     // Parameters
     _numHistBins = params._numHistBins;
@@ -60,15 +61,15 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
     _neighborhoodWeighting = params._neighWeighting;
 
     // Set neighborhood
-    _kernelWidth = (2 * _locNeighbors) + 1;
-    _neighborhoodSize = _kernelWidth * _kernelWidth;
-    weightNeighborhood(params._neighWeighting);     // sets _neighborhoodWeights
+    _kernelWidth = params._kernelWidth;
+    _neighborhoodSize = params._neighborhoodSize;
+    weightNeighborhood(_neighborhoodWeighting);     // sets _neighborhoodWeights and _neighborhoodWeightsSum
 
     // Data
     // Input
     _imgSize = params._imgSize;
     _pointIds = pointIds;
-    _numPoints = pointIds.size();
+    _numPoints = _pointIds.size();
     _numDims = params._numDims;
     _attribute_data = attribute_data;
 
@@ -106,22 +107,21 @@ void FeatureExtraction::computeHistogramFeatures() {
 void FeatureExtraction::initExtraction() {
     qDebug() << "Feature extraction: init feature extraction";
 
+    _outFeatures.resize(_numPoints * _numFeatureValsPerPoint);
+
+    // fill such that _outFeatures are always initialized to -1
+    std::fill(_outFeatures.begin(), _outFeatures.end(), -1.0f);
+
+    // calculate other help values specific to feature type
     if (_featType == feature_type::TEXTURE_HIST_1D) {
         // find min and max for each channel, resize the output larger due to vector features
         _minMaxVals = CalcMinMaxPerChannel(_numPoints, _numDims, _attribute_data);
-        _outFeatures.resize(_numPoints * _numDims * _numHistBins);
     }
     else if ((_featType == feature_type::LISA) | (_featType == feature_type::GEARYC)) {
         // find mean and varaince for each channel
         _meanVals = CalcMeanPerChannel(_numPoints, _numDims, _attribute_data);
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
-        _outFeatures.resize(_numPoints * _numDims);
     }
-    else if (_featType == feature_type::PCLOUD)
-        _outFeatures.resize(_numPoints * _numDims * _neighborhoodSize);
-
-    // fill such that _outFeatures are always initialized to -1
-    std::fill(_outFeatures.begin(), _outFeatures.end(), -1.0f);
 
 }
 

@@ -42,7 +42,7 @@ void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int ker
     // initialize Feature Extraction Settings
     setFeatureType(featType);
     setKernelWeight(kernelInd);
-    setNumLocNeighbors(numLocNeighbors);
+    setNumLocNeighbors(numLocNeighbors);    // Sets _params._kernelWidth and _params._neighborhoodSize as well
     setNumHistBins(numHistBins);
 
     // initialize Distance Calculation Settings
@@ -54,6 +54,9 @@ void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int ker
     setNumIterations(numIterations);
     setPerplexity(perplexity);
     setExaggeration(exaggeration);
+
+    // Derived parameters
+    setNumFeatureValsPerPoint(); 
 }
 
 
@@ -91,6 +94,8 @@ void SpidrAnalysis::setKernelWeight(const int loc_Neigh_Weighting_index) {
 
 void SpidrAnalysis::setNumLocNeighbors(const size_t num) {
     _params._numLocNeighbors = num;
+    _params._kernelWidth = (2 * _params._numLocNeighbors) + 1;
+    _params._neighborhoodSize = _params._kernelWidth * _params._kernelWidth;;
 }
 
 void SpidrAnalysis::setNumHistBins(const size_t num) {
@@ -121,6 +126,11 @@ void SpidrAnalysis::setNumIterations(const unsigned numIt) {
 void SpidrAnalysis::setExaggeration(const unsigned exag) {
     _params._exaggeration = exag;
 }
+
+void SpidrAnalysis::setNumFeatureValsPerPoint() {
+    _params._numFeatureValsPerPoint = NumFeatureValsPerPoint(_params._featureType, _params._numDims, _params._numHistBins, _params._neighborhoodSize);
+}
+
 
 const size_t SpidrAnalysis::getNumEmbPoints() {
     return _params._numPoints;
