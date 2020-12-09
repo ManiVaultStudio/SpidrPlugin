@@ -91,6 +91,7 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric
     }
     else if (knn_metric == distance_metric::METRIC_CHA)
     {
+        assert(dataVecBegin != NULL);
         qDebug() << "Distance calculation: EuclidenSpace (PointCloudSpace, Chamfer distsnce) as scalar feature metric";
         space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin);
     }
@@ -109,7 +110,7 @@ const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t
     case feature_type::TEXTURE_HIST_1D: featureSize = numDims * numHistBins; break;
     case feature_type::LISA:            // same as Geary's C
     case feature_type::GEARYC:          featureSize = numDims; break;
-    case feature_type::PCLOUD:          featureSize = numDims * neighborhoodSize; break;
+    case feature_type::PCLOUD:          featureSize = neighborhoodSize; break; // numDims * neighborhoodSize for copying data instead of IDs
     }
 
     return featureSize;

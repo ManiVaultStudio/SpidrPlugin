@@ -510,14 +510,18 @@ namespace hnswlib {
 
     static float
         ChamferDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        float *pVect1 = (float *)pVect1v;   // points to data item: values of neighbors
-        float *pVect2 = (float *)pVect2v;   // points to data item: values of neighbors
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood 1
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood 2
 
         const space_params_Col* sparam = (space_params_Col*)qty_ptr;
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* dataVectorBegin = sparam->dataVectorBegin; 
         const float* pWeight = sparam->A.data();
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
+        const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
 
         float res = 0;
         float colDist = FLT_MAX;
@@ -529,9 +533,13 @@ namespace hnswlib {
         // (the above can be written in a distance matrix)
         // Sum over all the column-wise and row-wise minima
         for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+            if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
+                continue;
             colDist = FLT_MAX;
             for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
-                tmpDist = L2distfunc_( (pVect1 +(n1*ndim)), (pVect2 + (n2*ndim)), &ndim);
+                if (idsN2[n2] == -2.0f)
+                    continue;
+                tmpDist = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
 
                 if (tmpDist < colDist)
                     colDist = tmpDist;

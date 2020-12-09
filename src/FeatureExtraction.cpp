@@ -136,7 +136,7 @@ void FeatureExtraction::extractFeatures() {
     else if (_featType == feature_type::GEARYC)
         featFunct = &FeatureExtraction::calculateGearysC;
     else if (_featType == feature_type::PCLOUD)
-        featFunct = &FeatureExtraction::allNeighborhoodVals;
+        featFunct = &FeatureExtraction::allNeighborhoodIDs; // allNeighborhoodVals for using the data instead of the IDs
     else
         qDebug() << "Feature extraction: unknown feature Type";
 
@@ -273,14 +273,14 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
 }
 
 void FeatureExtraction::allNeighborhoodVals(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
-    assert(_outFeatures.size() == _numPoints * _numDims * _neighborhoodSize);
+    assert(_outFeatures.size() == _numPoints * _numDims * _neighborhoodSize);     // _numFeatureValsPerPoint = _numDims * _neighborhoodSize
 
     // copy neighborValues into _outFeatures
     std::swap_ranges(neighborValues.begin(), neighborValues.end(), _outFeatures.begin() + (pointInd * _numDims * _neighborhoodSize));
 }
 
 void FeatureExtraction::allNeighborhoodIDs(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
-    assert(_outFeatures.size() == _numPoints * _neighborhoodSize);
+    assert(_outFeatures.size() == _numPoints * _neighborhoodSize);  // _numFeatureValsPerPoint = _neighborhoodSize
 
     // copy neighborIDs into _outFeatures
     std::replace(neighborIDs.begin(), neighborIDs.end(), -1, -2);       // use -2 mark outsiders, whereas -1 marks not processed
