@@ -27,12 +27,12 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
     _backgroundIDsGlobal = backgroundIDsGlobal;
 
     // Set parameters
-    _params._numPoints = pointIDsGlobal.size();
+    _params._numPoints = _pointIDsGlobal.size();
     _params._numDims = numDimensions;
     _params._imgSize = imgSize;
     _params._embeddingName = embeddingName.toStdString();
 
-    qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << imgSize.width() << ", " << imgSize.height();
+    qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width() << ", " << _params._imgSize.height();
 }
 
 void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins,\
