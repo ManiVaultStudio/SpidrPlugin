@@ -31,6 +31,7 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
     _params._numDims = numDimensions;
     _params._imgSize = imgSize;
     _params._embeddingName = embeddingName.toStdString();
+    _params._dataVecBegin = attribute_data.data();          // used in point cloud distance
 
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width() << ", " << _params._imgSize.height();
 }

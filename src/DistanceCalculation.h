@@ -74,7 +74,9 @@ private:
     size_t _numPoints;                              /*!<> */
     size_t _numHistBins;                            /*!<> */ // don't set this from the widget input. Instead you the value set in the feature extraction
     std::vector<float>  _dataFeatures;              /*!<> */
+    size_t _featureSize;                            /*!< depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)> */
     std::string _embeddingName;                     /*!< Name of the embedding */
+    const float* _dataVecBegin;                     /*!< Points to the first element in the data vector> */
 
     // Output
     std::vector<int> _knn_indices;                      /*!<> */
