@@ -40,16 +40,7 @@ void DistanceCalculation::setup(const std::vector<float> dataFeatures, const std
     _numHistBins = params._numHistBins;
     _embeddingName = params._embeddingName;
 
-    size_t featValsPerPoints;
-    if (_featureType == feature_type::TEXTURE_HIST_1D) {
-        featValsPerPoints = _numDims * _numHistBins;
-    }
-    else if ((_featureType == feature_type::LISA) | (_featureType == feature_type::GEARYC)) {
-        featValsPerPoints = _numDims;
-    }
-    else if (_featureType == feature_type::PCLOUD) {
-        featValsPerPoints = _numDims * _neighborhoodSize;
-    }
+    size_t featValsPerPoints = SetFeatureSize(_featureType, _numDims, _numHistBins, _neighborhoodSize);
 
     // consider background if specified - remove those points as well as their attribute and features
     if (backgroundIDsGlobal.empty()) {
