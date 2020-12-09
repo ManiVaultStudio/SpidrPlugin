@@ -63,7 +63,7 @@ template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(
 template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins) {
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t numHistBins, const float* dataVecBegin) {
     // chose distance metric
     hnswlib::SpaceInterface<float> *space = NULL;
     if (knn_metric == distance_metric::METRIC_QF)
@@ -92,7 +92,7 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
     else if (knn_metric == distance_metric::METRIC_CHA)
     {
         qDebug() << "Distance calculation: EuclidenSpace (PointCloudSpace, Chamfer distsnce) as scalar feature metric";
-        space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting);
+        space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin);
     }
     else
     {

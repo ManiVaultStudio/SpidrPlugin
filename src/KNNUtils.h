@@ -183,7 +183,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::v
  * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
  * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
  */
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins=0);
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t numHistBins=0, const float* dataVecBegin = NULL);
 
 
 /*! Calculates the size of an feature wrt to the feature type
@@ -501,6 +501,7 @@ namespace hnswlib {
 
     // data struct for distance calculation in PointCloudSpace
     struct space_params_Col {
+        const float* dataVectorBegin;
         size_t dim;
         ::std::vector<float> A;         // neighborhood similarity matrix
         size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
@@ -556,7 +557,7 @@ namespace hnswlib {
         space_params_Col params_;
 
     public:
-        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
+        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin) {
             fstdistfunc_ = ChamferDist;
             data_size_ = dim * neighborhoodSize * sizeof(float);
 
@@ -572,7 +573,7 @@ namespace hnswlib {
             default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
             }
 
-            params_ = { dim, A, neighborhoodSize, L2Sqr };
+            params_ = { dataVectorBegin, dim, A, neighborhoodSize, L2Sqr };
 
 #if defined(USE_SSE) || defined(USE_AVX)
             if (dim % 16 == 0)
