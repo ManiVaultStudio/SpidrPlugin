@@ -219,15 +219,15 @@ void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighb
 
     float neigh_diff_from_mean_sum = 0;
     float diff_from_mean = 0;
-    float local_neighborhoodWeightsSum = 0;
+    float local_neighborhoodWeightsSum = _neighborhoodWeightsSum;   // 0?
 
     for (size_t dim = 0; dim < _numDims; dim++) {
         neigh_diff_from_mean_sum = 0;
-        local_neighborhoodWeightsSum = _neighborhoodWeightsSum;
+        //local_neighborhoodWeightsSum = _neighborhoodWeightsSum;
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             if (neighborIDs[neighbor] == -1)
             {
-                local_neighborhoodWeightsSum -= _neighborhoodWeights[neighbor];
+                //local_neighborhoodWeightsSum -= _neighborhoodWeights[neighbor];  // should this be here?
                 continue; // skip if neighbor is outside image
             }
             neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
@@ -251,16 +251,16 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
 
     float diff_from_neigh_sum = 0;
     float diff_from_neigh = 0;
-    float local_neighborhoodWeightsSum = 0;
+    float local_neighborhoodWeightsSum = _neighborhoodWeightsSum;   // 0?
 
     for (size_t dim = 0; dim < _numDims; dim++) {
         diff_from_neigh_sum = 0;
         diff_from_neigh = 0;
-        local_neighborhoodWeightsSum = _neighborhoodWeightsSum;
+        //local_neighborhoodWeightsSum = _neighborhoodWeightsSum;
         for (size_t neighbor = 0; neighbor < _neighborhoodSize; neighbor++) {
             if (neighborIDs[neighbor] == -1)
             {
-                local_neighborhoodWeightsSum -= _neighborhoodWeights[neighbor];
+                //local_neighborhoodWeightsSum -= _neighborhoodWeights[neighbor];  // should this be here?
                 continue; // skip if neighbor is outside image
             }
             diff_from_neigh = _attribute_data[pointInd * _numDims + dim] - neighborValues[neighbor * _numDims + dim];
