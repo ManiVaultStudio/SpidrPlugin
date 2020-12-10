@@ -65,36 +65,37 @@ template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(
 template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins, const float* dataVecBegin) {
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins, const float* dataVecBegin) {
     // chose distance metric
     hnswlib::SpaceInterface<float> *space = NULL;
     if (knn_metric == distance_metric::METRIC_QF)
     {
         assert(numHistBins > 0);
         qDebug() << "Distance calculation: QFSpace as vector feature";
-        space = new hnswlib::QFSpace(numDims, numHistBins);
+        space = new hnswlib::QFSpace(numDims, numHistBins, featureValsPerPoint);
     }
     else if (knn_metric == distance_metric::METRIC_EMD)
     {
         assert(numHistBins > 0);
         qDebug() << "Distance calculation: EMDSpace as vector feature";
-        space = new hnswlib::EMDSpace(numDims, numHistBins);
+        space = new hnswlib::EMDSpace(numDims, numHistBins, featureValsPerPoint);
     }
     else if (knn_metric == distance_metric::METRIC_HEL)
     {
         assert(numHistBins > 0);
         qDebug() << "Distance calculation: HellingerSpace as vector feature metric";
-        space = new hnswlib::HellingerSpace(numDims, numHistBins);
+        space = new hnswlib::HellingerSpace(numDims, numHistBins, featureValsPerPoint);
     }
     else if (knn_metric == distance_metric::METRIC_EUC)
     {
         qDebug() << "Distance calculation: EuclidenSpace (L2Space) as scalar feature metric";
-        space = new hnswlib::L2Space(numDims);
+        space = new hnswlib::L2Space(numDims);  // featureValsPerPoint = numDims
     }
     else if (knn_metric == distance_metric::METRIC_CHA)
     {
+        assert(dataVecBegin != NULL);
         qDebug() << "Distance calculation: EuclidenSpace (PointCloudSpace, Chamfer distsnce) as scalar feature metric";
-        space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin);
+        space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
     }
     else
     {
@@ -105,7 +106,7 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
     return space;
 }
 
-size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBins, size_t neighborhoodSize) {
+const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t numDims, const size_t numHistBins, const size_t neighborhoodSize) {
     size_t featureSize = 0;
     switch (featureType) {
     case feature_type::TEXTURE_HIST_1D: featureSize = numDims * numHistBins; break;

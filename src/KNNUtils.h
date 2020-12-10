@@ -180,11 +180,12 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::v
  * \param neighborhoodWeighting Featureless distances use the weighting
  * \param numPoints Number of points in the data
  * \param attribute_data For use in some DEPRECATED distance metrics
+ * \param featureValsPerPoint used for data_size_
  * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
+ * \param dataVecBegin Used for PC distance where features are just IDs of the actual data
  * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
  */
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numHistBins=0, const float* dataVecBegin=NULL);
-
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins=0, const float* dataVecBegin = NULL);
 
 /*! Calculates the size of an feature wrt to the feature type
  * Used as a step size for adding points to an HNSWlib index
@@ -195,7 +196,7 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
  * \param neighborhoodSize Size of neighborhood, must be a perfect square
  * \return 
  */
-size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBins, size_t neighborhoodSize);
+const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t numDims, const size_t numHistBins, const size_t neighborhoodSize);
 
 namespace hnswlib {
 
@@ -389,7 +390,7 @@ namespace hnswlib {
         space_params_QF params_;
 
     public:
-        QFSpace(size_t dim, size_t bin, bin_sim ground_type = bin_sim::SIM_EUC) {
+        QFSpace(size_t dim, size_t bin, size_t featureValsPerPoint, bin_sim ground_type = bin_sim::SIM_EUC) {
             qDebug() << "Distance Calculation: Prepare QFSpace";
 
             fstdistfunc_ = QFSqr;
@@ -399,7 +400,7 @@ namespace hnswlib {
                 fstdistfunc_ = QFSqrSSE;
             }
 
-            data_size_ = dim * bin * sizeof(float);
+            data_size_ = featureValsPerPoint * sizeof(float);
 
             ::std::vector<float> A = BinSimilarities(bin, ground_type);
             
@@ -471,12 +472,12 @@ namespace hnswlib {
         space_params_Hel params_;
 
     public:
-        HellingerSpace(size_t dim, size_t bin) {
+        HellingerSpace(size_t dim, size_t bin, size_t featureValsPerPoint) {
             qDebug() << "Distance Calculation: Prepare HellingerSpace";
 
             fstdistfunc_ = HelSqr;
             params_ = { dim, bin };
-            data_size_ = dim * bin * sizeof(float);
+            data_size_ = featureValsPerPoint * sizeof(float);
         }
 
         size_t get_data_size() {
@@ -510,28 +511,28 @@ namespace hnswlib {
 
     static float
         ChamferDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood
-        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood 1
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood 2
 
         // parameters
         const space_params_Col* sparam = (space_params_Col*)qty_ptr;
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* dataVectorBegin = sparam->dataVectorBegin; 
         const std::vector<float> weights = sparam->A;
-        const float* pDataVectorBegin = sparam->dataVectorBegin;
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
-        const std::vector<float> idsN1(pVect1, pVect1 + neighborhoodSize);
-        const std::vector<float> idsN2(pVect2, pVect2 + neighborhoodSize);
+        const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
+        const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
 
-        // calculation vars
+
         float colSum = 0;
-        float rowSum = 0;
+        float rowSum = 0; 
         std::vector<float> colDist(neighborhoodSize, FLT_MAX);
         std::vector<float> rowDist(neighborhoodSize, FLT_MAX);
         float tmpDist = 0;
 
-        int numNeighbors1 = 0;  // count the number of neighbors (that are in the image)
+        int numNeighbors1 = 0;
         int numNeighbors2 = 0;
 
         // Euclidean dist between all neighbor pairs
@@ -541,12 +542,12 @@ namespace hnswlib {
 
             if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
                 continue; // skip if neighbor is outside image
-            
+
             for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
                 if (idsN2[n2] == -2.0f)
                     continue; // skip if neighbor is outside image
 
-                tmpDist = L2distfunc_(pDataVectorBegin + ((int)idsN1[n1] * ndim), pDataVectorBegin + ((int)idsN2[n2] * ndim), &ndim);
+                tmpDist = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
 
                 if (tmpDist < colDist[n1])
                     colDist[n1] = tmpDist;
@@ -556,6 +557,7 @@ namespace hnswlib {
 
             }
         }
+
         // weight min of each col and row, and sum over them
         for (size_t n = 0; n < neighborhoodSize; n++) {
             if (idsN1[n] != -2.0f)
@@ -569,7 +571,7 @@ namespace hnswlib {
                 numNeighbors2++;
             }
         }
-        
+
         assert(numNeighbors1 == neighborhoodSize - std::count(pVect1, pVect1 + neighborhoodSize, -2.0f));
         assert(numNeighbors2 == neighborhoodSize - std::count(pVect2, pVect2 + neighborhoodSize, -2.0f));
 
@@ -587,9 +589,9 @@ namespace hnswlib {
         space_params_Col params_;
 
     public:
-        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin) {
+        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin, size_t featureValsPerPoint) {
             fstdistfunc_ = ChamferDist;
-            data_size_ = dim * neighborhoodSize * sizeof(float);
+            data_size_ = featureValsPerPoint * sizeof(float);
 
             assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
             unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
@@ -723,12 +725,12 @@ namespace hnswlib {
 
     public:
         // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
-        EMDSpace(size_t dim, size_t bin) {
+        EMDSpace(size_t dim, size_t bin, size_t featureValsPerPoint) {
             qDebug() << "Distance Calculation: Prepare EMDSpace";
 
             fstdistfunc_ = EMD_sinkhorn;
 
-            data_size_ = dim * bin * sizeof(float);
+            data_size_ = featureValsPerPoint * sizeof(float);
 
             ::std::vector<float> D;
             D.resize(bin * bin);

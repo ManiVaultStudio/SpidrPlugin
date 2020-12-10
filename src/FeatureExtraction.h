@@ -126,6 +126,7 @@ private:
 
     // Options 
     feature_type _featType;                         /*!< Type of feature to extract */
+    size_t       _numFeatureValsPerPoint;           /*!< depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)> */
     size_t       _locNeighbors;                     /*!< Number of neighbors including center */
     size_t       _kernelWidth;                      /*!< Width of the kernel (2* _locNeighbors +1) */
     size_t       _neighborhoodSize;                 /*!< Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom */
