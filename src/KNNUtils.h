@@ -519,44 +519,67 @@ namespace hnswlib {
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
         const float* dataVectorBegin = sparam->dataVectorBegin; 
-        const float* pWeight = sparam->A.data();
+        const std::vector<float> weights = sparam->A;
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
         const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
         const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
 
-        float res = 0;
-        float colDist = FLT_MAX;
+
+        float colSum = 0;
+        float rowSum = 0; 
+        std::vector<float> colDist(neighborhoodSize, FLT_MAX);
         std::vector<float> rowDist(neighborhoodSize, FLT_MAX);
         float tmpDist = 0;
+
+        int numNeighbors1 = 0;
+        int numNeighbors2 = 0;
 
         // Euclidean dist between all neighbor pairs
         // Take the min of all dists from a item in neigh1 to all items in Neigh2
         // (the above can be written in a distance matrix)
         // Sum over all the column-wise and row-wise minima
         for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+
             if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
-                continue;
-            colDist = FLT_MAX;
+                continue; // skip if neighbor is outside image
+
             for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
                 if (idsN2[n2] == -2.0f)
-                    continue;
+                    continue; // skip if neighbor is outside image
+
                 tmpDist = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
 
-                if (tmpDist < colDist)
-                    colDist = tmpDist;
+                if (tmpDist < colDist[n1])
+                    colDist[n1] = tmpDist;
 
                 if (tmpDist < rowDist[n2]) 
                     rowDist[n2] = tmpDist;
 
             }
-            // add (weighted) min of col
-            res += colDist * *(pWeight + n1);
         }
-        // add (weighted) min of all rows
-        res += std::inner_product(rowDist.begin(), rowDist.end(), pWeight, 0.0f);
 
-        return (res);
+        // weight min of each col and row, and sum over them
+        for (size_t n = 0; n < neighborhoodSize; n++) {
+            if (idsN1[n] != -2.0f)
+            {
+                colSum += colDist[n] * weights[n];
+                numNeighbors1++;
+            }
+            if (idsN2[n] != -2.0f)
+            {
+                rowSum += rowDist[n] * weights[n];
+                numNeighbors2++;
+            }
+        }
+
+        assert(numNeighbors1 == neighborhoodSize - std::count(pVect1, pVect1 + neighborhoodSize, -2.0f));
+        assert(numNeighbors2 == neighborhoodSize - std::count(pVect2, pVect2 + neighborhoodSize, -2.0f));
+
+        assert(colSum < FLT_MAX);
+        assert(rowSum < FLT_MAX);
+
+        return colSum / numNeighbors1 + rowSum / numNeighbors2;
     }
 
     class PointCloudSpace : public SpaceInterface<float> {
