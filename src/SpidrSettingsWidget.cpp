@@ -42,7 +42,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
     distanceMetric.addItem("Point Clound (Chamfer)", QVariant(QPoint(3, 4)));
     distanceMetric.addItem("Point Clound (SSD)", QVariant(QPoint(3, 5)));
     distanceMetric.addItem("Point Clound (Hausdorff)", QVariant(QPoint(3, 6)));
-    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance)");
+    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance)");
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
     kernelWeight.addItem("Uniform", QVariant(0));
