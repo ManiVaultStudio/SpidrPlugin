@@ -103,6 +103,12 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric
         qDebug() << "Distance calculation: EuclidenSpace (ChamferSpace, Chamfer distsnce) as scalar feature metric";
         space = new hnswlib::SSDSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
     }
+    else if (knn_metric == distance_metric::METRIC_HAU)
+    {
+        assert(dataVecBegin != NULL);
+        qDebug() << "Distance calculation: EuclidenSpace (ChamferSpace, Chamfer distsnce) as scalar feature metric";
+        space = new hnswlib::HausdorffSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
+    }
     else
         qDebug() << "Distance calculation: ERROR: Distance metric unknown.";
 

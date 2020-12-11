@@ -48,6 +48,7 @@ enum class distance_metric : size_t
     METRIC_EUC = 3,      /*!< Euclidean distance - not suitable for histogram features */
     METRIC_CHA = 4,      /*!< Chamfer distance (point collection)*/
     METRIC_SSD = 5,      /*!< Sum of squared distances (point collection)*/
+    METRIC_HAU = 6,      /*!< Hausdorff distance (point collection)*/
 };
 
 /*!
@@ -744,6 +745,134 @@ namespace hnswlib {
         ~SSDSpace() {}
     };
 
+
+    // ---------------
+    //    Point cloud distance (Hausdorff distances)
+    // ---------------
+
+// data struct for distance calculation in SSDSpace
+    struct space_params_Haus {
+        const float* dataVectorBegin;
+        size_t dim;
+        ::std::vector<float> A;         // neighborhood similarity matrix
+        size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
+        DISTFUNC<float> L2distfunc_;
+    };
+
+
+    static float
+        HausdorffDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood 1
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood 2
+
+        // parameters
+        space_params_Haus* sparam = (space_params_Haus*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* dataVectorBegin = sparam->dataVectorBegin;
+        Eigen::VectorXf weights = Eigen::Map<Eigen::VectorXf>(sparam->A.data(), neighborhoodSize);
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
+        const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
+
+        std::vector<float> colDistMins(neighborhoodSize, FLT_MAX);
+        std::vector<float> rowDistMins(neighborhoodSize, FLT_MAX);
+        float distN1N2 = 0;
+
+        float maxN1 = 0;
+        float maxN2 = 0;
+
+        // Euclidean dist between all neighbor pairs
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2 (colDist) and vice versa (rowDist)
+        // Weight the colDist and rowDist with the inverse of the number of items in the neighborhood
+        for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+
+            if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
+                continue; // skip if neighbor is outside image
+
+            for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
+                if (idsN2[n2] == -2.0f)
+                    continue; // skip if neighbor is outside image
+
+                distN1N2 = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
+
+                if (distN1N2 < colDistMins[n1])
+                    colDistMins[n1] = distN1N2;
+
+                if (distN1N2 < rowDistMins[n2])
+                    rowDistMins[n2] = distN1N2;
+            }
+        }
+
+        // find largest of mins
+        for (size_t n = 0; n < neighborhoodSize; n++) {
+            if ((idsN1[n] != -2.0f) && (colDistMins[n] > maxN1))
+                maxN1 = colDistMins[n];
+
+            if ((idsN2[n] != -2.0f) && (rowDistMins[n] > maxN2))
+                maxN2 = rowDistMins[n];
+        }
+
+        assert(maxN1 < FLT_MAX);
+        assert(maxN2 < FLT_MAX);
+
+        return std::max(maxN1, maxN2);
+    }
+
+
+    class HausdorffSpace : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+
+        space_params_Haus params_;
+
+    public:
+        HausdorffSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin, size_t featureValsPerPoint) {
+            fstdistfunc_ = HausdorffDist;
+            data_size_ = featureValsPerPoint * sizeof(float);
+
+            assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
+            unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
+
+            ::std::vector<float> A(neighborhoodSize);
+            switch (weighting)
+            {
+            case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
+            case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NONE); break;
+            default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
+            }
+
+            params_ = { dataVectorBegin, dim, A, neighborhoodSize, L2Sqr };
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                params_.L2distfunc_ = L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                params_.L2distfunc_ = L2SqrSIMD4Ext;
+            else if (dim > 16)
+                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return &params_;
+        }
+
+        ~HausdorffSpace() {}
+    };
 
     // ---------------
     //    Wasserstein distance (EMD - Earth mover distance)
