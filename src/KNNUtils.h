@@ -660,7 +660,7 @@ namespace hnswlib {
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
         const float* dataVectorBegin = sparam->dataVectorBegin;
-        Eigen::VectorXf weights = Eigen::Map<Eigen::VectorXf>(sparam->A.data(), neighborhoodSize);
+        const std::vector<float> weights = sparam->A;
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
         const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
@@ -770,7 +770,7 @@ namespace hnswlib {
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
         const float* dataVectorBegin = sparam->dataVectorBegin;
-        Eigen::VectorXf weights = Eigen::Map<Eigen::VectorXf>(sparam->A.data(), neighborhoodSize);
+        const std::vector<float> weights = sparam->A;
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
         const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
@@ -807,11 +807,11 @@ namespace hnswlib {
 
         // find largest of mins
         for (size_t n = 0; n < neighborhoodSize; n++) {
-            if ((idsN1[n] != -2.0f) && (colDistMins[n] > maxN1))
-                maxN1 = colDistMins[n];
+            if ((idsN1[n] != -2.0f) && (weights[n] * colDistMins[n] > maxN1))
+                maxN1 = weights[n] * colDistMins[n];
 
-            if ((idsN2[n] != -2.0f) && (rowDistMins[n] > maxN2))
-                maxN2 = rowDistMins[n];
+            if ((idsN2[n] != -2.0f) && (weights[n] * rowDistMins[n] > maxN2))
+                maxN2 = weights[n] * rowDistMins[n];
         }
 
         assert(maxN1 < FLT_MAX);
