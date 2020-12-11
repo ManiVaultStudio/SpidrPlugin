@@ -529,8 +529,8 @@ namespace hnswlib {
 
         float colSum = 0;
         float rowSum = 0; 
-        std::vector<float> colDist(neighborhoodSize, FLT_MAX);
-        std::vector<float> rowDist(neighborhoodSize, FLT_MAX);
+        std::vector<float> colDistMins(neighborhoodSize, FLT_MAX);
+        std::vector<float> rowDistMins(neighborhoodSize, FLT_MAX);
         float distN1N2 = 0;
 
         int numNeighbors1 = 0;
@@ -550,11 +550,11 @@ namespace hnswlib {
 
                 distN1N2 = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
 
-                if (distN1N2 < colDist[n1])
-                    colDist[n1] = distN1N2;
+                if (distN1N2 < colDistMins[n1])
+                    colDistMins[n1] = distN1N2;
 
-                if (distN1N2 < rowDist[n2])
-                    rowDist[n2] = distN1N2;
+                if (distN1N2 < rowDistMins[n2])
+                    rowDistMins[n2] = distN1N2;
 
             }
         }
@@ -563,12 +563,12 @@ namespace hnswlib {
         for (size_t n = 0; n < neighborhoodSize; n++) {
             if (idsN1[n] != -2.0f)
             {
-                colSum += colDist[n] * weights[n];
+                colSum += colDistMins[n] * weights[n];
                 numNeighbors1++;
             }
             if (idsN2[n] != -2.0f)
             {
-                rowSum += rowDist[n] * weights[n];
+                rowSum += rowDistMins[n] * weights[n];
                 numNeighbors2++;
             }
         }
