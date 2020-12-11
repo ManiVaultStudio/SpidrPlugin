@@ -32,7 +32,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
     knnOptions.setToolTip("HNSW: Approximate kNN \nExact: precise (slow) \nEval: precise and saves kNN indices&distances to disk (slow)");
 
     // add options in the order as defined in enums in utils files
-    // data values (QPoint) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
+    // data values (QVariant) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
     // this is used as a nice way to cast this information internally in SpidrAnalysis
     distanceMetric.addItem("Texture Hist. (QF)", QVariant(QPoint(0, 0)));
     distanceMetric.addItem("Texture Hist. (EMD)", QVariant(QPoint(0, 1)));
@@ -40,6 +40,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
     distanceMetric.addItem("Local Moran's I (L2)", QVariant(QPoint(1, 3)));
     distanceMetric.addItem("Local Geary's C (L2)", QVariant(QPoint(2, 3)));
     distanceMetric.addItem("Point Clound (Chamfer)", QVariant(QPoint(3, 4)));
+    distanceMetric.addItem("Point Clound (SSD)", QVariant(QPoint(3, 5)));
     distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance)");
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
