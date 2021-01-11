@@ -86,7 +86,7 @@ DataTypes SpidrPlugin::supportedDataTypes() const
     return supportedTypes;
 }
 
-SettingsWidget* const SpidrPlugin::getSettings()
+hdps::gui::SettingsWidget* const SpidrPlugin::getSettings()
 {
     return _settings.get();
 }
@@ -95,6 +95,8 @@ void SpidrPlugin::dataSetPicked(const QString& name)
 {
     Points& points = _core->requestData<Points>(name);
     _settings->dataChanged(points);
+
+    _settings->setTitle(QString("%1: %2").arg(getGuiName(), name));
 }
 
 void SpidrPlugin::startComputation()

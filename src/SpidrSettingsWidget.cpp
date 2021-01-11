@@ -17,10 +17,17 @@
 #include <QVBoxLayout>
 #include <QStandardItemModel> 
 
-SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin)
-    : _analysisPlugin(analysisPlugin),
+SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
+    SettingsWidget(),
+    _analysisPlugin(analysisPlugin),
     backgroundNameLine(""), embNameLine("")
 {
+    const auto guiName = analysisPlugin.getGuiName();
+    setObjectName(guiName);
+    setIcon(hdps::Application::getIconFont("FontAwesome").getIcon("border-none"));
+    setTitle(guiName);
+    setSubtitle("");
+
     const auto minimumWidth = 200;
     setMinimumWidth(minimumWidth);
     setMaximumWidth(2 * minimumWidth);

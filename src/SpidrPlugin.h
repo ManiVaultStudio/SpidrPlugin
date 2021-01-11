@@ -10,10 +10,12 @@
 #include "SpidrAnalysis.h"
 #include "PointData.h"
 
+#include "Application.h" 
+
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
-using namespace hdps::gui;
+// using namespace hdps::gui;
 
 
 // =============================================================================
@@ -33,13 +35,19 @@ public:
     
     void init() override;
 
+
+    /** Returns the icon of this plugin */
+    QIcon getIcon() const override {
+        return hdps::Application::getIconFont("FontAwesome").getIcon("table");
+    }
+
     void dataAdded(const QString name) Q_DECL_OVERRIDE;
     void dataChanged(const QString name) Q_DECL_OVERRIDE;
     void dataRemoved(const QString name) Q_DECL_OVERRIDE;
     void selectionChanged(const QString dataName) Q_DECL_OVERRIDE;
     hdps::DataTypes supportedDataTypes() const Q_DECL_OVERRIDE;
 
-    SettingsWidget* const getSettings() override;
+    hdps::gui::SettingsWidget* const getSettings() override;
 
     void startComputation();
     void stopComputation();
