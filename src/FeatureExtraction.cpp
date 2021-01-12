@@ -4,6 +4,8 @@
 #include "FeatureUtils.h"
 #include "AnalysisParameters.h"     // class Parameters
 
+#include "hnswlib/hnswlib.h"    // 
+
 #include "omp.h"
 
 #include <QDebug>       // qDebug
@@ -13,6 +15,7 @@
 #include <vector>       // std::vector, std::begin, std::end
 #include <array>        // std::array
 #include <numeric>      // std::iota
+#include <cmath>        // std::pow
 #include <utility>      // std::forward
 #include <chrono>       // std::chrono
 
@@ -76,27 +79,52 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
     assert(_attribute_data.size() == _numPoints * _numDims);
 
     qDebug() << "Feature extraction: Num neighbors (in each direction): " << _locNeighbors << "(total neighbors: " << _neighborhoodSize << ") Neighbor weighting: " << (unsigned int)_neighborhoodWeighting;
+
     if (_featType == feature_type::TEXTURE_HIST_1D)
+    {
+        featFunct = &FeatureExtraction::calculateHistogram;  // will be called as calculateHistogram(_pointIds[pointID], neighborValues);
         qDebug() << "Feature extraction: Type 1d texture histogram, Num Bins: " << _numHistBins;
+    }
     else if(_featType == feature_type::LISA)
+    {
+        featFunct = &FeatureExtraction::calculateLISA;
         qDebug() << "Feature extraction: LISA";
+    }
     else if (_featType == feature_type::GEARYC)
+    {
+        featFunct = &FeatureExtraction::calculateGearysC;
         qDebug() << "Feature extraction: local Geary's C";
+    }
     else if (_featType == feature_type::PCLOUD)
+    {
+        featFunct = &FeatureExtraction::allNeighborhoodIDs; // allNeighborhoodVals for using the data instead of the IDs
         qDebug() << "Feature extraction: Point cloud (just the neighborhood, no transformations)";
+    }
+    else if (_featType == feature_type::MVN)
+    {
+        featFunct = &FeatureExtraction::calculateSumAllDist;
+        qDebug() << "Feature extraction: Preparation for Frobenius norm of attribute dist matrices";
+    }
     else
+    {
+        featFunct = NULL;
         qDebug() << "Feature extraction: unknown feature type";
+    }
+
+
 }
 
-void FeatureExtraction::computeHistogramFeatures() {
+void FeatureExtraction::computeHistogramFeatures() {   // TODO: RENAME - not only histogram features anymore
     // init, i.e. identify min and max per dimension for histogramming
     initExtraction();
+
     // all _outFeatures have to be -1 to, so we can easily check later if the were all assigned
     assert(std::all_of(_outFeatures.begin(), _outFeatures.end(), [](float i) {return i == -1.0f; }));
-
     auto start = std::chrono::steady_clock::now();
+
     // convolution over all points to create histograms
     extractFeatures();
+
     auto end = std::chrono::steady_clock::now();
     qDebug() << "Feature extraction: extraction duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count()) / 1000;
 
@@ -127,18 +155,6 @@ void FeatureExtraction::initExtraction() {
 
 void FeatureExtraction::extractFeatures() {
     qDebug() << "Feature extraction: extract features";
-
-    // select feature extraction methood
-    if (_featType == feature_type::TEXTURE_HIST_1D)
-        featFunct = &FeatureExtraction::calculateHistogram;  // will be called as calculateHistogram(_pointIds[pointID], neighborValues);
-    else if (_featType == feature_type::LISA)
-        featFunct = &FeatureExtraction::calculateLISA;
-    else if (_featType == feature_type::GEARYC)
-        featFunct = &FeatureExtraction::calculateGearysC;
-    else if (_featType == feature_type::PCLOUD)
-        featFunct = &FeatureExtraction::allNeighborhoodIDs; // allNeighborhoodVals for using the data instead of the IDs
-    else
-        qDebug() << "Feature extraction: unknown feature Type";
 
     // convolve over all selected data points
 #ifdef NDEBUG
@@ -271,6 +287,32 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
         _outFeatures[pointInd * _numDims + dim] = ( (2* local_neighborhoodWeightsSum / (_numPoints -1))  / _varVals[dim]) * diff_from_neigh_sum;
     }
 }
+
+void FeatureExtraction::calculateSumAllDist(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
+    assert(_outFeatures.size() == _numPoints);
+
+    float sumDistsSquared = 0;
+    float* currentPoint = _attribute_data.data() + (pointInd * _numDims);
+
+    hnswlib::DISTFUNC<float> L2distfunc_ = hnswlib::L2Sqr;
+#if defined(USE_SSE) || defined(USE_AVX)
+    if (_numDims % 16 == 0)
+        L2distfunc_ = hnswlib::L2SqrSIMD16Ext;
+    else if (_numDims % 4 == 0)
+        L2distfunc_ = hnswlib::L2SqrSIMD4Ext;
+    else if (_numDims > 16)
+        L2distfunc_ = hnswlib::L2SqrSIMD16ExtResiduals;
+    else if (_numDims > 4)
+        L2distfunc_ = hnswlib::L2SqrSIMD4ExtResiduals;
+#endif
+
+    // sum squared distances to all other points
+    for(size_t otherPointInd = 0; otherPointInd < _numPoints; otherPointInd++)
+        sumDistsSquared += L2distfunc_(currentPoint, _attribute_data.data() + (otherPointInd * _numDims), &_numDims);
+
+    _outFeatures[pointInd] = sumDistsSquared;
+}
+
 
 void FeatureExtraction::allNeighborhoodVals(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
     assert(_outFeatures.size() == _numPoints * _numDims * _neighborhoodSize);     // _numFeatureValsPerPoint = _numDims * _neighborhoodSize

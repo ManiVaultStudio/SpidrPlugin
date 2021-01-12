@@ -12,7 +12,7 @@
 #include <omp.h>
 
 #include <cmath>     // std::sqrt, exp, floor
-#include <numeric>   // std::inner_product
+#include <numeric>   // std::inner_product, std:accumulate 
 #include <algorithm> // std::find, fill, sort
 #include <utility>   // std:: pair
 #include <vector>
@@ -191,14 +191,15 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::v
  * \param numDims Number of data channels
  * \param neighborhoodSize Size of neighborhood, must be a perfect square
  * \param neighborhoodWeighting Featureless distances use the weighting
- * \param numPoints Number of points in the data
- * \param attribute_data For use in some DEPRECATED distance metrics
  * \param featureValsPerPoint used for data_size_
  * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
  * \param dataVecBegin Used for PC distance where features are just IDs of the actual data
+ * \param weight 
+ * \param imgWidth 
+ * \param featVecBegin 
  * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
  */
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins=0, const float* dataVecBegin = NULL);
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins=0, const float* dataVecBegin = NULL, float weight = 0, int imgWidth = 0, const std::vector<float>* featureVec = NULL);
 
 /*! Calculates the size of an feature wrt to the feature type
  * Used as a step size for adding points to an HNSWlib index
@@ -1013,4 +1014,122 @@ namespace hnswlib {
         ~EMDSpace() {}
     };
 
+    // ---------------
+//    MVN-Reduce (Combine Attribute and Spatial distance, 10.2312/eurovisshort.20171126)
+// ---------------
+
+    struct space_params_MVN {
+        size_t dim;
+        const float* dataBegin;
+        int imgWidth;
+        DISTFUNC<float> L2distfunc_;
+        float weight;
+        float normAttributes;
+        float normSpatial;
+    };
+
+    static float
+        MVN_AttrSpa(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float* pVect1 = (float*)pVect1v;
+        float* pVect2 = (float*)pVect2v;
+
+        const space_params_MVN* sparam = (space_params_MVN*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const int imgWidth = sparam->imgWidth;
+        const float weight = sparam->weight;
+        const float* dataBegin = sparam->dataBegin;
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        // get global ID from pointer
+        auto globID1 = (pVect1 - dataBegin) / ndim;
+        auto globID2 = (pVect2 - dataBegin) / ndim;
+
+        // calc image IDs
+        int ID1Height = std::floor(globID1 / imgWidth);
+        int ID1Width = globID1 - (ID1Height * imgWidth);
+
+        int ID2Height = std::floor(globID2 / imgWidth);
+        int ID2Width = globID2 - (ID1Height * imgWidth);
+
+        // spatial distance
+        float spaDist = std::pow(ID1Height - ID2Height, 2) + std::pow(ID1Width - ID2Width, 2);
+
+        // attribute distance
+        float attrDist = L2distfunc_(pVect1v, pVect2v, &ndim);
+
+        return (weight / sparam->normSpatial) * spaDist + ((1-weight) / sparam->normAttributes) * attrDist;
+    }
+
+    class MVNSpace : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+        space_params_MVN params_;
+
+    public:
+        // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
+        MVNSpace(size_t dim, float weight, int imgWidth, const float* dataBegin, const std::vector<float>* sumsDistAttr) {
+            qDebug() << "Distance Calculation: Prepare MVNSpace";
+
+            fstdistfunc_ = MVN_AttrSpa;
+
+            data_size_ = dim * sizeof(float);
+
+            // Complete the Frobenius norm (started in FeatureExtraction)
+            float normAttributes = std::accumulate(sumsDistAttr->begin(), sumsDistAttr->end(), (float)0.0);
+
+            // Calc normSpatial: Frobenius norm of spatial distance matrix
+            size_t numPoints = sumsDistAttr->size();
+            std::vector<float> sumsDistSpa(numPoints);
+
+#ifdef NDEBUG
+#pragma omp parallel for
+#endif
+            for (int locPointID = 0; locPointID < (int)numPoints; locPointID++) {
+                int locHeight = std::floor(locPointID / imgWidth);
+                int locWidth = locPointID - (locHeight * imgWidth);
+
+                float sumDistsSquared = 0;
+
+                for (int OtherPointID = 0; OtherPointID < (int)numPoints; OtherPointID++) {
+                    int otherHeight = std::floor(OtherPointID / imgWidth);
+                    int otherWidth = OtherPointID - (otherHeight * imgWidth);
+
+                    sumDistsSquared += std::pow(locHeight - otherHeight, 2) + std::pow(locWidth - otherWidth, 2);
+                }
+                
+                sumsDistSpa[locPointID] = sumDistsSquared;
+
+            }
+
+            float normSpatial = std::accumulate(sumsDistSpa.begin(), sumsDistSpa.end(), (float)0.0);
+
+            params_ = { dim, dataBegin, imgWidth, L2Sqr, weight, normAttributes, normSpatial };
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                params_.L2distfunc_ = L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                params_.L2distfunc_ = L2SqrSIMD4Ext;
+            else if (dim > 16)
+                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return (void *)&params_;
+        }
+
+        ~MVNSpace() {}
+    };
 }

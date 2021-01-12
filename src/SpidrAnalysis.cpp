@@ -37,7 +37,7 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
 }
 
 void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins,\
-                                               const int aknnAlgInd, const int aknnMetric, \
+                                               const int aknnAlgInd, const int aknnMetric, const float MVNweight, \
                                                const int numIterations, const int perplexity, const int exaggeration) {
     // initialize Feature Extraction Settings
     setFeatureType(featType);
@@ -46,9 +46,10 @@ void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int ker
     setNumHistBins(numHistBins);
 
     // initialize Distance Calculation Settings
+    // number of nn is dertermined by perplexity, set in setPerplexity
     setKnnAlgorithm(aknnAlgInd);
     setDistanceMetric(aknnMetric);
-    // number of nn is dertermined by perplexity, set in setPerplexity
+    setMVNWeight(MVNweight);
 
     // Initialize the tSNE computation
     setNumIterations(numIterations);
@@ -131,6 +132,9 @@ void SpidrAnalysis::setNumFeatureValsPerPoint() {
     _params._numFeatureValsPerPoint = NumFeatureValsPerPoint(_params._featureType, _params._numDims, _params._numHistBins, _params._neighborhoodSize);
 }
 
+void SpidrAnalysis::setMVNWeight(const float weight) {
+    _params._MVNweight = weight;
+}
 
 const size_t SpidrAnalysis::getNumEmbPoints() {
     return _params._numPoints;

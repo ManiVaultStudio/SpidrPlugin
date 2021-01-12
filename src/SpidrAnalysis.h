@@ -53,12 +53,13 @@ public:
      * \param numHistBins
      * \param aknnAlgInd
      * \param aknnMetInd
+     * \param MVNweight
      * \param numIterations
      * \param perplexity
      * \param exaggeration
      */
     void initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins, \
-                                    const int aknnAlgInd, const int aknnMetric, \
+                                    const int aknnAlgInd, const int aknnMetric, const float MVNweight, \
                                     const int numIterations, const int perplexity, const int exaggeration);
 
     // Getter
@@ -140,6 +141,9 @@ private:
 
     /*! Sets the size of a feature, derived from other parameters */
     void setNumFeatureValsPerPoint();
+
+    /*! Sets the spatial-attribut distance weight, 0 for only attributes and 1 for only spatial */
+    void setMVNWeight(const float weight);
 
 private:
     // worker classes

@@ -96,6 +96,13 @@ private:
     */
     void calculateGearysC(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
 
+    /*! Compute the sum of dists^2 from one point to all others
+     * See MVN-Reduce doi:10.2312/eurovisshort.20171126.x
+     * \param pointInd
+     * \param neighborValues
+    */
+    void calculateSumAllDist(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
+
     /*! Sets the Feature per element to all it's neighbors attributes
      * The neighborhood is a square and centered around each item respectively
      * Padding is done by setting out-of-boundary values to 0

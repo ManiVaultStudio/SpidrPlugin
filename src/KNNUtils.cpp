@@ -71,7 +71,7 @@ template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(
 template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins, const float* dataVecBegin) {
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins, const float* dataVecBegin, float weight, int imgWidth, const std::vector<float>* featureVec) {
     // chose distance metric
     hnswlib::SpaceInterface<float> *space = NULL;
     if (knn_metric == distance_metric::METRIC_QF)
@@ -115,6 +115,13 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric
         qDebug() << "Distance calculation: EuclidenSpace (ChamferSpace, Chamfer distsnce) as scalar feature metric";
         space = new hnswlib::HausdorffSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
     }
+    else if (knn_metric == distance_metric::METRIC_MVN)
+    {
+        assert(dataVecBegin != NULL);
+        assert(featureVec != NULL);
+        qDebug() << "Distance calculation: MVN-Reduce - Spatial and Attribute distancec combined with weight " << weight;
+        space = new hnswlib::MVNSpace(numDims, weight, imgWidth, dataVecBegin, featureVec);
+    }
     else
         qDebug() << "Distance calculation: ERROR: Distance metric unknown.";
 
@@ -128,6 +135,7 @@ const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t
     case feature_type::LISA:            // same as Geary's C
     case feature_type::GEARYC:          featureSize = numDims; break;
     case feature_type::PCLOUD:          featureSize = neighborhoodSize; break; // numDims * neighborhoodSize for copying data instead of IDs
+    case feature_type::MVN:             featureSize = 1; break; // sum of dist^2 to all other points
     }
 
     return featureSize;

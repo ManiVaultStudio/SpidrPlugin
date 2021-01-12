@@ -77,6 +77,8 @@ private:
     size_t _numFeatureValsPerPoint;                 /*!< Feature Values per Point> */
     std::string _embeddingName;                     /*!< Name of the embedding */
     const float* _dataVecBegin;                     /*!< Points to the first element in the data vector> */
+    float _MVNweight;                               /*!<> */
+    int _imgWidth;                                  /*!<> */
 
     // Output
     std::vector<int> _knn_indices;                      /*!<> */
