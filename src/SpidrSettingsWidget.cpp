@@ -41,15 +41,16 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     // add options in the order as defined in enums in utils files
     // data values (QVariant) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
     // this is used as a nice way to cast this information internally in SpidrAnalysis
-    distanceMetric.addItem("Texture Hist. (QF)", QVariant(QPoint(0, 0)));
-    distanceMetric.addItem("Texture Hist. (EMD)", QVariant(QPoint(0, 1)));
-    distanceMetric.addItem("Texture Hist. (Hel)", QVariant(QPoint(0, 2)));
-    distanceMetric.addItem("Local Moran's I (L2)", QVariant(QPoint(1, 3)));
-    distanceMetric.addItem("Local Geary's C (L2)", QVariant(QPoint(2, 3)));
-    distanceMetric.addItem("Point Clound (Chamfer)", QVariant(QPoint(3, 4)));
-    distanceMetric.addItem("Point Clound (SSD)", QVariant(QPoint(3, 5)));
-    distanceMetric.addItem("Point Clound (Hausdorff)", QVariant(QPoint(3, 6)));
+    distanceMetric.addItem("Texture Hist. (QF)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_QF));
+    distanceMetric.addItem("Texture Hist. (EMD)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_EMD));
+    distanceMetric.addItem("Texture Hist. (Hel)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
+    distanceMetric.addItem("Local Moran's I (L2)", MakeMetricPair(feature_type::LISA, distance_metric::METRIC_EUC));
+    distanceMetric.addItem("Local Geary's C (L2)", MakeMetricPair(feature_type::GEARYC, distance_metric::METRIC_EUC));
+    distanceMetric.addItem("Point Clound (Chamfer)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
+    distanceMetric.addItem("Point Clound (SSD)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));
+    distanceMetric.addItem("Point Clound (Hausdorff)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU));
     distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance)");
+
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
     kernelWeight.addItem("Uniform", QVariant(0));

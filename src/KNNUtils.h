@@ -39,7 +39,7 @@ enum class knn_library : size_t
 };
 
 /*! Defines the distance metric
-  */
+ */
 enum class distance_metric : size_t
 {
     METRIC_QF = 0,       /*!< Quadratic form distance */
@@ -60,6 +60,16 @@ enum class bin_sim : size_t
     SIM_EXP = 1,    /*!< exp(-(Euclidean distance between bins)^2/(Max dist)) */
     SIM_UNI = 2,    /*!< 1 (uniform) */
 };
+
+
+/*!
+ * Used in SpidrSettingsWidget to set the distanceMetric/Feature Type pair
+ * Casts enum classes to unsigned int
+ * \param ft feature_type
+ * \param dm distance_metric
+ * \return QVariant(QPoint, QPoint)
+ */
+QVariant MakeMetricPair(feature_type ft, distance_metric dm);
 
 
 /*!

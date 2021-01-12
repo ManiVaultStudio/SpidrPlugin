@@ -1,6 +1,12 @@
 #pragma once
 #include "KNNUtils.h"
 
+
+QVariant MakeMetricPair(feature_type ft, distance_metric dm) {
+    return QVariant(QPoint(static_cast<unsigned int>(ft), static_cast<size_t>(dm)));
+}
+
+
 template<typename T>
 std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
 
