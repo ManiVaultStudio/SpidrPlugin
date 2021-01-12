@@ -49,6 +49,7 @@ enum class distance_metric : size_t
     METRIC_CHA = 4,      /*!< Chamfer distance (point collection)*/
     METRIC_SSD = 5,      /*!< Sum of squared distances (point collection)*/
     METRIC_HAU = 6,      /*!< Hausdorff distance (point collection)*/
+    METRIC_MVN = 7,      /*!< MVN-Reduce, see 10.2312/euroviss, combines spatial and attribute distance with a weight*/
 };
 
 /*!

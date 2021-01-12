@@ -49,8 +49,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Point Clound (Chamfer)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
     distanceMetric.addItem("Point Clound (SSD)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));
     distanceMetric.addItem("Point Clound (Hausdorff)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU));
-    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance)");
-
+    distanceMetric.addItem("MVN (Attr./Spatial)", MakeMetricPair(feature_type::MVN, distance_metric::METRIC_MVN));
+    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance) \n MVN-Reduce (Combination of Spatial and Attribute distance)");
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
     kernelWeight.addItem("Uniform", QVariant(0));
@@ -74,6 +74,9 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     connect(&kernelSize, &QSpinBox::textChanged, this, &SpidrSettingsWidget::onKernelSizeChanged);
     // change the hist bin size heuristic
     connect(&histBinSizeHeur, SIGNAL(currentIndexChanged(int)), this, SLOT(onHistBinSizeHeurPicked(int)));
+    // connect weight slider and spin box
+    connect(&weightSpaAttrSlider, &QSlider::valueChanged, [this](const int& val) {weightSpaAttrNum.setValue(double(val)/100);});
+    connect(&weightSpaAttrNum, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [this](const double& val) {weightSpaAttrSlider.setValue(val * 100); });
 
     connect(&numIterations, SIGNAL(textChanged(QString)), SLOT(numIterationsChanged(QString)));
     connect(&perplexity,    SIGNAL(textChanged(QString)), SLOT(perplexityChanged(QString)));
@@ -115,6 +118,9 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     QLabel* histBinSizeHeurLabel = new QLabel("Histo. Bin Heuristic");
     QLabel* histBinSizeLabel = new QLabel("Number Bins");
 
+    QLabel* weightSpAttrLabel = new QLabel("MVN weight");
+    weightSpAttrLabel->setToolTip("Weight Attribute (1) vs Spatial (0)");
+    
     // Set option default values
     numIterations.setFixedWidth(50);
     perplexity.setFixedWidth(50);
@@ -124,6 +130,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     numChecks.setFixedWidth(50);
     kernelSize.setFixedWidth(50);
     histBinSize.setFixedWidth(50);
+    weightSpaAttrSlider.setFixedWidth(50);
+    weightSpaAttrNum.setFixedWidth(50);
 
     numIterations.setValidator(new QIntValidator(1, 10000, this));
     perplexity.setValidator(new QIntValidator(2, 50, this));
@@ -133,6 +141,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     numChecks.setValidator(new QIntValidator(1, 10000, this));
     kernelSize.setRange(1, 10000);
     histBinSize.setRange(1, 10000);
+    weightSpaAttrNum.setRange(0, 1);
 
     numIterations.setText("1000");
     perplexity.setText("30");
@@ -143,6 +152,15 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     kernelSize.setValue(1);
     histBinSize.setValue(5);
 
+    weightSpaAttrSlider.setRange(0, 100);
+    weightSpaAttrSlider.setSingleStep(1);
+    weightSpaAttrSlider.setOrientation(Qt::Horizontal);
+
+    weightSpaAttrNum.setDecimals(2);
+    weightSpaAttrNum.setSingleStep(0.01);
+
+    weightSpaAttrSlider.setEnabled(false);
+    weightSpaAttrNum.setEnabled(false);
 
     // Add options to their appropriate group box
     auto* const settingsLayout = new QGridLayout();
@@ -150,14 +168,18 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     settingsLayout->addWidget(knnAlgorithmLabel, 0, 0);
     settingsLayout->addWidget(&knnOptions, 1, 0);
 
-    settingsLayout->addWidget(distanceMetricLabel, 0, 1);
-    settingsLayout->addWidget(&distanceMetric, 1, 1);
+    settingsLayout->addWidget(distanceMetricLabel, 0, 1, 1, 3);  // (widget, row, col, rowSpan, colSpan)
+    settingsLayout->addWidget(&distanceMetric, 1, 1, 1, 3);
     
     settingsLayout->addWidget(kernelWeightLabel, 2, 0);
     settingsLayout->addWidget(&kernelWeight, 3, 0);
 
     settingsLayout->addWidget(kernelSizeLabel, 2, 1);
     settingsLayout->addWidget(&kernelSize, 3, 1);
+
+    settingsLayout->addWidget(weightSpAttrLabel, 2, 2);
+    settingsLayout->addWidget(&weightSpaAttrSlider, 3, 2);
+    settingsLayout->addWidget(&weightSpaAttrNum, 3, 3);
 
     settingsLayout->addWidget(histBinSizeHeurLabel, 4, 0);
     settingsLayout->addWidget(&histBinSizeHeur, 5, 0);
@@ -169,7 +191,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     settingsLayout->addWidget(&numIterations, 7, 0);
     
     settingsLayout->addWidget(perplexityLabel, 6, 1);
-    settingsLayout->addWidget(&perplexity, 7, 1);    
+    settingsLayout->addWidget(&perplexity, 7, 1);
         
     settingsBox->setLayout(settingsLayout);
 
@@ -317,18 +339,18 @@ void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {
 
 }
 
-void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
+void SpidrSettingsWidget::onDistanceMetricPicked(int distMetricBoxIndex) {
     
     // if the metric works on vector features
     // provide options for the vector size
     // also, check if neighborhood weighting is 
     // available for the specific feature
-    if (value >= 5) {   
+    if (distMetricBoxIndex >= 5) {
         // PCD, no features
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
     }
-    else if (value >= 3) {   
+    else if (distMetricBoxIndex >= 3) {
         // LISA, GC, scalar features
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
@@ -336,6 +358,15 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int value) {
     else {
         histBinSizeHeur.setEnabled(true);
         histBinSize.setEnabled(true);
+    }
+
+    if (distMetricBoxIndex == 8) {
+        weightSpaAttrSlider.setEnabled(true);
+        weightSpaAttrNum.setEnabled(true);
+    }
+    else {
+        weightSpaAttrSlider.setEnabled(false);
+        weightSpaAttrNum.setEnabled(false);
     }
 }
 

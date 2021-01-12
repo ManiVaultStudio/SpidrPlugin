@@ -18,6 +18,16 @@ enum class feature_type : unsigned int
     LISA = 1,               /*!< Local Indicator of Spatial Associations, scalar feaure */
     GEARYC = 2,             /*!< Geary's, scalar feature */
     PCLOUD = 3,             /*!< Point cloud, i.e. just the neighborhood, no transformations*/
+    MVN = 4,                /*!< MVN-Reduce, see 10.2312/euroviss, computes Frobenius norms of spatial and attribute distance matrices*/
+};
+
+// Heuristic for setting the histogram bin size
+enum class histBinSizeHeuristic : unsigned int
+{
+    MANUAL = 0,    /*!< Manually  adjust histogram bin size */
+    SQRT = 1,      /*!< ceil(sqrt(n)), n = neighborhood size */
+    STURGES = 2,   /*!< ceil(log_2(n))+1, n = neighborhood size */
+    RICE = 3,      /*!< ceil(2*pow(n, 1/3)), n = neighborhood size */
 };
 
 
