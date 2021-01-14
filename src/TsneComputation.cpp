@@ -86,7 +86,7 @@ void TsneComputation::computeGradientDescent()
     embed();
 }
 
-void TsneComputation::setup(std::vector<int>* knn_indices, std::vector<float>* knn_distances, Parameters params) {
+void TsneComputation::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const Parameters params) {
     // Parameters
     _iterations = params._numIterations;
     _perplexity = params._perplexity;
@@ -105,6 +105,7 @@ void TsneComputation::setup(std::vector<int>* knn_indices, std::vector<float>* k
 
     qDebug() << "t-SNE computation: Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors. Perplexity: " << _perplexity << ", Iterations: " << _iterations;
 
+    assert(_knn_indices.size() == _numPoints * _nn);
 }
 
 
@@ -129,7 +130,7 @@ void TsneComputation::initTSNE()
         double t = 0.0;
         {
             hdi::utils::ScopedTimer<double> timer(t);
-            probabilityGenerator.computeGaussianDistributions(*_knn_distances, *_knn_indices, _nn, _probabilityDistribution, probGenParams);
+            probabilityGenerator.computeGaussianDistributions(_knn_distances, _knn_indices, _nn, _probabilityDistribution, probGenParams);
         }
         qDebug() << "Probability distributions calculated.";
         qDebug() << "================================================================================";
@@ -205,7 +206,7 @@ void TsneComputation::embed()
         _isGradientDescentRunning = false;
         _isTsneRunning = false;
 
-        emit computationStopped();
+        // emit computationStopped();
     }
 
     qDebug() << "--------------------------------------------------------------------------------";

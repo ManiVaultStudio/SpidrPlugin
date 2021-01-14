@@ -10,10 +10,12 @@
 #include "SpidrAnalysis.h"
 #include "PointData.h"
 
+#include "Application.h" 
+
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
-using namespace hdps::gui;
+// using namespace hdps::gui;
 
 
 // =============================================================================
@@ -33,13 +35,19 @@ public:
     
     void init() override;
 
+
+    /** Returns the icon of this plugin */
+    QIcon getIcon() const override {
+        return hdps::Application::getIconFont("FontAwesome").getIcon("table");
+    }
+
     void dataAdded(const QString name) Q_DECL_OVERRIDE;
     void dataChanged(const QString name) Q_DECL_OVERRIDE;
     void dataRemoved(const QString name) Q_DECL_OVERRIDE;
     void selectionChanged(const QString dataName) Q_DECL_OVERRIDE;
     hdps::DataTypes supportedDataTypes() const Q_DECL_OVERRIDE;
 
-    SettingsWidget* const getSettings() override;
+    hdps::gui::SettingsWidget* const getSettings() override;
 
     void startComputation();
     void stopComputation();
@@ -47,6 +55,10 @@ public:
 public slots:
     void dataSetPicked(const QString& name);
     void onNewEmbedding();
+    void onFinishedEmbedding();
+
+signals:
+    void embeddingComputationStopped();
 
 private:
     /*!
@@ -71,8 +83,9 @@ private:
      * \param attribute_data
      * \param numDims
      * \param imgSize
+     * \param backgroundIDsGlobal
      */
-    void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize);
+    void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, QSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
 
     SpidrAnalysis _spidrAnalysis;                       /*!<> */
     std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */

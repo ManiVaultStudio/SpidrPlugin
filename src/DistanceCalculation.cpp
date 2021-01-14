@@ -9,7 +9,9 @@
 #include <QDebug>
 
 #include <chrono>
-#include <algorithm>    // std::none_of
+#include <algorithm>            // std::none_of
+#include <iterator>             // std::make_move_iterator, find
+#include <utility>              // std::move
 
 DistanceCalculation::DistanceCalculation() :
     _knn_lib(knn_library::KNN_HNSW),
@@ -21,14 +23,15 @@ DistanceCalculation::~DistanceCalculation()
 {
 }
 
-void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector<float>& attribute_data, std::vector<float>* dataFeatures, Parameters& params) {
+void DistanceCalculation::setup(const std::vector<float> dataFeatures, const std::vector<unsigned int> backgroundIDsGlobal, Parameters& params) {
     _featureType = params._featureType;
+    _numFeatureValsPerPoint = params._numFeatureValsPerPoint;
 
     // Parameters
     _knn_lib = params._aknn_algorithm;
     _knn_metric = params._aknn_metric;
     _nn = params._nn;
-    _neighborhoodSize = (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1); // square neighborhood with _numLocNeighbors to each side from the center
+    _neighborhoodSize = params._neighborhoodSize;    // square neighborhood with _numLocNeighbors to each side from the center
     _neighborhoodWeighting = params._neighWeighting;
 
     // Data
@@ -36,10 +39,36 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
     _numPoints = params._numPoints;
     _numDims = params._numDims;
     _numHistBins = params._numHistBins;
-    _dataFeatures = dataFeatures;
-    _pointIds = &pointIds;
-    _attribute_data = &attribute_data;
     _embeddingName = params._embeddingName;
+    _dataVecBegin = params._dataVecBegin;
+    _MVNweight = params._MVNweight;
+    _imgWidth = params._imgSize.width();
+
+    // consider background if specified - remove those points as well as their attribute and features
+    if (backgroundIDsGlobal.empty()) {
+        _dataFeatures = dataFeatures;
+    }
+    else {
+        // if background IDs are given, delete the respective knn indices and distances
+        std::vector<float> dataFeaturesFilt;
+        for (unsigned int i = 0; i < _numPoints; i++) {
+            // value is not in the background, use it for the embedding
+            if (std::find(backgroundIDsGlobal.begin(), backgroundIDsGlobal.end(), i) == backgroundIDsGlobal.end()) {
+                dataFeaturesFilt.insert(dataFeaturesFilt.end(), std::make_move_iterator(dataFeatures.begin() + i * _numFeatureValsPerPoint), std::make_move_iterator(dataFeatures.begin() + (i + 1) * _numFeatureValsPerPoint));
+            }
+        }
+
+        std::swap(_dataFeatures, dataFeaturesFilt);
+
+        // reduce the number of points by the size of the background
+        size_t numBackgroundPoints = backgroundIDsGlobal.size();
+        _numPoints -= numBackgroundPoints;
+
+        params._numPoints = _numPoints;
+
+        qDebug() << "Distance calculation: Excluding" << numBackgroundPoints << " background points and respective features";
+
+    }
 
     // Output
     //_knn_indices.resize(_numPoints*_nn, -1);              // unnecessary, done in ComputeHNSWkNN
@@ -47,23 +76,12 @@ void DistanceCalculation::setup(std::vector<unsigned int>& pointIds, std::vector
 
     assert(params._nn == (size_t)(params._perplexity * params._perplexity_multiplier + 1));     // should be set in SpidrAnalysis::initializeAnalysisSettings
 
-    size_t featValsPerPoints;
-    if (_featureType == feature_type::TEXTURE_HIST_1D) {
-        featValsPerPoints = _numDims * _numHistBins;
-    }
-    else if ((_featureType == feature_type::LISA) | (_featureType == feature_type::GEARYC)) {
-        featValsPerPoints = _numDims;
-    }
-    else if (_featureType == feature_type::PCLOUD) {
-        featValsPerPoints = _numDims * _neighborhoodSize;
-    }
+    assert(_dataFeatures.size() == (_numPoints * _numFeatureValsPerPoint));
 
-    assert(_dataFeatures->size() == (_numPoints * featValsPerPoints));
-
-    qDebug() << "Distance calculation: Feature values per point: " << _numDims * _neighborhoodSize << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
+    qDebug() << "Distance calculation: Feature values per point: " << _numFeatureValsPerPoint << "Number of NN to calculate" << _nn << ". Metric: " << (size_t)_knn_metric;
 
     // -1 would mark an unset feature
-    assert(std::none_of(_dataFeatures->begin(), _dataFeatures->end(), [](float i) {return i == -1.0f; }));
+    assert(std::none_of(_dataFeatures.begin(), _dataFeatures.end(), [](float i) {return i == -1.0f; }));
 }
 
 void DistanceCalculation::compute() {
@@ -81,28 +99,25 @@ void DistanceCalculation::computekNN() {
     auto t_start_CreateHNSWSpace = std::chrono::steady_clock::now();
 
     // setup hsnw index
-    hnswlib::SpaceInterface<float> *space = CreateHNSWSpace(_knn_metric, _numDims, _neighborhoodSize, _neighborhoodWeighting, _numPoints, _attribute_data, _numHistBins);
+    hnswlib::SpaceInterface<float> *space = CreateHNSWSpace(_knn_metric, _numDims, _neighborhoodSize, _neighborhoodWeighting, _numFeatureValsPerPoint, _numHistBins, _dataVecBegin, _MVNweight, _imgWidth, _numPoints);
     assert(space != NULL);
 
     auto t_end_CreateHNSWSpace = std::chrono::steady_clock::now();
     qDebug() << "Distance calculation: Build time metric space (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (t_end_CreateHNSWSpace - t_start_CreateHNSWSpace).count()) / 1000;
     qDebug() << "Distance calculation: Compute kNN";
 
-    // depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)
-    size_t featureSize = SetFeatureSize(_featureType, _numDims, _numHistBins, _neighborhoodSize);
-
     auto t_start_ComputeDist = std::chrono::steady_clock::now();
 
     if (_knn_lib == knn_library::KNN_HNSW) {
         qDebug() << "Distance calculation: HNSWLib for knn computation";
 
-        std::tie(_knn_indices, _knn_distances_squared) = ComputeHNSWkNN(_dataFeatures, space, featureSize, _numPoints, _nn);
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeHNSWkNN(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints, _nn);
 
     }
     else if (_knn_lib == knn_library::NONE) {
         qDebug() << "Distance calculation: Exact kNN computation";
 
-        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, featureSize, _numPoints, _nn);
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints, _nn);
 
     }
     else if (_knn_lib == knn_library::EVAL) {
@@ -112,19 +127,18 @@ void DistanceCalculation::computekNN() {
         qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
         std::vector<int> knn_indices_to_Disk;
         std::vector<float> knn_distances_squared_to_Disk;
-        std::tie(knn_indices_to_Disk, knn_distances_squared_to_Disk) = ComputeFullDistMat(_dataFeatures, space, featureSize, _numPoints);
+        std::tie(knn_indices_to_Disk, knn_distances_squared_to_Disk) = ComputeFullDistMat(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints);
 
         qDebug() << "Distance calculation: Evaluation mode - Write distance matrix to disk";
 
         // Write distance matrices to disk
-        std::string savePath = "D:/Documents/Project 2020a/Spidr/Paper/SpidrEvaluation/Data/";
-        savePath += _embeddingName;
+        std::string savePath = _embeddingName;
         std::string infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_numPoints);
         writeVecToBinary(knn_indices_to_Disk, savePath + "_knnInd" + infoStr + ".bin");
         writeVecToBinary(knn_distances_squared_to_Disk, savePath + "_knnDist" + infoStr + ".bin");
         
         qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
-        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, featureSize, _numPoints, _nn);
+        std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints, _nn);
 
     }
 
@@ -144,12 +158,12 @@ const std::tuple< std::vector<int>, std::vector<float>> DistanceCalculation::out
     return { _knn_indices, _knn_distances_squared };
 }
 
-std::vector<int>* DistanceCalculation::get_knn_indices() {
-    return &_knn_indices;
+std::vector<int> DistanceCalculation::get_knn_indices() {
+    return _knn_indices;
 }
 
-std::vector<float>* DistanceCalculation::get_knn_distances_squared() {
-    return &_knn_distances_squared;
+std::vector<float> DistanceCalculation::get_knn_distances_squared() {
+    return _knn_distances_squared;
 }
 
 

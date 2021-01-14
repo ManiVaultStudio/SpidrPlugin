@@ -12,7 +12,7 @@
 #include <omp.h>
 
 #include <cmath>     // std::sqrt, exp, floor
-#include <numeric>   // std::inner_product
+#include <numeric>   // std::inner_product, std:accumulate 
 #include <algorithm> // std::find, fill, sort
 #include <utility>   // std:: pair
 #include <vector>
@@ -39,14 +39,17 @@ enum class knn_library : size_t
 };
 
 /*! Defines the distance metric
-  */
+ */
 enum class distance_metric : size_t
 {
     METRIC_QF = 0,       /*!< Quadratic form distance */
     METRIC_EMD = 1,      /*!< Earth mover distance*/
     METRIC_HEL = 2,      /*!< Hellinger distance */
     METRIC_EUC = 3,      /*!< Euclidean distance - not suitable for histogram features */
-    METRIC_CHA = 4,     /*!< Chamfer distance (points collection)*/
+    METRIC_CHA = 4,      /*!< Chamfer distance (point collection)*/
+    METRIC_SSD = 5,      /*!< Sum of squared distances (point collection)*/
+    METRIC_HAU = 6,      /*!< Hausdorff distance (point collection)*/
+    METRIC_MVN = 7,      /*!< MVN-Reduce, see 10.2312/euroviss, combines spatial and attribute distance with a weight*/
 };
 
 /*!
@@ -58,6 +61,16 @@ enum class bin_sim : size_t
     SIM_EXP = 1,    /*!< exp(-(Euclidean distance between bins)^2/(Max dist)) */
     SIM_UNI = 2,    /*!< 1 (uniform) */
 };
+
+
+/*!
+ * Used in SpidrSettingsWidget to set the distanceMetric/Feature Type pair
+ * Casts enum classes to unsigned int
+ * \param ft feature_type
+ * \param dm distance_metric
+ * \return QVariant(QPoint, QPoint)
+ */
+QVariant MakeMetricPair(feature_type ft, distance_metric dm);
 
 
 /*!
@@ -107,7 +120,7 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
  * \return Tuple of knn Indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
 
 /*! Compute exact kNNs 
  * Calculate the distances between all point pairs and find closest neighbors
@@ -120,7 +133,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
  * \return Tuple of indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn, bool sort = true) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn, bool sort = true) {
     std::vector<std::pair<int, float>> indices_distances;
     std::vector<int> knn_indices;
     std::vector<float> knn_distances_squared;
@@ -140,7 +153,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
 #pragma omp parallel for
 #endif
         for (int j = 0; j < (int)numPoints; j++) {
-            indices_distances[j] = std::make_pair(j, distfunc(dataFeatures->data() + i * featureSize, dataFeatures->data() + j * featureSize, params));
+            indices_distances[j] = std::make_pair(j, distfunc(dataFeatures.data() + i * featureSize, dataFeatures.data() + j * featureSize, params));
         }
 
         if (sort)
@@ -167,7 +180,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeExactKNN(const std::vect
  * \return Tuple of indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints) {
     // set nn = numPoints and sort = false
     return ComputeExactKNN(dataFeatures, space, featureSize, numPoints, numPoints, false);
 }
@@ -178,13 +191,15 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::v
  * \param numDims Number of data channels
  * \param neighborhoodSize Size of neighborhood, must be a perfect square
  * \param neighborhoodWeighting Featureless distances use the weighting
- * \param numPoints Number of points in the data
- * \param attribute_data For use in some DEPRECATED distance metrics
+ * \param featureValsPerPoint used for data_size_
  * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
+ * \param dataVecBegin Used for PC distance where features are just IDs of the actual data
+ * \param weight 
+ * \param imgWidth 
+ * \param numPoints 
  * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
  */
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data, size_t numHistBins=0);
-
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins=0, const float* dataVecBegin = NULL, float weight = 0, int imgWidth = 0, int numPoints = 0);
 
 /*! Calculates the size of an feature wrt to the feature type
  * Used as a step size for adding points to an HNSWlib index
@@ -195,7 +210,7 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size
  * \param neighborhoodSize Size of neighborhood, must be a perfect square
  * \return 
  */
-size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBins, size_t neighborhoodSize);
+const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t numDims, const size_t numHistBins, const size_t neighborhoodSize);
 
 namespace hnswlib {
 
@@ -389,7 +404,7 @@ namespace hnswlib {
         space_params_QF params_;
 
     public:
-        QFSpace(size_t dim, size_t bin, bin_sim ground_type = bin_sim::SIM_EUC) {
+        QFSpace(size_t dim, size_t bin, size_t featureValsPerPoint, bin_sim ground_type = bin_sim::SIM_EUC) {
             qDebug() << "Distance Calculation: Prepare QFSpace";
 
             fstdistfunc_ = QFSqr;
@@ -399,7 +414,7 @@ namespace hnswlib {
                 fstdistfunc_ = QFSqrSSE;
             }
 
-            data_size_ = dim * bin * sizeof(float);
+            data_size_ = featureValsPerPoint * sizeof(float);
 
             ::std::vector<float> A = BinSimilarities(bin, ground_type);
             
@@ -471,12 +486,12 @@ namespace hnswlib {
         space_params_Hel params_;
 
     public:
-        HellingerSpace(size_t dim, size_t bin) {
+        HellingerSpace(size_t dim, size_t bin, size_t featureValsPerPoint) {
             qDebug() << "Distance Calculation: Prepare HellingerSpace";
 
             fstdistfunc_ = HelSqr;
             params_ = { dim, bin };
-            data_size_ = dim * bin * sizeof(float);
+            data_size_ = featureValsPerPoint * sizeof(float);
         }
 
         size_t get_data_size() {
@@ -499,8 +514,9 @@ namespace hnswlib {
     //    Point cloud distance (Chamfer)
     // ---------------
 
-    // data struct for distance calculation in PointCloudSpace
-    struct space_params_Col {
+    // data struct for distance calculation in ChamferSpace
+    struct space_params_Chamf {
+        const float* dataVectorBegin;
         size_t dim;
         ::std::vector<float> A;         // neighborhood similarity matrix
         size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
@@ -509,56 +525,87 @@ namespace hnswlib {
 
     static float
         ChamferDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        float *pVect1 = (float *)pVect1v;   // points to data item: values of neighbors
-        float *pVect2 = (float *)pVect2v;   // points to data item: values of neighbors
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood 1
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood 2
 
-        const space_params_Col* sparam = (space_params_Col*)qty_ptr;
+        // parameters
+        const space_params_Chamf* sparam = (space_params_Chamf*)qty_ptr;
         const size_t ndim = sparam->dim;
         const size_t neighborhoodSize = sparam->neighborhoodSize;
-        const float* pWeight = sparam->A.data();
+        const float* dataVectorBegin = sparam->dataVectorBegin; 
+        const std::vector<float> weights = sparam->A;
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
-        float res = 0;
-        float colDist = FLT_MAX;
-        std::vector<float> rowDist(neighborhoodSize, FLT_MAX);
-        float tmpDist = 0;
+        const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
+        const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
+
+        float colSum = 0;
+        float rowSum = 0; 
+        std::vector<float> colDistMins(neighborhoodSize, FLT_MAX);
+        std::vector<float> rowDistMins(neighborhoodSize, FLT_MAX);
+        float distN1N2 = 0;
+
+        int numNeighbors1 = 0;
+        int numNeighbors2 = 0;
 
         // Euclidean dist between all neighbor pairs
-        // Take the min of all dists from a item in neigh1 to all items in Neigh2
-        // (the above can be written in a distance matrix)
-        // Sum over all the column-wise and row-wise minima
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2 (colDist) and vice versa (rowDist)
+        // Weight the colDist and rowDist with the inverse of the number of items in the neighborhood
         for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
-            colDist = FLT_MAX;
+
+            if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
+                continue; // skip if neighbor is outside image
+
             for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
-                tmpDist = L2distfunc_( (pVect1 +(n1*ndim)), (pVect2 + (n2*ndim)), &ndim);
+                if (idsN2[n2] == -2.0f)
+                    continue; // skip if neighbor is outside image
 
-                if (tmpDist < colDist)
-                    colDist = tmpDist;
+                distN1N2 = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
 
-                if (tmpDist < rowDist[n2]) 
-                    rowDist[n2] = tmpDist;
+                if (distN1N2 < colDistMins[n1])
+                    colDistMins[n1] = distN1N2;
+
+                if (distN1N2 < rowDistMins[n2])
+                    rowDistMins[n2] = distN1N2;
 
             }
-            // add (weighted) min of col
-            res += colDist * *(pWeight + n1);
         }
-        // add (weighted) min of all rows
-        res += std::inner_product(rowDist.begin(), rowDist.end(), pWeight, 0.0f);
 
-        return (res);
+        // weight min of each col and row, and sum over them
+        for (size_t n = 0; n < neighborhoodSize; n++) {
+            if (idsN1[n] != -2.0f)
+            {
+                colSum += colDistMins[n] * weights[n];
+                numNeighbors1++;
+            }
+            if (idsN2[n] != -2.0f)
+            {
+                rowSum += rowDistMins[n] * weights[n];
+                numNeighbors2++;
+            }
+        }
+
+        assert(numNeighbors1 == neighborhoodSize - std::count(pVect1, pVect1 + neighborhoodSize, -2.0f));
+        assert(numNeighbors2 == neighborhoodSize - std::count(pVect2, pVect2 + neighborhoodSize, -2.0f));
+
+        assert(colSum < FLT_MAX);
+        assert(rowSum < FLT_MAX);
+
+        return colSum / numNeighbors1 + rowSum / numNeighbors2;
     }
 
-    class PointCloudSpace : public SpaceInterface<float> {
+
+    class ChamferSpace : public SpaceInterface<float> {
 
         DISTFUNC<float> fstdistfunc_;
         size_t data_size_;
 
-        space_params_Col params_;
+        space_params_Chamf params_;
 
     public:
-        PointCloudSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting) {
+        ChamferSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin, size_t featureValsPerPoint) {
             fstdistfunc_ = ChamferDist;
-            data_size_ = dim * neighborhoodSize * sizeof(float);
+            data_size_ = featureValsPerPoint * sizeof(float);
 
             assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
             unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
@@ -572,7 +619,7 @@ namespace hnswlib {
             default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
             }
 
-            params_ = { dim, A, neighborhoodSize, L2Sqr };
+            params_ = { dataVectorBegin, dim, A, neighborhoodSize, L2Sqr };
 
 #if defined(USE_SSE) || defined(USE_AVX)
             if (dim % 16 == 0)
@@ -598,9 +645,246 @@ namespace hnswlib {
             return &params_;
         }
 
-        ~PointCloudSpace() {}
+        ~ChamferSpace() {}
     };
 
+    // ---------------
+    //    Point cloud distance (Sum of squared distances)
+    // ---------------
+
+// data struct for distance calculation in SSDSpace
+    struct space_params_SSD {
+        const float* dataVectorBegin;
+        size_t dim;
+        ::std::vector<float> A;         // neighborhood similarity matrix
+        size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
+        DISTFUNC<float> L2distfunc_;
+    };
+
+
+    static float
+        SumSquaredDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood 1
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood 2
+
+        // parameters
+        space_params_SSD* sparam = (space_params_SSD*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* dataVectorBegin = sparam->dataVectorBegin;
+        const std::vector<float> weights = sparam->A;
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
+        const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
+
+        float tmpRes = 0;
+
+        int numNeighbors1 = neighborhoodSize - std::count(idsN1.begin(), idsN1.end(), -2.0f);
+        int numNeighbors2 = neighborhoodSize - std::count(idsN2.begin(), idsN2.end(), -2.0f);
+
+        // Euclidean dist between all neighbor pairs
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2 (colDist) and vice versa (rowDist)
+        // Weight the colDist and rowDist with the inverse of the number of items in the neighborhood
+        for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+
+            if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
+                continue; // skip if neighbor is outside image
+
+            for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
+                if (idsN2[n2] == -2.0f)
+                    continue; // skip if neighbor is outside image
+
+                tmpRes += (weights[n1] + weights[n2]) * L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
+
+            }
+        }
+
+        return tmpRes / (numNeighbors1 * numNeighbors2); 
+    }
+
+
+    class SSDSpace : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+
+        space_params_SSD params_;
+
+    public:
+        SSDSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin, size_t featureValsPerPoint) {
+            fstdistfunc_ = SumSquaredDist;
+            data_size_ = featureValsPerPoint * sizeof(float);
+
+            assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
+            unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
+
+            ::std::vector<float> A(neighborhoodSize);
+            switch (weighting)
+            {
+            case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
+            case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NONE); break;
+            default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
+            }
+
+            params_ = { dataVectorBegin, dim, A, neighborhoodSize, L2Sqr };
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                params_.L2distfunc_ = L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                params_.L2distfunc_ = L2SqrSIMD4Ext;
+            else if (dim > 16)
+                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return &params_;
+        }
+
+        ~SSDSpace() {}
+    };
+
+
+    // ---------------
+    //    Point cloud distance (Hausdorff distances)
+    // ---------------
+
+// data struct for distance calculation in SSDSpace
+    struct space_params_Haus {
+        const float* dataVectorBegin;
+        size_t dim;
+        ::std::vector<float> A;         // neighborhood similarity matrix
+        size_t neighborhoodSize;        //  (2 * (params._numLocNeighbors) + 1) * (2 * (params._numLocNeighbors) + 1)
+        DISTFUNC<float> L2distfunc_;
+    };
+
+
+    static float
+        HausdorffDist(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood 1
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood 2
+
+        // parameters
+        space_params_Haus* sparam = (space_params_Haus*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* dataVectorBegin = sparam->dataVectorBegin;
+        const std::vector<float> weights = sparam->A;
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
+        const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
+
+        std::vector<float> colDistMins(neighborhoodSize, FLT_MAX);
+        std::vector<float> rowDistMins(neighborhoodSize, FLT_MAX);
+        float distN1N2 = 0;
+
+        float maxN1 = 0;
+        float maxN2 = 0;
+
+        // Euclidean dist between all neighbor pairs
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2 (colDist) and vice versa (rowDist)
+        // Weight the colDist and rowDist with the inverse of the number of items in the neighborhood
+        for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+
+            if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
+                continue; // skip if neighbor is outside image
+
+            for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
+                if (idsN2[n2] == -2.0f)
+                    continue; // skip if neighbor is outside image
+
+                distN1N2 = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
+
+                if (distN1N2 < colDistMins[n1])
+                    colDistMins[n1] = distN1N2;
+
+                if (distN1N2 < rowDistMins[n2])
+                    rowDistMins[n2] = distN1N2;
+            }
+        }
+
+        // find largest of mins
+        for (size_t n = 0; n < neighborhoodSize; n++) {
+            if ((idsN1[n] != -2.0f) && (weights[n] * colDistMins[n] > maxN1))
+                maxN1 = weights[n] * colDistMins[n];
+
+            if ((idsN2[n] != -2.0f) && (weights[n] * rowDistMins[n] > maxN2))
+                maxN2 = weights[n] * rowDistMins[n];
+        }
+
+        assert(maxN1 < FLT_MAX);
+        assert(maxN2 < FLT_MAX);
+
+        return std::max(maxN1, maxN2);
+    }
+
+
+    class HausdorffSpace : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+
+        space_params_Haus params_;
+
+    public:
+        HausdorffSpace(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin, size_t featureValsPerPoint) {
+            fstdistfunc_ = HausdorffDist;
+            data_size_ = featureValsPerPoint * sizeof(float);
+
+            assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
+            unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
+
+            ::std::vector<float> A(neighborhoodSize);
+            switch (weighting)
+            {
+            case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
+            case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NONE); break;
+            default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
+            }
+
+            params_ = { dataVectorBegin, dim, A, neighborhoodSize, L2Sqr };
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                params_.L2distfunc_ = L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                params_.L2distfunc_ = L2SqrSIMD4Ext;
+            else if (dim > 16)
+                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return &params_;
+        }
+
+        ~HausdorffSpace() {}
+    };
 
     // ---------------
     //    Wasserstein distance (EMD - Earth mover distance)
@@ -692,12 +976,12 @@ namespace hnswlib {
 
     public:
         // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
-        EMDSpace(size_t dim, size_t bin) {
+        EMDSpace(size_t dim, size_t bin, size_t featureValsPerPoint) {
             qDebug() << "Distance Calculation: Prepare EMDSpace";
 
             fstdistfunc_ = EMD_sinkhorn;
 
-            data_size_ = dim * bin * sizeof(float);
+            data_size_ = featureValsPerPoint * sizeof(float);
 
             ::std::vector<float> D;
             D.resize(bin * bin);
@@ -730,4 +1014,129 @@ namespace hnswlib {
         ~EMDSpace() {}
     };
 
+    // ---------------
+//    MVN-Reduce (Combine Attribute and Spatial distance, 10.2312/eurovisshort.20171126)
+// ---------------
+
+    struct space_params_MVN {
+        size_t dim;
+        DISTFUNC<float> L2distfunc_;
+        float weight;
+        float normAttributes;
+        float normSpatial;
+    };
+
+    static float
+        MVN_AttrSpa(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float* pVect1 = (float*)pVect1v;    // pointer to the data features, not the actual data
+        float* pVect2 = (float*)pVect2v;
+
+        std::vector<float> test1(pVect1, pVect1+20);
+        std::vector<float> test2(pVect2, pVect2+20);        // why is there so much garbage after the second entry?
+
+        const space_params_MVN* sparam = (space_params_MVN*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const float weight = sparam->weight;
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        // calc image IDs
+        float ID1Height = std::round(*(pVect1 + ndim));
+        float ID1Width  = std::round(*(pVect1 + ndim + 1));
+
+        float ID2Height = std::round(*(pVect2 + ndim));
+        float ID2Width  = std::round(*(pVect2 + ndim + 1));
+
+        // spatial distance squared
+        float spaDist = std::pow(ID1Height - ID2Height, 2) + std::pow(ID1Width - ID2Width, 2);
+
+        // attribute distance squared
+        float attrDist = L2distfunc_(pVect1v, pVect2v, &ndim);
+
+        float res = (weight / sparam->normSpatial) * spaDist + ((1 - weight) / sparam->normAttributes) * attrDist;
+        //float res = (weight) * spaDist + (1 - weight) * attrDist;
+
+        return res;
+    }
+
+    class MVNSpace : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+        space_params_MVN params_;
+
+    public:
+        // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
+        MVNSpace(size_t dim, float weight, int imgWidth, const float* dataAttrBegin, const unsigned int numPoints) {
+            qDebug() << "Distance Calculation: Prepare MVNSpace";
+
+            fstdistfunc_ = MVN_AttrSpa;
+
+            data_size_ = (dim + 2) * sizeof(float);
+
+            hnswlib::DISTFUNC<float> L2distfunc_ = hnswlib::L2Sqr;
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                L2distfunc_ = hnswlib::L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                L2distfunc_ = hnswlib::L2SqrSIMD4Ext;
+            else if (dim > 16)
+                L2distfunc_ = hnswlib::L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                L2distfunc_ = hnswlib::L2SqrSIMD4ExtResiduals;
+#endif
+
+            qDebug() << "Distance Calculation: Calculating normalization factors";
+
+            // Calc normSpatial: Frobenius norm of spatial distance matrix
+            std::vector<float> sumsSpatDist(numPoints);
+            std::vector<float> sumsAttrDist(numPoints);
+
+#ifdef NDEBUG
+#pragma omp parallel for
+#endif
+            for (int pointID = 0; pointID < (int)numPoints; pointID++) {
+                // prep spat
+                int locHeight = std::floor(pointID / imgWidth);
+                int locWidth = pointID - (locHeight * imgWidth);
+
+                float sumSpatDistsSquared = 0;
+                float sumAttrDistsSquared = 0;
+
+                // prep attr
+                const float* currentPoint = dataAttrBegin + (pointID * dim);
+
+                for (int otherPointID = 0; otherPointID < (int)numPoints; otherPointID++) {
+                    int otherHeight = std::floor(otherPointID / imgWidth);
+                    int otherWidth = otherPointID - (otherHeight * imgWidth);
+
+                    sumSpatDistsSquared += std::pow(locHeight - otherHeight, 2) + std::pow(locWidth - otherWidth, 2);
+                    sumAttrDistsSquared += L2distfunc_(currentPoint, dataAttrBegin + (otherPointID * dim), &dim);
+                }
+
+                sumsSpatDist[pointID] = sumSpatDistsSquared;
+                sumsAttrDist[pointID] = sumAttrDistsSquared;
+
+            }
+
+            float normSpatial = std::accumulate(sumsSpatDist.begin(), sumsSpatDist.end(), (float)0.0);
+            float normAttributes = std::accumulate(sumsAttrDist.begin(), sumsAttrDist.end(), (float)0.0);
+
+            params_ = { dim, L2distfunc_, weight, normAttributes, normSpatial };
+
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return (void *)&params_;
+        }
+
+        ~MVNSpace() {}
+    };
 }

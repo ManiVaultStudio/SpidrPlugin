@@ -12,6 +12,8 @@
 #include <QGridLayout>
 #include <QLineEdit>
 #include <QSpinBox>
+#include <QDoubleSpinBox>
+#include <QSlider>
 #include <QLabel>
 #include <QObject>
 #include <QPushButton>
@@ -24,21 +26,9 @@ using namespace hdps::gui;
 
 class SpidrPlugin;
 
-// Heuristic for setting the histogram bin size
-enum class histBinSizeHeuristic : unsigned int
-{
-    MANUAL = 0,    /*!< Manually  adjust histogram bin size */
-    SQRT = 1,      /*!< ceil(sqrt(n)), n = neighborhood size */
-    STURGES = 2,   /*!< ceil(log_2(n))+1, n = neighborhood size */
-    RICE = 3,      /*!< ceil(2*pow(n, 1/3)), n = neighborhood size */
-};
 
-/**
- * Main settings widget
- */
 /*!
- * 
- * 
+ * Main settings widget
  */
 class SpidrSettingsWidget : public SettingsWidget
 {
@@ -95,6 +85,9 @@ public:
     QComboBox histBinSizeHeur;
     QSpinBox  histBinSize;
 
+    QSlider   weightSpaAttrSlider;
+    QDoubleSpinBox weightSpaAttrNum;
+
     QLineEdit numIterations;
     QLineEdit perplexity;
     QLineEdit exaggeration;
@@ -102,6 +95,9 @@ public:
     QLineEdit numTrees;
     QLineEdit numChecks;
     QLineEdit theta;
+
+    QLineEdit backgroundNameLine;
+    QCheckBox backgroundFromData;   // if ticked take the data not the indices of the data as the background info (for loading background data sets)
 
     QLineEdit embNameLine;
     QPushButton startButton;

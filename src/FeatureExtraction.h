@@ -24,7 +24,7 @@ public:
      * 
      * \return 
      */
-    std::vector<float>* output();
+    std::vector<float> output();
 
     void setNumLocNeighbors(size_t size);
     void setNeighborhoodWeighting(loc_Neigh_Weighting weighting);
@@ -96,6 +96,13 @@ private:
     */
     void calculateGearysC(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
 
+    /*! Compute the sum of dists^2 from one point to all others
+     * See MVN-Reduce doi:10.2312/eurovisshort.20171126.x
+     * \param pointInd
+     * \param neighborValues
+    */
+    void calculateSumAllDist(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs);
+
     /*! Sets the Feature per element to all it's neighbors attributes
      * The neighborhood is a square and centered around each item respectively
      * Padding is done by setting out-of-boundary values to 0
@@ -126,11 +133,13 @@ private:
 
     // Options 
     feature_type _featType;                         /*!< Type of feature to extract */
+    size_t       _numFeatureValsPerPoint;           /*!< depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)> */
     size_t       _locNeighbors;                     /*!< Number of neighbors including center */
     size_t       _kernelWidth;                      /*!< Width of the kernel (2* _locNeighbors +1) */
     size_t       _neighborhoodSize;                 /*!< Square neighborhood centered around an item with _neighborhoodSize neighbors to the left, right, top and buttom */
     loc_Neigh_Weighting _neighborhoodWeighting;     /*!< Weighting type of neighborhood kernel */
     std::vector<float> _neighborhoodWeights;        /*!< Weightings of neighborhood kernel */
+    float _neighborhoodWeightsSum;                  /*!< Sum of weightings in neighborhood kernel */
     size_t       _numHistBins;                      /*!< Number of bins in each histogram */
 
     // Data

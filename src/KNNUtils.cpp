@@ -1,8 +1,14 @@
 #pragma once
 #include "KNNUtils.h"
 
+
+QVariant MakeMetricPair(feature_type ft, distance_metric dm) {
+    return QVariant(QPoint(static_cast<unsigned int>(ft), static_cast<size_t>(dm)));
+}
+
+
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
 
     std::vector<int> indices(numPoints * nn, -1);
     std::vector<float> distances_squared(numPoints * nn, -1);
@@ -12,19 +18,20 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     hnswlib::HierarchicalNSW<float> appr_alg(space, numPoints);   // use default HNSW values for M, ef_construction random_seed
 
     // add data points: each data point holds _numDims*_numHistBins values
-    appr_alg.addPoint((void*)dataFeatures->data(), (std::size_t) 0);
+    appr_alg.addPoint((void*)dataFeatures.data(), (std::size_t) 0);
+
 
 #ifdef NDEBUG
     // This loop is for release mode, it's parallel loop implementation from hnswlib
     int num_threads = std::thread::hardware_concurrency();
     hnswlib::ParallelFor(1, numPoints, num_threads, [&](size_t i, size_t threadId) {
-        appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
+        appr_alg.addPoint((void*)(dataFeatures.data() + (i*indMultiplier)), (hnswlib::labeltype) i);
     });
 #else
 // This loop is for debugging, when you want to sequentially add points
     for (int i = 1; i < numPoints; ++i)
     {
-        appr_alg.addPoint((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype) i);
+        appr_alg.addPoint((void*)(dataFeatures.data() + (i*indMultiplier)), (hnswlib::labeltype) i);
     }
 #endif
     qDebug() << "ComputeHNSWkNN: Search akNN Index";
@@ -36,7 +43,7 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     for (int i = 0; i < numPoints; ++i)
     {
         // find nearest neighbors
-        auto top_candidates = appr_alg.searchKnn((void*)(dataFeatures->data() + (i*indMultiplier)), (hnswlib::labeltype)nn);
+        auto top_candidates = appr_alg.searchKnn((void*)(dataFeatures.data() + (i*indMultiplier)), (hnswlib::labeltype)nn);
         while (top_candidates.size() > nn) {
             top_candidates.pop();
         }
@@ -59,57 +66,74 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     return std::make_tuple(indices, distances_squared);
 }
 // Resolve linker errors with explicit instantiation, https://isocpp.org/wiki/faq/templates#separate-template-fn-defn-from-decl
-template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(const std::vector<float>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
-template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int>* dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(const std::vector<float>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(distance_metric knn_metric, size_t numDims, size_t neighborhoodSize, loc_Neigh_Weighting neighborhoodWeighting, size_t numPoints, std::vector<float>* attribute_data, size_t numHistBins) {
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins, const float* dataVecBegin, float weight, int imgWidth, int numPoints) {
     // chose distance metric
     hnswlib::SpaceInterface<float> *space = NULL;
     if (knn_metric == distance_metric::METRIC_QF)
     {
         assert(numHistBins > 0);
         qDebug() << "Distance calculation: QFSpace as vector feature";
-        space = new hnswlib::QFSpace(numDims, numHistBins);
+        space = new hnswlib::QFSpace(numDims, numHistBins, featureValsPerPoint);
     }
     else if (knn_metric == distance_metric::METRIC_EMD)
     {
         assert(numHistBins > 0);
         qDebug() << "Distance calculation: EMDSpace as vector feature";
-        space = new hnswlib::EMDSpace(numDims, numHistBins);
+        space = new hnswlib::EMDSpace(numDims, numHistBins, featureValsPerPoint);
     }
     else if (knn_metric == distance_metric::METRIC_HEL)
     {
         assert(numHistBins > 0);
         qDebug() << "Distance calculation: HellingerSpace as vector feature metric";
-        space = new hnswlib::HellingerSpace(numDims, numHistBins);
+        space = new hnswlib::HellingerSpace(numDims, numHistBins, featureValsPerPoint);
     }
     else if (knn_metric == distance_metric::METRIC_EUC)
     {
         qDebug() << "Distance calculation: EuclidenSpace (L2Space) as scalar feature metric";
-        space = new hnswlib::L2Space(numDims);
+        space = new hnswlib::L2Space(numDims);  // featureValsPerPoint = numDims
     }
     else if (knn_metric == distance_metric::METRIC_CHA)
     {
-        qDebug() << "Distance calculation: EuclidenSpace (PointCloudSpace, Chamfer distsnce) as scalar feature metric";
-        space = new hnswlib::PointCloudSpace(numDims, neighborhoodSize, neighborhoodWeighting);
+        assert(dataVecBegin != NULL);
+        qDebug() << "Distance calculation: EuclidenSpace (ChamferSpace, Chamfer distsnce) as scalar feature metric";
+        space = new hnswlib::ChamferSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
+    }
+    else if (knn_metric == distance_metric::METRIC_SSD)
+    {
+        assert(dataVecBegin != NULL);
+        qDebug() << "Distance calculation: EuclidenSpace (ChamferSpace, Chamfer distsnce) as scalar feature metric";
+        space = new hnswlib::SSDSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
+    }
+    else if (knn_metric == distance_metric::METRIC_HAU)
+    {
+        assert(dataVecBegin != NULL);
+        qDebug() << "Distance calculation: EuclidenSpace (ChamferSpace, Chamfer distsnce) as scalar feature metric";
+        space = new hnswlib::HausdorffSpace(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
+    }
+    else if (knn_metric == distance_metric::METRIC_MVN)
+    {
+        assert(dataVecBegin != NULL);
+        qDebug() << "Distance calculation: MVN-Reduce - Spatial and Attribute distancec combined with weight " << weight;
+        space = new hnswlib::MVNSpace(numDims, weight, imgWidth, dataVecBegin, numPoints);
     }
     else
-    {
         qDebug() << "Distance calculation: ERROR: Distance metric unknown.";
-        return NULL;
-    }
 
     return space;
 }
 
-size_t SetFeatureSize(feature_type featureType, size_t numDims, size_t numHistBins, size_t neighborhoodSize) {
+const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t numDims, const size_t numHistBins, const size_t neighborhoodSize) {
     size_t featureSize = 0;
     switch (featureType) {
     case feature_type::TEXTURE_HIST_1D: featureSize = numDims * numHistBins; break;
     case feature_type::LISA:            // same as Geary's C
     case feature_type::GEARYC:          featureSize = numDims; break;
-    case feature_type::PCLOUD:            featureSize = numDims * neighborhoodSize; break;
+    case feature_type::PCLOUD:          featureSize = neighborhoodSize; break; // numDims * neighborhoodSize for copying data instead of IDs
+    case feature_type::MVN:             featureSize = numDims + 2; break; // for each point: attr vals and x&y pos
     }
 
     return featureSize;
