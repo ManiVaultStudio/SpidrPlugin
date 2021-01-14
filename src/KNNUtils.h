@@ -120,7 +120,7 @@ static std::vector<float> BinSimilarities(size_t num_bins, bin_sim sim_type = bi
  * \return Tuple of knn Indices and respective squared distances
 */
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t featureSize, size_t numPoints, unsigned int nn);
 
 /*! Compute exact kNNs 
  * Calculate the distances between all point pairs and find closest neighbors
@@ -196,10 +196,10 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeFullDistMat(const std::v
  * \param dataVecBegin Used for PC distance where features are just IDs of the actual data
  * \param weight 
  * \param imgWidth 
- * \param featVecBegin 
+ * \param numPoints 
  * \return A HNSWLib compatible SpaceInterface, which is used as the basis to compare two points
  */
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins=0, const float* dataVecBegin = NULL, float weight = 0, int imgWidth = 0, const std::vector<float>* featureVec = NULL);
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins=0, const float* dataVecBegin = NULL, float weight = 0, int imgWidth = 0, int numPoints = 0);
 
 /*! Calculates the size of an feature wrt to the feature type
  * Used as a step size for adding points to an HNSWlib index
@@ -1020,8 +1020,6 @@ namespace hnswlib {
 
     struct space_params_MVN {
         size_t dim;
-        const float* dataBegin;
-        int imgWidth;
         DISTFUNC<float> L2distfunc_;
         float weight;
         float normAttributes;
@@ -1030,34 +1028,34 @@ namespace hnswlib {
 
     static float
         MVN_AttrSpa(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
-        float* pVect1 = (float*)pVect1v;
+        float* pVect1 = (float*)pVect1v;    // pointer to the data features, not the actual data
         float* pVect2 = (float*)pVect2v;
+
+        std::vector<float> test1(pVect1, pVect1+20);
+        std::vector<float> test2(pVect2, pVect2+20);        // why is there so much garbage after the second entry?
 
         const space_params_MVN* sparam = (space_params_MVN*)qty_ptr;
         const size_t ndim = sparam->dim;
-        const int imgWidth = sparam->imgWidth;
         const float weight = sparam->weight;
-        const float* dataBegin = sparam->dataBegin;
         DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
 
-        // get global ID from pointer
-        auto globID1 = (pVect1 - dataBegin) / ndim;
-        auto globID2 = (pVect2 - dataBegin) / ndim;
-
         // calc image IDs
-        int ID1Height = std::floor(globID1 / imgWidth);
-        int ID1Width = globID1 - (ID1Height * imgWidth);
+        float ID1Height = std::round(*(pVect1 + ndim));
+        float ID1Width  = std::round(*(pVect1 + ndim + 1));
 
-        int ID2Height = std::floor(globID2 / imgWidth);
-        int ID2Width = globID2 - (ID1Height * imgWidth);
+        float ID2Height = std::round(*(pVect2 + ndim));
+        float ID2Width  = std::round(*(pVect2 + ndim + 1));
 
-        // spatial distance
+        // spatial distance squared
         float spaDist = std::pow(ID1Height - ID2Height, 2) + std::pow(ID1Width - ID2Width, 2);
 
-        // attribute distance
+        // attribute distance squared
         float attrDist = L2distfunc_(pVect1v, pVect2v, &ndim);
 
-        return (weight / sparam->normSpatial) * spaDist + ((1-weight) / sparam->normAttributes) * attrDist;
+        float res = (weight / sparam->normSpatial) * spaDist + ((1 - weight) / sparam->normAttributes) * attrDist;
+        //float res = (weight) * spaDist + (1 - weight) * attrDist;
+
+        return res;
     }
 
     class MVNSpace : public SpaceInterface<float> {
@@ -1068,54 +1066,63 @@ namespace hnswlib {
 
     public:
         // ground_weight might be set to (0.5 * sd of all data * ground_dist_max^2) as im doi:10.1006/cviu.2001.0934
-        MVNSpace(size_t dim, float weight, int imgWidth, const float* dataBegin, const std::vector<float>* sumsDistAttr) {
+        MVNSpace(size_t dim, float weight, int imgWidth, const float* dataAttrBegin, const unsigned int numPoints) {
             qDebug() << "Distance Calculation: Prepare MVNSpace";
 
             fstdistfunc_ = MVN_AttrSpa;
 
-            data_size_ = dim * sizeof(float);
+            data_size_ = (dim + 2) * sizeof(float);
 
-            // Complete the Frobenius norm (started in FeatureExtraction)
-            float normAttributes = std::accumulate(sumsDistAttr->begin(), sumsDistAttr->end(), (float)0.0);
+            hnswlib::DISTFUNC<float> L2distfunc_ = hnswlib::L2Sqr;
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                L2distfunc_ = hnswlib::L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                L2distfunc_ = hnswlib::L2SqrSIMD4Ext;
+            else if (dim > 16)
+                L2distfunc_ = hnswlib::L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                L2distfunc_ = hnswlib::L2SqrSIMD4ExtResiduals;
+#endif
+
+            qDebug() << "Distance Calculation: Calculating normalization factors";
 
             // Calc normSpatial: Frobenius norm of spatial distance matrix
-            size_t numPoints = sumsDistAttr->size();
-            std::vector<float> sumsDistSpa(numPoints);
+            std::vector<float> sumsSpatDist(numPoints);
+            std::vector<float> sumsAttrDist(numPoints);
 
 #ifdef NDEBUG
 #pragma omp parallel for
 #endif
-            for (int locPointID = 0; locPointID < (int)numPoints; locPointID++) {
-                int locHeight = std::floor(locPointID / imgWidth);
-                int locWidth = locPointID - (locHeight * imgWidth);
+            for (int pointID = 0; pointID < (int)numPoints; pointID++) {
+                // prep spat
+                int locHeight = std::floor(pointID / imgWidth);
+                int locWidth = pointID - (locHeight * imgWidth);
 
-                float sumDistsSquared = 0;
+                float sumSpatDistsSquared = 0;
+                float sumAttrDistsSquared = 0;
 
-                for (int OtherPointID = 0; OtherPointID < (int)numPoints; OtherPointID++) {
-                    int otherHeight = std::floor(OtherPointID / imgWidth);
-                    int otherWidth = OtherPointID - (otherHeight * imgWidth);
+                // prep attr
+                const float* currentPoint = dataAttrBegin + (pointID * dim);
 
-                    sumDistsSquared += std::pow(locHeight - otherHeight, 2) + std::pow(locWidth - otherWidth, 2);
+                for (int otherPointID = 0; otherPointID < (int)numPoints; otherPointID++) {
+                    int otherHeight = std::floor(otherPointID / imgWidth);
+                    int otherWidth = otherPointID - (otherHeight * imgWidth);
+
+                    sumSpatDistsSquared += std::pow(locHeight - otherHeight, 2) + std::pow(locWidth - otherWidth, 2);
+                    sumAttrDistsSquared += L2distfunc_(currentPoint, dataAttrBegin + (otherPointID * dim), &dim);
                 }
-                
-                sumsDistSpa[locPointID] = sumDistsSquared;
+
+                sumsSpatDist[pointID] = sumSpatDistsSquared;
+                sumsAttrDist[pointID] = sumAttrDistsSquared;
 
             }
 
-            float normSpatial = std::accumulate(sumsDistSpa.begin(), sumsDistSpa.end(), (float)0.0);
+            float normSpatial = std::accumulate(sumsSpatDist.begin(), sumsSpatDist.end(), (float)0.0);
+            float normAttributes = std::accumulate(sumsAttrDist.begin(), sumsAttrDist.end(), (float)0.0);
 
-            params_ = { dim, dataBegin, imgWidth, L2Sqr, weight, normAttributes, normSpatial };
+            params_ = { dim, L2distfunc_, weight, normAttributes, normSpatial };
 
-#if defined(USE_SSE) || defined(USE_AVX)
-            if (dim % 16 == 0)
-                params_.L2distfunc_ = L2SqrSIMD16Ext;
-            else if (dim % 4 == 0)
-                params_.L2distfunc_ = L2SqrSIMD4Ext;
-            else if (dim > 16)
-                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
-            else if (dim > 4)
-                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
-#endif
         }
 
         size_t get_data_size() {

@@ -8,7 +8,7 @@ QVariant MakeMetricPair(feature_type ft, distance_metric dm) {
 
 
 template<typename T>
-std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
+std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {
 
     std::vector<int> indices(numPoints * nn, -1);
     std::vector<float> distances_squared(numPoints * nn, -1);
@@ -19,7 +19,6 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
 
     // add data points: each data point holds _numDims*_numHistBins values
     appr_alg.addPoint((void*)dataFeatures.data(), (std::size_t) 0);
-
 
 
 #ifdef NDEBUG
@@ -67,11 +66,11 @@ std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vecto
     return std::make_tuple(indices, distances_squared);
 }
 // Resolve linker errors with explicit instantiation, https://isocpp.org/wiki/faq/templates#separate-template-fn-defn-from-decl
-template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(const std::vector<float> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
-template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int> dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<float>(const std::vector<float>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
+template std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN<unsigned int>(const std::vector<unsigned int>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn);
 
 
-hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins, const float* dataVecBegin, float weight, int imgWidth, const std::vector<float>* featureVec) {
+hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric, const size_t numDims, const size_t neighborhoodSize, const loc_Neigh_Weighting neighborhoodWeighting, const size_t featureValsPerPoint, const size_t numHistBins, const float* dataVecBegin, float weight, int imgWidth, int numPoints) {
     // chose distance metric
     hnswlib::SpaceInterface<float> *space = NULL;
     if (knn_metric == distance_metric::METRIC_QF)
@@ -118,9 +117,8 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric
     else if (knn_metric == distance_metric::METRIC_MVN)
     {
         assert(dataVecBegin != NULL);
-        assert(featureVec != NULL);
         qDebug() << "Distance calculation: MVN-Reduce - Spatial and Attribute distancec combined with weight " << weight;
-        space = new hnswlib::MVNSpace(numDims, weight, imgWidth, dataVecBegin, featureVec);
+        space = new hnswlib::MVNSpace(numDims, weight, imgWidth, dataVecBegin, numPoints);
     }
     else
         qDebug() << "Distance calculation: ERROR: Distance metric unknown.";
@@ -135,7 +133,7 @@ const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t
     case feature_type::LISA:            // same as Geary's C
     case feature_type::GEARYC:          featureSize = numDims; break;
     case feature_type::PCLOUD:          featureSize = neighborhoodSize; break; // numDims * neighborhoodSize for copying data instead of IDs
-    case feature_type::MVN:             featureSize = 1; break; // sum of dist^2 to all other points
+    case feature_type::MVN:             featureSize = numDims + 2; break; // for each point: attr vals and x&y pos
     }
 
     return featureSize;

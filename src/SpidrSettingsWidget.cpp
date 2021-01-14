@@ -119,7 +119,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     QLabel* histBinSizeLabel = new QLabel("Number Bins");
 
     QLabel* weightSpAttrLabel = new QLabel("MVN weight");
-    weightSpAttrLabel->setToolTip("Weight Attribute (1) vs Spatial (0)");
+    weightSpAttrLabel->setToolTip("Weight Attribute (0) vs Spatial (1)");
     
     // Set option default values
     numIterations.setFixedWidth(50);

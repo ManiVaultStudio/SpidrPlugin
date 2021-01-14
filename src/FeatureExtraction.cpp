@@ -289,28 +289,17 @@ void FeatureExtraction::calculateGearysC(size_t pointInd, std::vector<float> nei
 }
 
 void FeatureExtraction::calculateSumAllDist(size_t pointInd, std::vector<float> neighborValues, std::vector<int> neighborIDs) {
-    assert(_outFeatures.size() == _numPoints);
+    assert(_outFeatures.size() == _numPoints * (_numDims + 2));
 
-    float sumDistsSquared = 0;
-    float* currentPoint = _attribute_data.data() + (pointInd * _numDims);
+    std::copy_n(_attribute_data.begin() + (pointInd * _numDims), _numDims, _outFeatures.begin() + (pointInd * _numFeatureValsPerPoint));
 
-    hnswlib::DISTFUNC<float> L2distfunc_ = hnswlib::L2Sqr;
-#if defined(USE_SSE) || defined(USE_AVX)
-    if (_numDims % 16 == 0)
-        L2distfunc_ = hnswlib::L2SqrSIMD16Ext;
-    else if (_numDims % 4 == 0)
-        L2distfunc_ = hnswlib::L2SqrSIMD4Ext;
-    else if (_numDims > 16)
-        L2distfunc_ = hnswlib::L2SqrSIMD16ExtResiduals;
-    else if (_numDims > 4)
-        L2distfunc_ = hnswlib::L2SqrSIMD4ExtResiduals;
-#endif
+    int locHeight = std::floor(pointInd / _imgSize.width());         // height val, pixel pos in image
+    int locWidth = pointInd - (locHeight * _imgSize.width());        // width val, pixel pos in image
 
-    // sum squared distances to all other points
-    for(size_t otherPointInd = 0; otherPointInd < _numPoints; otherPointInd++)
-        sumDistsSquared += L2distfunc_(currentPoint, _attribute_data.data() + (otherPointInd * _numDims), &_numDims);
+    _outFeatures[pointInd * _numFeatureValsPerPoint + _numDims] = locHeight;
+    _outFeatures[pointInd * _numFeatureValsPerPoint + _numDims + 1] = locWidth;
 
-    _outFeatures[pointInd] = sumDistsSquared;
+    
 }
 
 
