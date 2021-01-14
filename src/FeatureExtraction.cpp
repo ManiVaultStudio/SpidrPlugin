@@ -78,8 +78,6 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
 
     assert(_attribute_data.size() == _numPoints * _numDims);
 
-    qDebug() << "Feature extraction: Num neighbors (in each direction): " << _locNeighbors << "(total neighbors: " << _neighborhoodSize << ") Neighbor weighting: " << (unsigned int)_neighborhoodWeighting;
-
     if (_featType == feature_type::TEXTURE_HIST_1D)
     {
         featFunct = &FeatureExtraction::calculateHistogram;  // will be called as calculateHistogram(_pointIds[pointID], neighborValues);
@@ -103,6 +101,8 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
     else if (_featType == feature_type::MVN)
     {
         featFunct = &FeatureExtraction::calculateSumAllDist;
+        _locNeighbors = 0;      // even better was to skip the neighborhood extraction during
+        _neighborhoodSize = 1;  // feature calculation but this is the next best thing
         qDebug() << "Feature extraction: Preparation for Frobenius norm of attribute dist matrices";
     }
     else
@@ -111,6 +111,7 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
         qDebug() << "Feature extraction: unknown feature type";
     }
 
+    qDebug() << "Feature extraction: Num neighbors (in each direction): " << _locNeighbors << "(total neighbors: " << _neighborhoodSize << ") Neighbor weighting: " << (unsigned int)_neighborhoodWeighting;
 
 }
 
