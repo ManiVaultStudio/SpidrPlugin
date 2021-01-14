@@ -345,13 +345,8 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int distMetricBoxIndex) {
     // provide options for the vector size
     // also, check if neighborhood weighting is 
     // available for the specific feature
-    if (distMetricBoxIndex >= 5) {
-        // PCD, no features
-        histBinSizeHeur.setEnabled(false);
-        histBinSize.setEnabled(false);
-    }
-    else if (distMetricBoxIndex >= 3) {
-        // LISA, GC, scalar features
+    if (distMetricBoxIndex >= 3) {
+        // PCD (no features) LISA, GC (scalar features)
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
     }
@@ -363,10 +358,16 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int distMetricBoxIndex) {
     if (distMetricBoxIndex == 8) {
         weightSpaAttrSlider.setEnabled(true);
         weightSpaAttrNum.setEnabled(true);
+
+        kernelSize.setEnabled(false);
+        kernelWeight.setEnabled(false);
     }
     else {
         weightSpaAttrSlider.setEnabled(false);
         weightSpaAttrNum.setEnabled(false);
+
+        kernelSize.setEnabled(true);
+        kernelWeight.setEnabled(true);
     }
 }
 
