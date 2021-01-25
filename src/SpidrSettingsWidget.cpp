@@ -49,6 +49,9 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Point Clound (SSD)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));
     distanceMetric.addItem("Point Clound (Hausdorff)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU));
     distanceMetric.addItem("MVN (Attr./Spatial)", MakeMetricPair(feature_type::MVN, distance_metric::METRIC_MVN));
+    distanceMetric.addItem("MVN (Attr./Spatial)", MakeMetricPair(feature_type::MVN, distance_metric::METRIC_MVN));
+    distanceMetric.addItem("Hausdorff (Min)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_min));
+    distanceMetric.addItem("Hausdorff (Median)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_med));
     distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance) \n MVN-Reduce (Combination of Spatial and Attribute distance)");
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
