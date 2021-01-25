@@ -6,6 +6,15 @@ QVariant MakeMetricPair(feature_type ft, distance_metric dm) {
     return QVariant(QPoint(static_cast<unsigned int>(ft), static_cast<size_t>(dm)));
 }
 
+distance_metric GetDistMetricFromMetricPair(const QVariant metricPair) {
+    return static_cast<distance_metric> (metricPair.value<QPoint>().y());
+}
+
+feature_type GetFeatureTypeFromMetricPair(const QVariant metricPair) {
+    return static_cast<feature_type> (metricPair.value<QPoint>().x());
+}
+
+
 
 template<typename T>
 std::tuple<std::vector<int>, std::vector<float>> ComputeHNSWkNN(const std::vector<T>& dataFeatures, hnswlib::SpaceInterface<float> *space, size_t indMultiplier, size_t numPoints, unsigned int nn) {

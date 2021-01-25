@@ -58,8 +58,8 @@ public:
      * \param perplexity
      * \param exaggeration
      */
-    void initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins, \
-                                    const int aknnAlgInd, const int aknnMetric, const float MVNweight, \
+    void initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
+                                    const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
                                     const int numIterations, const int perplexity, const int exaggeration);
 
     // Getter

@@ -33,23 +33,23 @@
  */
 enum class knn_library : size_t
 {
-    EVAL = 99,          /*!< No knn library in use, full dist matrix and save it to disk */ 
-    NONE = 0,           /*!< No knn library in use, no approximation i.e. exact kNN computation */ 
-    KNN_HNSW = 1,       /*!< HNSWLib */
+    EVAL,           /*!< No knn library in use, full dist matrix and save it to disk */ 
+    NONE,           /*!< No knn library in use, no approximation i.e. exact kNN computation */ 
+    KNN_HNSW,       /*!< HNSWLib */
 };
 
 /*! Defines the distance metric
  */
 enum class distance_metric : size_t
 {
-    METRIC_QF = 0,       /*!< Quadratic form distance */
-    METRIC_EMD = 1,      /*!< Earth mover distance*/
-    METRIC_HEL = 2,      /*!< Hellinger distance */
-    METRIC_EUC = 3,      /*!< Euclidean distance - not suitable for histogram features */
-    METRIC_CHA = 4,      /*!< Chamfer distance (point collection)*/
-    METRIC_SSD = 5,      /*!< Sum of squared distances (point collection)*/
-    METRIC_HAU = 6,      /*!< Hausdorff distance (point collection)*/
-    METRIC_MVN = 7,      /*!< MVN-Reduce, see 10.2312/euroviss, combines spatial and attribute distance with a weight*/
+    METRIC_QF,       /*!< Quadratic form distance */
+    METRIC_EMD,      /*!< Earth mover distance*/
+    METRIC_HEL,      /*!< Hellinger distance */
+    METRIC_EUC,      /*!< Euclidean distance - not suitable for histogram features */
+    METRIC_CHA,      /*!< Chamfer distance (point collection)*/
+    METRIC_SSD,      /*!< Sum of squared distances (point collection)*/
+    METRIC_HAU,      /*!< Hausdorff distance (point collection)*/
+    METRIC_MVN,      /*!< MVN-Reduce, see 10.2312/euroviss, combines spatial and attribute distance with a weight*/
 };
 
 /*!
@@ -57,9 +57,9 @@ enum class distance_metric : size_t
  */
 enum class bin_sim : size_t
 {
-    SIM_EUC = 0,    /*!< 1 - sqrt(Euclidean distance between bins)/(Max dist) */
-    SIM_EXP = 1,    /*!< exp(-(Euclidean distance between bins)^2/(Max dist)) */
-    SIM_UNI = 2,    /*!< 1 (uniform) */
+    SIM_EUC,    /*!< 1 - sqrt(Euclidean distance between bins)/(Max dist) */
+    SIM_EXP,    /*!< exp(-(Euclidean distance between bins)^2/(Max dist)) */
+    SIM_UNI,    /*!< 1 (uniform) */
 };
 
 
@@ -72,6 +72,9 @@ enum class bin_sim : size_t
  */
 QVariant MakeMetricPair(feature_type ft, distance_metric dm);
 
+
+distance_metric GetDistMetricFromMetricPair(const QVariant metricPair);
+feature_type GetFeatureTypeFromMetricPair(const QVariant metricPair);
 
 /*!
  * Computes the similarities of bins of a 1D histogram.
