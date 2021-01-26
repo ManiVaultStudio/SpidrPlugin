@@ -141,6 +141,18 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric
         qDebug() << "Distance calculation: EuclidenSpace (Hausdorff, med)";
         space = new hnswlib::HausdorffSpace_median(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
     }
+    else if (knn_metric == distance_metric::METRIC_HAU_medmed)
+    {
+        assert(dataVecBegin != NULL);
+        qDebug() << "Distance calculation: EuclidenSpace (Hausdorff, med)";
+        space = new hnswlib::HausdorffSpace_medianmedian(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
+    }
+    else if (knn_metric == distance_metric::METRIC_HAU_minmax)
+    {
+        assert(dataVecBegin != NULL);
+        qDebug() << "Distance calculation: EuclidenSpace (Hausdorff, minmax)";
+        space = new hnswlib::HausdorffSpace_minmax(numDims, neighborhoodSize, neighborhoodWeighting, dataVecBegin, featureValsPerPoint);
+    }
     else
         qDebug() << "Distance calculation: ERROR: Distance metric unknown.";
 

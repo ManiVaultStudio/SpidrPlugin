@@ -51,6 +51,8 @@ enum class distance_metric : size_t
     METRIC_HAU,      /*!< Hausdorff distance (point collection)*/
     METRIC_HAU_min,      /*!< Hausdorff distance (point collection) but with min instead of max*/                       // TODO: Is there a name for this in the literature 
     METRIC_HAU_med,      /*!< Hausdorff distance (point collection) but with median instead of max*/                    //       or does this not make sense at all?
+    METRIC_HAU_medmed,      /*!< Hausdorff distance (point collection) but with median instead of max*/                    //       or does this not make sense at all?
+    METRIC_HAU_minmax,      /*!< Hausdorff distance (point collection) but with median instead of max*/                    //       or does this not make sense at all?
     METRIC_MVN,      /*!< MVN-Reduce, see 10.2312/euroviss, combines spatial and attribute distance with a weight*/ 
 };
 
@@ -1011,6 +1013,126 @@ namespace hnswlib {
 
 
     // ---------------
+//    Point cloud distance (Hausdorff _min distances)
+// ---------------
+
+
+    static float
+        HausdorffDist_minmax(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood 1
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood 2
+
+        // parameters
+        space_params_Haus* sparam = (space_params_Haus*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* dataVectorBegin = sparam->dataVectorBegin;
+        const std::vector<float> weights = sparam->A;
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
+        const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
+
+        std::vector<float> colDistMins(neighborhoodSize, 0);
+        std::vector<float> rowDistMins(neighborhoodSize, 0);
+        float distN1N2 = 0;
+
+        float minN1 = 0;
+        float minN2 = 0;
+
+        // Euclidean dist between all neighbor pairs
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2 (colDist) and vice versa (rowDist)
+        // Weight the colDist and rowDist with the inverse of the number of items in the neighborhood
+        for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+
+            if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
+                continue; // skip if neighbor is outside image
+
+            for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
+                if (idsN2[n2] == -2.0f)
+                    continue; // skip if neighbor is outside image
+
+                distN1N2 = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
+
+                if (distN1N2 > colDistMins[n1])
+                    colDistMins[n1] = distN1N2;
+
+                if (distN1N2 > rowDistMins[n2])
+                    rowDistMins[n2] = distN1N2;
+            }
+        }
+
+        // find smallest of mins
+        for (size_t n = 0; n < neighborhoodSize; n++) {
+            if ((idsN1[n] != -2.0f) && (weights[n] * colDistMins[n] > minN1))
+                minN1 = weights[n] * colDistMins[n];
+
+            if ((idsN2[n] != -2.0f) && (weights[n] * rowDistMins[n] > minN2))
+                minN2 = weights[n] * rowDistMins[n];
+        }
+
+        assert(minN1 < FLT_MAX);
+        assert(minN2 < FLT_MAX);
+
+        return std::min(minN1, minN2);
+    }
+
+
+    class HausdorffSpace_minmax : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+
+        space_params_Haus params_;
+
+    public:
+        HausdorffSpace_minmax(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin, size_t featureValsPerPoint) {
+            fstdistfunc_ = HausdorffDist_minmax;
+            data_size_ = featureValsPerPoint * sizeof(float);
+
+            assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
+            unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
+
+            ::std::vector<float> A(neighborhoodSize);
+            switch (weighting)
+            {
+            case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
+            case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NONE); break;
+            default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
+            }
+
+            params_ = { dataVectorBegin, dim, A, neighborhoodSize, L2Sqr };
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                params_.L2distfunc_ = L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                params_.L2distfunc_ = L2SqrSIMD4Ext;
+            else if (dim > 16)
+                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return &params_;
+        }
+
+        ~HausdorffSpace_minmax() {}
+    };
+
+
+    // ---------------
     //    Point cloud distance (Hausdorff _median distances)
     // ---------------
 
@@ -1079,7 +1201,6 @@ namespace hnswlib {
         return (colMed + rowMed) / 2;
     }
 
-
     class HausdorffSpace_median : public SpaceInterface<float> {
 
         DISTFUNC<float> fstdistfunc_;
@@ -1131,6 +1252,162 @@ namespace hnswlib {
         }
 
         ~HausdorffSpace_median() {}
+    };
+
+    // ---------------
+    //    Point cloud distance (Hausdorff _medianmedian distances)
+    // ---------------
+
+
+    static float
+        HausdorffDist_medianmedian(const void *pVect1v, const void *pVect2v, const void *qty_ptr) {
+        float *pVect1 = (float *)pVect1v;   // points to first ID in neighborhood 1
+        float *pVect2 = (float *)pVect2v;   // points to first ID in neighborhood 2
+
+        // parameters
+        space_params_Haus* sparam = (space_params_Haus*)qty_ptr;
+        const size_t ndim = sparam->dim;
+        const size_t neighborhoodSize = sparam->neighborhoodSize;
+        const float* dataVectorBegin = sparam->dataVectorBegin;
+        const std::vector<float> weights = sparam->A;
+        DISTFUNC<float> L2distfunc_ = sparam->L2distfunc_;
+
+        const std::vector<int> idsN1(pVect1, pVect1 + neighborhoodSize);    // implicitly converts float to int
+        const std::vector<int> idsN2(pVect2, pVect2 + neighborhoodSize);
+
+        std::vector<float> colDistMeds(neighborhoodSize, FLT_MAX);
+        std::vector<float> rowDistMeds(neighborhoodSize, FLT_MAX);
+
+        Eigen::MatrixXf distMat(neighborhoodSize, neighborhoodSize);    // access with distMat(row, col)
+        distMat.fill(FLT_MAX);
+
+        // Euclidean dist between all neighbor pairs
+        // Take the min of all dists from a item in neigh1 to all items in Neigh2 (colDist) and vice versa (rowDist)
+        // Weight the colDist and rowDist with the inverse of the number of items in the neighborhood
+        for (size_t n1 = 0; n1 < neighborhoodSize; n1++) {
+
+            if (idsN1[n1] == -2.0f)    // -1 is used for unprocessed locations during feature extraction, thus -2 indicated values outside image
+                continue; // skip if neighbor is outside image
+
+            for (size_t n2 = 0; n2 < neighborhoodSize; n2++) {
+                if (idsN2[n2] == -2.0f)
+                    continue; // skip if neighbor is outside image
+
+                distMat(n1, n2) = L2distfunc_(dataVectorBegin + (idsN1[n1] * ndim), dataVectorBegin + (idsN2[n2] * ndim), &ndim);
+
+            }
+        }
+
+        // find medians of columns and rows
+        std::vector<float> colDists(neighborhoodSize);
+        std::vector<float> rowDists(neighborhoodSize);
+        unsigned int neighborhoodSize_c = 0;
+        unsigned int neighborhoodSize_r = 0;
+        for (size_t n = 0; n < neighborhoodSize; n++) {
+            // map eigen vector rows and cols to std vector
+            Eigen::Map<Eigen::RowVectorXf>(&colDists[0], 1, neighborhoodSize) = distMat.col(n);
+            Eigen::Map<Eigen::RowVectorXf>(&rowDists[0], 1, neighborhoodSize) = distMat.row(n);
+
+            // count FLT_MAX to determine median pos
+            neighborhoodSize_c = neighborhoodSize - std::count(colDists.begin(), colDists.end(), FLT_MAX);
+            neighborhoodSize_r = neighborhoodSize - std::count(rowDists.begin(), rowDists.end(), FLT_MAX);
+
+            // calc median
+            if (neighborhoodSize_c % 2 != 0) {
+                std::nth_element(colDists.begin(), colDists.begin() + neighborhoodSize_c / 2, colDists.end());
+                std::nth_element(colDists.begin(), colDists.begin() + neighborhoodSize_c / 2 + 1, colDists.end());
+                colDistMeds[n] = (colDists[neighborhoodSize_c / 2] + colDists[neighborhoodSize_c / 2 + 1]) / 2;
+            }
+            else
+            {
+                std::nth_element(colDists.begin(), colDists.begin() + neighborhoodSize_c / 2, colDists.end());
+                colDistMeds[n] = colDists[neighborhoodSize_c / 2];
+            }
+
+            if (neighborhoodSize_r % 2 != 0) {
+                std::nth_element(rowDists.begin(), rowDists.begin() + neighborhoodSize_r / 2, rowDists.end());
+                std::nth_element(rowDists.begin(), rowDists.begin() + neighborhoodSize_r / 2 + 1, rowDists.end());
+                rowDistMeds[n] = (rowDists[neighborhoodSize_r / 2] + rowDists[neighborhoodSize_r / 2 + 1]) / 2;
+            }
+            else {
+                std::nth_element(rowDists.begin(), rowDists.begin() + neighborhoodSize_r / 2, rowDists.end());
+                rowDistMeds[n] = rowDists[neighborhoodSize_r / 2];
+
+            }
+
+
+        }
+
+        assert(neighborhoodSize % 2 != 0);
+
+        // find median of medians
+        std::nth_element(colDistMeds.begin(), colDistMeds.begin() + neighborhoodSize / 2, colDistMeds.end());
+        std::nth_element(colDistMeds.begin(), colDistMeds.begin() + neighborhoodSize / 2 + 1, colDistMeds.end());
+        float colMed = (colDistMeds[neighborhoodSize / 2] + colDistMeds[neighborhoodSize / 2 + 1]) / 2;
+
+        std::nth_element(rowDistMeds.begin(), rowDistMeds.begin() + neighborhoodSize / 2, rowDistMeds.end());
+        std::nth_element(rowDistMeds.begin(), rowDistMeds.begin() + neighborhoodSize / 2 + 1, rowDistMeds.end());
+        float rowMed = (rowDistMeds[neighborhoodSize / 2] + rowDistMeds[neighborhoodSize / 2 + 1]) / 2;
+
+
+        assert(colMed < FLT_MAX);
+        assert(rowMed < FLT_MAX);
+
+        return (colMed + rowMed) / 2;
+    }
+
+
+    class HausdorffSpace_medianmedian : public SpaceInterface<float> {
+
+        DISTFUNC<float> fstdistfunc_;
+        size_t data_size_;
+
+        space_params_Haus params_;
+
+    public:
+        HausdorffSpace_medianmedian(size_t dim, size_t neighborhoodSize, loc_Neigh_Weighting weighting, const float* dataVectorBegin, size_t featureValsPerPoint) {
+            fstdistfunc_ = HausdorffDist_medianmedian;
+            data_size_ = featureValsPerPoint * sizeof(float);
+
+            assert((::std::sqrt(neighborhoodSize) - std::floor(::std::sqrt(neighborhoodSize))) == 0);  // neighborhoodSize must be perfect square
+            unsigned int _kernelWidth = (int)::std::sqrt(neighborhoodSize);
+
+            ::std::vector<float> A(neighborhoodSize);
+            switch (weighting)
+            {
+            case loc_Neigh_Weighting::WEIGHT_UNIF: std::fill(A.begin(), A.end(), 1); break;
+            case loc_Neigh_Weighting::WEIGHT_BINO: A = BinomialKernel2D(_kernelWidth, norm_vec::NORM_MAX); break;        // weight the center with 1
+            case loc_Neigh_Weighting::WEIGHT_GAUS: A = GaussianKernel2D(_kernelWidth, 1.0, norm_vec::NORM_NONE); break;
+            default:  std::fill(A.begin(), A.end(), -1);  break;  // no implemented weighting type given. 
+            }
+
+            params_ = { dataVectorBegin, dim, A, neighborhoodSize, L2Sqr };
+
+#if defined(USE_SSE) || defined(USE_AVX)
+            if (dim % 16 == 0)
+                params_.L2distfunc_ = L2SqrSIMD16Ext;
+            else if (dim % 4 == 0)
+                params_.L2distfunc_ = L2SqrSIMD4Ext;
+            else if (dim > 16)
+                params_.L2distfunc_ = L2SqrSIMD16ExtResiduals;
+            else if (dim > 4)
+                params_.L2distfunc_ = L2SqrSIMD4ExtResiduals;
+#endif
+        }
+
+        size_t get_data_size() {
+            return data_size_;
+        }
+
+        DISTFUNC<float> get_dist_func() {
+            return fstdistfunc_;
+        }
+
+        void *get_dist_func_param() {
+            return &params_;
+        }
+
+        ~HausdorffSpace_medianmedian() {}
     };
 
 
