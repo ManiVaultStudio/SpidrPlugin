@@ -15,8 +15,8 @@
 enum class feature_type : unsigned int
 {
     TEXTURE_HIST_1D = 0,    /*!< Histograms of data point neighborhood, vector feature */
-    LISA = 1,               /*!< Local Indicator of Spatial Associations, scalar feaure */
-    GEARYC = 2,             /*!< Geary's, scalar feature */
+    LOCALMORANSI = 1,       /*!< local Moran's I (Local Indicator of Spatial Associations), scalar feaure */
+    GEARYC = 2,             /*!< Geary's, C (Local Indicator of Spatial Associations) scalar feature */
     PCLOUD = 3,             /*!< Point cloud, i.e. just the neighborhood, no transformations*/
     MVN = 4,                /*!< MVN-Reduce, see 10.2312/euroviss, computes Frobenius norms of spatial and attribute distance matrices*/
 };
@@ -32,7 +32,7 @@ enum class histBinSizeHeuristic : unsigned int
 
 
 /*! Weighting of local neighborhoods
- * Used e.g. in histogram creation, spatial weighting in LISA and Point cloud distance
+ * Used e.g. in histogram creation, spatial weighting in LOCALMORANSI and Point cloud distance
  */
 enum class loc_Neigh_Weighting : unsigned int
 {

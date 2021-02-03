@@ -43,7 +43,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Texture Hist. (QF)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_QF));
     distanceMetric.addItem("Texture Hist. (EMD)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_EMD));
     distanceMetric.addItem("Texture Hist. (Hel)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
-    distanceMetric.addItem("Local Moran's I (L2)", MakeMetricPair(feature_type::LISA, distance_metric::METRIC_EUC));
+    distanceMetric.addItem("Local Moran's I (L2)", MakeMetricPair(feature_type::LOCALMORANSI, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Local Geary's C (L2)", MakeMetricPair(feature_type::GEARYC, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Point Clound (Chamfer)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
     distanceMetric.addItem("Point Clound (SSD)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));

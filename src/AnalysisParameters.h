@@ -30,7 +30,7 @@ public:
     std::string         _embeddingName;         /*!< Name of the embedding */
     const float*        _dataVecBegin;          /*!< Points to the first element in the data vector */
     // features
-    feature_type        _featureType;           /*!< texture histogram, LISA */
+    feature_type        _featureType;           /*!< */
     size_t              _numFeatureValsPerPoint;/*!< depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)> */
     loc_Neigh_Weighting _neighWeighting;        /*!<> */
     size_t              _kernelWidth;           /*!<> */

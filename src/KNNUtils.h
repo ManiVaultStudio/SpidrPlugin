@@ -211,7 +211,7 @@ hnswlib::SpaceInterface<float>* CreateHNSWSpace(const distance_metric knn_metric
 /*! Calculates the size of an feature wrt to the feature type
  * Used as a step size for adding points to an HNSWlib index
  *
- * \param featureType type of feature (e.g. scalar LISA or vector Texture Histogram)
+ * \param featureType type of feature (e.g. scalar LOCALMORANSI or vector Texture Histogram)
  * \param numDims Number of data channels
  * \param numHistBins Number of histogram bins of feature type is a vector i.e. histogram
  * \param neighborhoodSize Size of neighborhood, must be a perfect square

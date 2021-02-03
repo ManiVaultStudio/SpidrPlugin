@@ -83,10 +83,10 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
         featFunct = &FeatureExtraction::calculateHistogram;  // will be called as calculateHistogram(_pointIds[pointID], neighborValues);
         qDebug() << "Feature extraction: Type 1d texture histogram, Num Bins: " << _numHistBins;
     }
-    else if(_featType == feature_type::LISA)
+    else if(_featType == feature_type::LOCALMORANSI)
     {
         featFunct = &FeatureExtraction::calculateLISA;
-        qDebug() << "Feature extraction: LISA";
+        qDebug() << "Feature extraction: LOCALMORANSI";
     }
     else if (_featType == feature_type::GEARYC)
     {
@@ -146,7 +146,7 @@ void FeatureExtraction::initExtraction() {
         // find min and max for each channel, resize the output larger due to vector features
         _minMaxVals = CalcMinMaxPerChannel(_numPoints, _numDims, _attribute_data);
     }
-    else if ((_featType == feature_type::LISA) | (_featType == feature_type::GEARYC)) {
+    else if ((_featType == feature_type::LOCALMORANSI) | (_featType == feature_type::GEARYC)) {
         // find mean and varaince for each channel
         _meanVals = CalcMeanPerChannel(_numPoints, _numDims, _attribute_data);
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
@@ -250,8 +250,8 @@ void FeatureExtraction::calculateLISA(size_t pointInd, std::vector<float> neighb
             neigh_diff_from_mean_sum += _neighborhoodWeights[neighbor] * (neighborValues[neighbor * _numDims + dim] - _meanVals[dim]);
         }
         diff_from_mean = (_attribute_data[pointInd * _numDims + dim] - _meanVals[dim]);
-        // (local_neighborhoodWeightsSum / _varVals[dim]) is the proportionality factor between the local LISA and the global Moran's I
-        // such that sum LISA = (local_neighborhoodWeightsSum / _varVals[dim]) * I. Thus, the division by _varVals in the next line yields sum LISA = I. 
+        // (local_neighborhoodWeightsSum / _varVals[dim]) is the proportionality factor between the local LOCALMORANSI and the global Moran's I
+        // such that sum LOCALMORANSI = (local_neighborhoodWeightsSum / _varVals[dim]) * I. Thus, the division by _varVals in the next line yields sum LOCALMORANSI = I. 
         // Cf. 10.1111/j.1538-4632.1995.tb00338.x 
         _outFeatures[pointInd * _numDims + dim] = (local_neighborhoodWeightsSum / _varVals[dim]) * diff_from_mean * neigh_diff_from_mean_sum;
 
@@ -333,7 +333,7 @@ void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
 
     // Some features do not take into account the current point but only the neighborhood values
     // Therefor set the weight of the neighborhood center (the current point) to 0
-    if ((_featType == feature_type::LISA) || (_featType == feature_type::GEARYC)) {
+    if ((_featType == feature_type::LOCALMORANSI) || (_featType == feature_type::GEARYC)) {
         int centralID = (int)std::sqrt(_neighborhoodSize) + 1;
         assert(_neighborhoodWeights.size() == (centralID-1)*(centralID-1));
         _neighborhoodWeights[centralID] = 0;
