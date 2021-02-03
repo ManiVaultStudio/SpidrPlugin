@@ -164,7 +164,7 @@ const size_t NumFeatureValsPerPoint(const feature_type featureType, const size_t
     switch (featureType) {
     case feature_type::TEXTURE_HIST_1D: featureSize = numDims * numHistBins; break;
     case feature_type::LOCALMORANSI:            // same as Geary's C
-    case feature_type::GEARYC:          featureSize = numDims; break;
+    case feature_type::LOCALGEARYC:          featureSize = numDims; break;
     case feature_type::PCLOUD:          featureSize = neighborhoodSize; break; // numDims * neighborhoodSize for copying data instead of IDs
     case feature_type::MVN:             featureSize = numDims + 2; break; // for each point: attr vals and x&y pos
     }

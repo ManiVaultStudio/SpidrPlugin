@@ -15,8 +15,8 @@
 enum class feature_type : unsigned int
 {
     TEXTURE_HIST_1D = 0,    /*!< Histograms of data point neighborhood, vector feature */
-    LOCALMORANSI = 1,       /*!< local Moran's I (Local Indicator of Spatial Associations), scalar feaure */
-    GEARYC = 2,             /*!< Geary's, C (Local Indicator of Spatial Associations) scalar feature */
+    LOCALMORANSI = 1,       /*!< Local Moran's I (Local Indicator of Spatial Associations), scalar feaure */
+    LOCALGEARYC = 2,        /*!< Local Geary's C (Local Indicator of Spatial Associations), scalar feature */
     PCLOUD = 3,             /*!< Point cloud, i.e. just the neighborhood, no transformations*/
     MVN = 4,                /*!< MVN-Reduce, see 10.2312/euroviss, computes Frobenius norms of spatial and attribute distance matrices*/
 };

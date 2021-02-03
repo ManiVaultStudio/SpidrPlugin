@@ -36,7 +36,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     knnOptions.addItem("HNSW", static_cast<unsigned int> (knn_library::KNN_HNSW));
     knnOptions.addItem("Exact", static_cast<unsigned int> (knn_library::NONE));
     knnOptions.addItem("Eval", static_cast<unsigned int> (knn_library::EVAL));
-    knnOptions.setToolTip("HNSW: Approximate kNN \nExact: precise (slow) \nEval: precise and saves kNN indices&distances to disk (slow)");
+    knnOptions.setToolTip("HNSW: Approximate kNN \nExact: precise (slow) \nEval: precise and saves (all+kNN) indices&distances and features to disk (slow)");
 
     // data values (QVariant) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
     // this is used as a nice way to cast this information internally in SpidrAnalysis
@@ -44,7 +44,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Texture Hist. (EMD)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_EMD));
     distanceMetric.addItem("Texture Hist. (Hel)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
     distanceMetric.addItem("Local Moran's I (L2)", MakeMetricPair(feature_type::LOCALMORANSI, distance_metric::METRIC_EUC));
-    distanceMetric.addItem("Local Geary's C (L2)", MakeMetricPair(feature_type::GEARYC, distance_metric::METRIC_EUC));
+    distanceMetric.addItem("Local Geary's C (L2)", MakeMetricPair(feature_type::LOCALGEARYC, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Point Clound (Chamfer)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
     distanceMetric.addItem("Point Clound (SSD)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));
     distanceMetric.addItem("Point Clound (Hausdorff)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU));

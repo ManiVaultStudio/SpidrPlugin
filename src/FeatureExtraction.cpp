@@ -88,7 +88,7 @@ void FeatureExtraction::setup(const std::vector<unsigned int>& pointIds, const s
         featFunct = &FeatureExtraction::calculateLISA;
         qDebug() << "Feature extraction: LOCALMORANSI";
     }
-    else if (_featType == feature_type::GEARYC)
+    else if (_featType == feature_type::LOCALGEARYC)
     {
         featFunct = &FeatureExtraction::calculateGearysC;
         qDebug() << "Feature extraction: local Geary's C";
@@ -146,7 +146,7 @@ void FeatureExtraction::initExtraction() {
         // find min and max for each channel, resize the output larger due to vector features
         _minMaxVals = CalcMinMaxPerChannel(_numPoints, _numDims, _attribute_data);
     }
-    else if ((_featType == feature_type::LOCALMORANSI) | (_featType == feature_type::GEARYC)) {
+    else if ((_featType == feature_type::LOCALMORANSI) | (_featType == feature_type::LOCALGEARYC)) {
         // find mean and varaince for each channel
         _meanVals = CalcMeanPerChannel(_numPoints, _numDims, _attribute_data);
         _varVals = CalcVarEstimate(_numPoints, _numDims, _attribute_data, _meanVals);
@@ -333,7 +333,7 @@ void FeatureExtraction::weightNeighborhood(loc_Neigh_Weighting weighting) {
 
     // Some features do not take into account the current point but only the neighborhood values
     // Therefor set the weight of the neighborhood center (the current point) to 0
-    if ((_featType == feature_type::LOCALMORANSI) || (_featType == feature_type::GEARYC)) {
+    if ((_featType == feature_type::LOCALMORANSI) || (_featType == feature_type::LOCALGEARYC)) {
         int centralID = (int)std::sqrt(_neighborhoodSize) + 1;
         assert(_neighborhoodWeights.size() == (centralID-1)*(centralID-1));
         _neighborhoodWeights[centralID] = 0;

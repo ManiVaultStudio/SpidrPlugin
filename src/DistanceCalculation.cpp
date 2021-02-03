@@ -124,25 +124,34 @@ void DistanceCalculation::computekNN() {
         // Save the entire distance matrix to disk. Then calc the exact kNN and perform the embedding
         // Note: You could also sort the distance matrix instead of recalculating it - but I'm lazy and will only use this for small data set where the performance is not an issue.
 
-        qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
-        std::vector<int> knn_indices_to_Disk;
-        std::vector<float> knn_distances_squared_to_Disk;
-        std::tie(knn_indices_to_Disk, knn_distances_squared_to_Disk) = ComputeFullDistMat(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints);
+        qDebug() << "Distance calculation: Evaluation mode - Calc full distance matrix for writing to disk";
+        std::vector<int> all_dists_indices_to_Disk;
+        std::vector<float> all_distances_squared_to_Disk;
+        std::tie(all_dists_indices_to_Disk, all_distances_squared_to_Disk) = ComputeFullDistMat(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints);
 
-        qDebug() << "Distance calculation: Evaluation mode - Write distance matrix to disk";
+        qDebug() << "Distance calculation: Evaluation mode - Write full distance matrix to disk";
 
-        // Write distance matrices to disk
+        // Write (full) distance matricx amd IDs to disk
         std::string savePath = _embeddingName;
         std::string infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_numPoints);
-        writeVecToBinary(knn_indices_to_Disk, savePath + "_knnInd" + infoStr + ".bin");
-        writeVecToBinary(knn_distances_squared_to_Disk, savePath + "_knnDist" + infoStr + ".bin");
+        writeVecToBinary(all_dists_indices_to_Disk, savePath + "_allInds" + infoStr + ".bin");
+        writeVecToBinary(all_distances_squared_to_Disk, savePath + "_allDists" + infoStr + ".bin");
         
-        qDebug() << "Distance calculation: Evaluation mode - Full distance matrix";
+        // Write features to disk
+        infoStr = "_nFpP_" + std::to_string(_numFeatureValsPerPoint) + "_nP_" + std::to_string(_numPoints) + "_nD_" + std::to_string(_numDims);
+        writeVecToBinary(_dataFeatures, savePath + "_features" + infoStr + ".bin");
+
+        qDebug() << "Distance calculation: Evaluation mode - Calc exact knn distance matrix for embedding";
         std::tie(_knn_indices, _knn_distances_squared) = ComputeExactKNN(_dataFeatures, space, _numFeatureValsPerPoint, _numPoints, _nn);
 
+        // Write exact knn distances to disk
+        qDebug() << "Distance calculation: Evaluation mode - Write knn distance matrix to disk";
+        infoStr = "_nD_" + std::to_string(_numDims) + "_nP_" + std::to_string(_numPoints) + "_nN_" + std::to_string(_nn);
+        writeVecToBinary(_knn_indices, savePath + "_knnInds" + infoStr + ".bin");
+        writeVecToBinary(_knn_distances_squared, savePath + "_knnDists" + infoStr + ".bin");
+
     }
-
-
+    
     auto t_end_ComputeDist = std::chrono::steady_clock::now();
     qDebug() << "Distance calculation: Computation duration (sec): " << ((float)std::chrono::duration_cast<std::chrono::milliseconds> (t_end_ComputeDist - t_start_ComputeDist).count()) / 1000;
 
