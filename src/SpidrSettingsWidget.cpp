@@ -34,9 +34,10 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     
     // add data item according to enum knn_library (KNNUtils)
     knnOptions.addItem("HNSW", static_cast<unsigned int> (knn_library::KNN_HNSW));
-    knnOptions.addItem("Exact", static_cast<unsigned int> (knn_library::NONE));
-    knnOptions.addItem("Eval", static_cast<unsigned int> (knn_library::EVAL));
-    knnOptions.setToolTip("HNSW: Approximate kNN \nExact: precise (slow) \nEval: precise and saves (all+kNN) indices&distances and features to disk (slow)");
+    knnOptions.addItem("Exact", static_cast<unsigned int> (knn_library::EXACT));
+    knnOptions.addItem("Eval Full", static_cast<unsigned int> (knn_library::EVAL_EXACT));
+    knnOptions.addItem("Eval akNN", static_cast<unsigned int> (knn_library::EVAL_KNN));
+    knnOptions.setToolTip("HNSW: Approximate kNN (fast) \nExact: precise (slow) \nEval Full: precise and saves (all+kNN) indices&distances and features to disk (slow) \nEval Full: Like Eval Full but for akNN (fast)");
 
     // data values (QVariant) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
     // this is used as a nice way to cast this information internally in SpidrAnalysis
@@ -54,7 +55,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Hausdorff (Median)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_med));
     distanceMetric.addItem("Hausdorff (MedianMedian)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_medmed));
     distanceMetric.addItem("Hausdorff (MinMax)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_minmax));
-    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance) \n MVN-Reduce (Combination of Spatial and Attribute distance)");
+    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance) \nMVN-Reduce (Combination of Spatial and Attribute distance)");
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
     kernelWeight.addItem("Uniform", static_cast<unsigned int> (loc_Neigh_Weighting::WEIGHT_UNIF));
@@ -138,7 +139,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     weightSpaAttrNum.setFixedWidth(50);
 
     numIterations.setValidator(new QIntValidator(1, 10000, this));
-    perplexity.setValidator(new QIntValidator(2, 50, this));
+    perplexity.setValidator(new QIntValidator(2, 90, this));
     exaggeration.setValidator(new QIntValidator(1, 10000, this));
     expDecay.setValidator(new QIntValidator(1, 10000, this));
     numTrees.setValidator(new QIntValidator(1, 10000, this));

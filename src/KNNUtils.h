@@ -33,8 +33,9 @@
  */
 enum class knn_library : size_t
 {
-    EVAL,           /*!< No knn library in use, full dist matrix and save it to disk */ 
-    NONE,           /*!< No knn library in use, no approximation i.e. exact kNN computation */ 
+    EVAL_EXACT,     /*!< No knn library in use, saves full dist matrix and IDs as well as features to disk */ 
+    EVAL_KNN,       /*!< HNSWLib in use, saves akNN distance matrix and IDs */ 
+    EXACT,          /*!< No knn library in use, no approximation i.e. exact kNN computation */ 
     KNN_HNSW,       /*!< HNSWLib */
 };
 
