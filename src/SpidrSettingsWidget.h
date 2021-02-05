@@ -62,6 +62,7 @@ public slots:
 
 private slots:
     void onStartToggled(bool pressed);
+    void onContinueClicked(bool pressed);
     void onKernelSizeChanged(const QString &kernelSizeField);
     void onHistBinSizeHeurPicked(int value);
     void onDistanceMetricPicked(int value);
@@ -101,6 +102,8 @@ public:
 
     QLineEdit embNameLine;
     QPushButton startButton;
+    QSpinBox  moreIterations;
+    QPushButton continueButton;
 
 private:
   SpidrPlugin& _analysisPlugin;

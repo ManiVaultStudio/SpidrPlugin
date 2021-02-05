@@ -70,7 +70,8 @@ _verbose(false),
 _isGradientDescentRunning(false),
 _isTsneRunning(false),
 _isMarkedForDeletion(false),
-_continueFromIteration(0)
+_continueFromIteration(0),
+_iterationCount(0)
 {
     _nn = _perplexity * _perplexity_multiplier + 1;
 }
@@ -111,7 +112,8 @@ void TsneComputation::setup(const std::vector<int> knn_indices, const std::vecto
 
 void TsneComputation::initTSNE()
 {
-        
+    _iterationCount = 0;
+
     // Computation of the high dimensional similarities
     {
         hdi::dr::HDJointProbabilityGenerator<float>::Parameters probGenParams;
@@ -154,6 +156,8 @@ void TsneComputation::initGradientDescent()
     tsneParams._exaggeration_factor = 4 + _numPoints / 60000.0;
     _A_tSNE.setTheta(std::min(0.5, std::max(0.0, (_numPoints - 1000.0)*0.00005)));
 
+    qDebug() << _exaggerationIter;
+
     // Create a context local to this thread that shares with the global share context
     offBuffer = new OffscreenBuffer();
     offBuffer->initialize();
@@ -175,7 +179,7 @@ void TsneComputation::embed()
         _isGradientDescentRunning = true;
 
         // Performs gradient descent for every iteration
-        for (int iter = 0; iter < _iterations; ++iter)
+        for (int iter = 0; iter < _iterations; ++iter, _iterationCount++)
         {
             hdi::utils::ScopedTimer<double> timer(t);
             if (!_isGradientDescentRunning)
@@ -215,15 +219,60 @@ void TsneComputation::embed()
 
 }
 
+
 void TsneComputation::compute() {
     initTSNE();
     computeGradientDescent();
 }
 
+
+void TsneComputation::continueCompute(unsigned int moreIter) {
+    // init only once
+    if (_probabilityDistribution.size() == 0)
+        initTSNE();
+
+    // initGradientDescent
+    _isTsneRunning = true;
+    delete offBuffer;
+    offBuffer = new OffscreenBuffer();
+    offBuffer->initialize();
+    offBuffer->bindContext();
+
+    bool test = _GPGPU_tSNE.isInitialized();
+
+    hdi::dr::TsneParameters tsneParams;
+    tsneParams._embedding_dimensionality = _numDimensionsOutput;
+    tsneParams._mom_switching_iter = _iterationCount;
+    tsneParams._remove_exaggeration_iter = _iterationCount;
+    tsneParams._presetEmbedding = true;
+    tsneParams._exponential_decay_iter = 150;
+    tsneParams._exaggeration_factor = 4 + _numPoints / 60000.0;
+
+    //_GPGPU_tSNE.updateParams(tsneParams);
+    _GPGPU_tSNE.initialize(_probabilityDistribution, &_embedding, tsneParams);
+    
+    // use previous embedding instead of random intitialization to continue
+    auto embedding_container = &(_embedding.getContainer());
+    // simply replace the container by the input?
+    for (int p = 0; p < _numPoints; p++) {
+        for (int d = 0; d < 2; d++) {
+            (*embedding_container)[p * 2 + d] = _outputData[p * 2 + d];
+        }
+    }
+
+    copyFloatOutput();
+
+    // change iterations
+    setIterations(moreIter);
+    embed();
+}
+
+
 // Copy tSNE output to our output
 void TsneComputation::copyFloatOutput()
 {
     _outputData = _embedding.getContainer();
+//    qDebug() << _outputData;
 }
 
 const std::vector<float>& TsneComputation::output()

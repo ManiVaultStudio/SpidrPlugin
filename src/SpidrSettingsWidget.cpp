@@ -93,9 +93,13 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     // Initialize start button
     startButton.setText("Start Computation");
-    startButton.setFixedSize(QSize(150, 50));
+    startButton.setFixedSize(QSize(150, 20));
     startButton.setCheckable(true);
     connect(&startButton, &QPushButton::toggled, this, &SpidrSettingsWidget::onStartToggled);
+
+    continueButton.setText("Cont.");
+    continueButton.setFixedSize(QSize(50, 20));
+    connect(&continueButton, &QPushButton::clicked, this, &SpidrSettingsWidget::onContinueClicked);
 
     // Create group boxes for grouping together various settings
     QGroupBox* settingsBox = new QGroupBox("Basic settings");
@@ -125,6 +129,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     QLabel* weightSpAttrLabel = new QLabel("MVN weight");
     weightSpAttrLabel->setToolTip("Weight Attribute (0) vs Spatial (1)");
+
+    QLabel* moreIterationsLabel = new QLabel("Plus iter:");
     
     // Set option default values
     numIterations.setFixedWidth(50);
@@ -137,6 +143,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     histBinSize.setFixedWidth(50);
     weightSpaAttrSlider.setFixedWidth(50);
     weightSpaAttrNum.setFixedWidth(50);
+    moreIterations.setFixedWidth(40);
 
     numIterations.setValidator(new QIntValidator(1, 10000, this));
     perplexity.setValidator(new QIntValidator(2, 90, this));
@@ -147,6 +154,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     kernelSize.setRange(1, 10000);
     histBinSize.setRange(1, 10000);
     weightSpaAttrNum.setRange(0, 1);
+    moreIterations.setRange(1, 10000);
 
     numIterations.setText("1000");
     perplexity.setText("30");
@@ -219,7 +227,10 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     auto* const computeLayout = new QGridLayout();
     computeLayout->addWidget(embNameLabel, 0, 0);
     computeLayout->addWidget(&embNameLine, 1, 0, Qt::AlignTop);
-    computeLayout->addWidget(&startButton, 0, 1, 2, 1, Qt::AlignCenter);
+    computeLayout->addWidget(moreIterationsLabel, 0, 1, 2, 1, Qt::AlignTop | Qt::AlignLeft);
+    computeLayout->addWidget(&moreIterations, 0, 1, 2, 1, Qt::AlignTop | Qt::AlignHCenter);
+    computeLayout->addWidget(&continueButton, 0, 1, 2, 1, Qt::AlignTop | Qt::AlignRight);
+    computeLayout->addWidget(&startButton, 1, 1, 2, 1, Qt::AlignCenter);
     computeBox->setLayout(computeLayout);
 
     // Add all the parts of the settings widget together
@@ -318,6 +329,30 @@ void SpidrSettingsWidget::onStartToggled(bool pressed)
     }
     startButton.setText(pressed ? "Stop Computation" : "Start Computation");
     pressed ? _analysisPlugin.startComputation() : _analysisPlugin.stopComputation();;
+}
+
+void SpidrSettingsWidget::onContinueClicked(bool pressed)
+{
+    // Do nothing if we have no data set selected
+    if (dataOptions.currentText().isEmpty()) {
+        return;
+    }
+
+    // Check if the tSNE settings are valid before running the computation
+    if (!hasValidSettings()) {
+        QMessageBox warningBox;
+        warningBox.setText(tr("Some settings are invalid or missing. Continue with default values?"));
+        QPushButton *continueButton = warningBox.addButton(tr("Continue"), QMessageBox::ActionRole);
+        QPushButton *abortButton = warningBox.addButton(QMessageBox::Abort);
+
+        warningBox.exec();
+
+        if (warningBox.clickedButton() == abortButton) {
+            return;
+        }
+    }
+    startButton.setText(pressed ? "Stop Computation" : "Start Computation");
+    _analysisPlugin.continueComputation(moreIterations.text().toInt());
 }
 
 void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {

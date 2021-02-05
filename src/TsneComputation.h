@@ -59,6 +59,12 @@ public:
 
     /*!
      * 
+     *
+     */
+    void continueCompute(unsigned int moreIter);
+
+    /*!
+     * 
      * 
      * \return 
      */
@@ -84,6 +90,7 @@ private:
     hdi::dr::SparseTSNEUserDefProbabilities<float> _A_tSNE;
     hdi::dr::GradientDescentTSNETexture _GPGPU_tSNE;
     hdi::data::Embedding<float> _embedding;
+    //hdi::dr::TsneParameters _tsneParams;
 
     // Data
     std::vector<int> _knn_indices;               /*!<> */
@@ -112,4 +119,5 @@ private:
     bool _isMarkedForDeletion;
 
     int _continueFromIteration;
+    unsigned int _iterationCount;
 };

@@ -3,10 +3,12 @@
 
 #include <QtCore>
 #include <QSize>
+#include <QString>
 #include <QtDebug>
 
 #include <utility>      // std::as_const
 #include <vector>       // std::vector
+#include <algorithm>    // std::find
 
 //#include <windows.h>
 Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
@@ -130,6 +132,21 @@ void SpidrPlugin::startComputation()
     // Start spatial analysis
     _spidrAnalysis.start();
 
+}
+
+void SpidrPlugin::continueComputation(unsigned int moreIter) {
+    std::vector<QString> coreDataSets = _core->requestAllDataNames({ QString("Points") });
+    // if _embeddingName already exists, use it - otherwise init and start form new
+    if (std::find(coreDataSets.begin(), coreDataSets.end(), _embeddingName) == coreDataSets.end()) {
+        _settings.get()->numIterations.setText(QString::number(moreIter));
+        startComputation();
+    }
+    else
+    {
+        _settings.get()->numIterations.setText(QString::number(_settings.get()->numIterations.text().toInt() + moreIter));  // update iterations in setting widget (UI)
+        _spidrAnalysis.setContinueComputation(moreIter);    // set new iteration count and thereby switch _spidrAnalysis to "continue mode"
+        _spidrAnalysis.start();
+    }
 }
 
 void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, QSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal) {

@@ -51,6 +51,7 @@ public:
 
     void startComputation();
     void stopComputation();
+    void continueComputation(unsigned int moreIter);
 
 public slots:
     void dataSetPicked(const QString& name);

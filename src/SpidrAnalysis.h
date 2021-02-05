@@ -44,6 +44,8 @@ public:
      */
     void stopComputation();
 
+    void setContinueComputation(unsigned int moreIter);
+
     /*! Set the parameters of the entire Analysis
      * Use the input from e.g a GUI
      * 
@@ -157,6 +159,8 @@ private:
     std::vector<unsigned int> _backgroundIDsGlobal;  /*!< ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation > */
     Parameters _params;                         /*!<> */
     std::vector<float> _emd_with_backgound;
+
+    unsigned int _continueIterations;           /*!< if 0, start new> */
 };
 
 

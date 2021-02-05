@@ -4,7 +4,7 @@
 
 #include <QDebug>
 
-SpidrAnalysis::SpidrAnalysis(QObject* parent) : QThread(parent)
+SpidrAnalysis::SpidrAnalysis(QObject* parent) : QThread(parent), _continueIterations(0)
 {
     // Connect embedding
     // connect(&_tsne, &TsneComputation::computationStopped, this, &SpidrAnalysis::embeddingComputationStopped);
@@ -17,7 +17,15 @@ SpidrAnalysis::~SpidrAnalysis()
 }
 
 void SpidrAnalysis::run() {
-    spatialAnalysis();
+    if (_continueIterations == 0)
+        spatialAnalysis();
+    else
+    {
+        _tsne.continueCompute(_continueIterations);
+        setContinueComputation(0);    // reset "continue mode" to normal
+    }
+
+    emit finishedEmbedding();
 }
 
 void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal) {
@@ -78,7 +86,10 @@ void SpidrAnalysis::spatialAnalysis() {
     _tsne.setup(knn_indices, knn_distances_squared, _params);
     _tsne.compute();
 
-    emit finishedEmbedding();
+}
+
+void SpidrAnalysis::setContinueComputation(unsigned int moreIter) {
+    _continueIterations = moreIter;
 }
 
 void SpidrAnalysis::embeddingComputationStopped() {
