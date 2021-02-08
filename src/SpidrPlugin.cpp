@@ -107,7 +107,7 @@ void SpidrPlugin::startComputation()
     std::vector<unsigned int> pointIDsGlobal; // Global ID of each point in the image
     std::vector<float> attribute_data;        // Actual channel valures, only consider enabled dimensions
     std::vector<unsigned int> backgroundIDsGlobal;  // ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
-    QSize imgSize;
+    ImgSize imgSize;
     unsigned int numDims;
     QString dataName = _settings->dataOptions.currentText();
     retrieveData(dataName, pointIDsGlobal, attribute_data, numDims, imgSize, backgroundIDsGlobal);
@@ -132,9 +132,11 @@ void SpidrPlugin::startComputation()
 
 }
 
-void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, QSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal) {
+void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal) {
     Points& points = _core->requestData<Points>(dataName);
-    imgSize = points.getProperty("ImageSize", QSize()).toSize();
+    QSize qtImgSize = points.getProperty("ImageSize", QSize()).toSize();
+    imgSize.width = qtImgSize.width();
+    imgSize.height = qtImgSize.height();
 
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 

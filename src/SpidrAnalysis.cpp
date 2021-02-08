@@ -20,7 +20,7 @@ void SpidrAnalysis::run() {
     spatialAnalysis();
 }
 
-void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const QSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal) {
+void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal) {
     // Set data
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
@@ -33,7 +33,7 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
     _params._embeddingName = embeddingName.toStdString();
     _params._dataVecBegin = _attribute_data.data();          // used in point cloud distance
 
-    qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width() << ", " << _params._imgSize.height();
+    qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width << ", " << _params._imgSize.height;
 }
 
 void SpidrAnalysis::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins,\

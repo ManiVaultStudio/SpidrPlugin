@@ -26,13 +26,8 @@ set(PLUGIN
     src/SpidrPlugin.json
     src/SpidrAnalysis.h
     src/SpidrAnalysis.cpp
-	src/FeatureExtraction.h
-	src/FeatureExtraction.cpp
-	src/DistanceCalculation.h
-	src/DistanceCalculation.cpp
     src/TsneComputation.h
     src/TsneComputation.cpp
-	src/AnalysisParameters.h
 )
 
 set(DIMENSIONSELECTIONHOLDER
@@ -46,28 +41,29 @@ set(DIMENSIONSELECTIONHOLDER
     src/DimensionSelectionProxyModel.cpp
 )
 
-file(GLOB UTILS src/*Utils.*)
 file(GLOB WIDGETS src/*Widget.*)
 file(GLOB UIS ui/*.ui)
 file(GLOB JSON src/*.json)
+file(GLOB SPIDRLIB lib/Spidr/src/*)
 
-set(SOURCES ${PLUGIN} ${UTILS} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
+set(SOURCES ${PLUGIN} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
 set(AUX ${JSON})
 
 source_group(Plugin FILES ${PLUGIN})
-source_group(DimensionSelectionHolder FILES ${DIMENSIONSELECTIONHOLDER})
-source_group(Utils FILES ${UTILS})
+source_group(Spidrlib FILES ${SPIDRLIB})
 source_group(Widgets FILES ${WIDGETS})
+source_group(DimensionSelectionHolder FILES ${DIMENSIONSELECTIONHOLDER})
 source_group(UI FILES ${UIS})
 source_group(Aux FILES ${AUX})
 
 QT5_WRAP_UI(UI_HEADERS ${UIS})
 
-add_library(${PROJECT} SHARED ${SOURCES} ${UIS} ${AUX})
+add_library(${PROJECT} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
 
 include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
 include_directories ("lib/HDI/include")
 include_directories ("lib/hnswlib/")
+include_directories ("lib/Spidr/src/")
 include_directories(${Boost_INCLUDE_DIRS})
 
 if(MSVC)
@@ -98,7 +94,6 @@ if(OPENMP_FOUND)
 else()
     message(WARNING, "OpenMP not found!")    
 endif()
-
 
 target_link_libraries(${PROJECT} ${Boost_LIBRARIES})
 target_link_libraries(${PROJECT} Eigen3::Eigen)

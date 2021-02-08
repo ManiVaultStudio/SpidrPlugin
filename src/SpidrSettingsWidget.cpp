@@ -17,6 +17,19 @@
 #include <QVBoxLayout>
 #include <QStandardItemModel> 
 
+QVariant MakeQtMetricPair(feature_type ft, distance_metric dm) {
+    return QVariant(QPoint(static_cast<unsigned int>(ft), static_cast<size_t>(dm)));
+}
+
+distance_metric GetDistMetricFromQtMetricPair(const QVariant metricPair) {
+    return static_cast<distance_metric> (metricPair.value<QPoint>().y());
+}
+
+feature_type GetFeatureTypeFromQtMetricPair(const QVariant metricPair) {
+    return static_cast<feature_type> (metricPair.value<QPoint>().x());
+}
+
+
 SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     SettingsWidget(),
     _analysisPlugin(analysisPlugin),
@@ -41,19 +54,19 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     // data values (QVariant) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
     // this is used as a nice way to cast this information internally in SpidrAnalysis
-    distanceMetric.addItem("Texture Hist. (QF)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_QF));
-    distanceMetric.addItem("Texture Hist. (EMD)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_EMD));
-    distanceMetric.addItem("Texture Hist. (Hel)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
-    distanceMetric.addItem("Local Moran's I (L2)", MakeMetricPair(feature_type::LOCALMORANSI, distance_metric::METRIC_EUC));
-    distanceMetric.addItem("Local Geary's C (L2)", MakeMetricPair(feature_type::LOCALGEARYC, distance_metric::METRIC_EUC));
-    distanceMetric.addItem("Point Clound (Chamfer)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
-    distanceMetric.addItem("Point Clound (SSD)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));
-    distanceMetric.addItem("Point Clound (Hausdorff)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU));
-    distanceMetric.addItem("MVN (Attr./Spatial)", MakeMetricPair(feature_type::MVN, distance_metric::METRIC_MVN));
-    distanceMetric.addItem("Hausdorff (Min)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_min));
-    distanceMetric.addItem("Hausdorff (Median)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_med));
-    distanceMetric.addItem("Hausdorff (MedianMedian)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_medmed));
-    distanceMetric.addItem("Hausdorff (MinMax)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_minmax));
+    distanceMetric.addItem("Texture Hist. (QF)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_QF));
+    distanceMetric.addItem("Texture Hist. (EMD)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_EMD));
+    distanceMetric.addItem("Texture Hist. (Hel)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
+    distanceMetric.addItem("Local Moran's I (L2)", MakeQtMetricPair(feature_type::LOCALMORANSI, distance_metric::METRIC_EUC));
+    distanceMetric.addItem("Local Geary's C (L2)", MakeQtMetricPair(feature_type::LOCALGEARYC, distance_metric::METRIC_EUC));
+    distanceMetric.addItem("Point Clound (Chamfer)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
+    distanceMetric.addItem("Point Clound (SSD)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));
+    distanceMetric.addItem("Point Clound (Hausdorff)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU));
+    distanceMetric.addItem("MVN (Attr./Spatial)", MakeQtMetricPair(feature_type::MVN, distance_metric::METRIC_MVN));
+    distanceMetric.addItem("Hausdorff (Min)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_min));
+    distanceMetric.addItem("Hausdorff (Median)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_med));
+    distanceMetric.addItem("Hausdorff (MedianMedian)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_medmed));
+    distanceMetric.addItem("Hausdorff (MinMax)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_minmax));
     distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance) \nMVN-Reduce (Combination of Spatial and Attribute distance)");
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
@@ -344,7 +357,7 @@ void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {
 }
 
 void SpidrSettingsWidget::onDistanceMetricPicked(int distMetricBoxIndex) {
-    distance_metric distMetric = GetDistMetricFromMetricPair(distanceMetric.itemData(distMetricBoxIndex));
+    distance_metric distMetric = GetDistMetricFromQtMetricPair(distanceMetric.itemData(distMetricBoxIndex));
 
     // if the metric works on vector features provide options for the vector size
     // also, check if neighborhood weighting is available for the specific feature
