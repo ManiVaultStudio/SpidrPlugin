@@ -138,9 +138,9 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     weightSpaAttrNum.setFixedWidth(50);
 
     numIterations.setValidator(new QIntValidator(1, 10000, this));
-    perplexity.setValidator(new QIntValidator(2, 90, this));
-    exaggeration.setValidator(new QIntValidator(1, 10000, this));
-    expDecay.setValidator(new QIntValidator(1, 10000, this));
+    perplexity.setValidator(new QIntValidator(2, 150, this));
+    exaggeration.setValidator(new QIntValidator(0, 10000, this));
+    expDecay.setValidator(new QIntValidator(0, 10000, this));
     numTrees.setValidator(new QIntValidator(1, 10000, this));
     numChecks.setValidator(new QIntValidator(1, 10000, this));
     kernelSize.setRange(1, 10000);
