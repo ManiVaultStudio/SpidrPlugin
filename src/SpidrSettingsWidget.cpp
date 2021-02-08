@@ -50,7 +50,6 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Point Clound (SSD)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));
     distanceMetric.addItem("Point Clound (Hausdorff)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU));
     distanceMetric.addItem("MVN (Attr./Spatial)", MakeMetricPair(feature_type::MVN, distance_metric::METRIC_MVN));
-    distanceMetric.addItem("MVN (Attr./Spatial)", MakeMetricPair(feature_type::MVN, distance_metric::METRIC_MVN));
     distanceMetric.addItem("Hausdorff (Min)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_min));
     distanceMetric.addItem("Hausdorff (Median)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_med));
     distanceMetric.addItem("Hausdorff (MedianMedian)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_medmed));
