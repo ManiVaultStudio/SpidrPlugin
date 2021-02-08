@@ -230,7 +230,7 @@ void SpidrPlugin::initializeAnalysisSettings() {
     // TODO: use the strongly typed enum classes instead of all the int values
     _spidrAnalysis.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().value<unsigned int>(), _settings->kernelSize.text().toInt(),  \
                                               _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().value<unsigned int>(), _settings->distanceMetric.currentData().toPoint().y(), \
-                                              _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt());
+                                              _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt(), _settings->expDecay.text().toInt());
 }
 
 

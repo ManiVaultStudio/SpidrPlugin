@@ -60,7 +60,7 @@ public:
      */
     void initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
                                     const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
-                                    const int numIterations, const int perplexity, const int exaggeration);
+                                    const int numIterations, const int perplexity, const int exaggeration, const int expDecay);
 
     // Getter
     const size_t getNumEmbPoints();
@@ -138,6 +138,9 @@ private:
 
     /*! Sets the exageration during gradient descent */
     void setExaggeration(const unsigned exag);
+
+    /*! Sets the exponential decay during gradient descent */
+    void setExpDecay(const unsigned expDacay);
 
     /*! Sets the size of a feature, derived from other parameters */
     void setNumFeatureValsPerPoint();

@@ -46,5 +46,6 @@ public:
     float               _perplexity;            //! Perplexity value in evert distribution.
     int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
     int                 _numIterations;         /*!< Number of gradient descent iterations> */
-    int                 _exaggeration;          /*!< Number of iterations for early exxageration> */
+    int                 _exaggeration;          /*!< Number of iterations for early exageration> */
+    int                 _expDecay;              /*!< exponential decay> */
 };

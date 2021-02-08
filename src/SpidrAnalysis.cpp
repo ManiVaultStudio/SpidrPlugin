@@ -38,7 +38,7 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
 
 void SpidrAnalysis::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins,\
                                                const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
-                                               const int numIterations, const int perplexity, const int exaggeration) {
+                                               const int numIterations, const int perplexity, const int exaggeration, const int expDecay) {
     // initialize Feature Extraction Settings
     setFeatureType(featType);
     setKernelWeight(kernelWeightType);
@@ -55,6 +55,7 @@ void SpidrAnalysis::initializeAnalysisSettings(const unsigned int featType, cons
     setNumIterations(numIterations);
     setPerplexity(perplexity);
     setExaggeration(exaggeration);
+    setExpDecay(expDecay);
 
     // Derived parameters
     setNumFeatureValsPerPoint(); 
@@ -126,6 +127,10 @@ void SpidrAnalysis::setNumIterations(const unsigned numIt) {
 
 void SpidrAnalysis::setExaggeration(const unsigned exag) {
     _params._exaggeration = exag;
+}
+
+void SpidrAnalysis::setExpDecay(const unsigned expDecay) {
+    _params._expDecay = expDecay;
 }
 
 void SpidrAnalysis::setNumFeatureValsPerPoint() {
