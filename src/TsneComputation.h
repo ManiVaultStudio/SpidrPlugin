@@ -25,6 +25,7 @@ public:
     void setVerbose(bool verbose);
     void setIterations(int iterations);
     void setExaggerationIter(int exaggerationIter);
+    void setExponentialDecay(int exponentialDecay);
     void setPerplexity(int perplexity);
     void setNumDimensionsOutput(int numDimensionsOutput);
 
@@ -96,6 +97,7 @@ private:
     int _numTrees;
     int _numChecks;
     int _exaggerationIter;
+    int _exponentialDecay;
     int _perplexity;                                    /*!<> */
     int _perplexity_multiplier;
     int _numDimensionsOutput;

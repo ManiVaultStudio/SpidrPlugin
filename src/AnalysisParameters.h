@@ -30,7 +30,7 @@ public:
     std::string         _embeddingName;         /*!< Name of the embedding */
     const float*        _dataVecBegin;          /*!< Points to the first element in the data vector */
     // features
-    feature_type        _featureType;           /*!< texture histogram, LISA */
+    feature_type        _featureType;           /*!< */
     size_t              _numFeatureValsPerPoint;/*!< depending on the feature type, the features vector has a different length (scalar features vs vector features per dimension)> */
     loc_Neigh_Weighting _neighWeighting;        /*!<> */
     size_t              _kernelWidth;           /*!<> */
@@ -46,5 +46,6 @@ public:
     float               _perplexity;            //! Perplexity value in evert distribution.
     int                 _perplexity_multiplier; //! Multiplied by the perplexity gives the number of nearest neighbors used
     int                 _numIterations;         /*!< Number of gradient descent iterations> */
-    int                 _exaggeration;          /*!< Number of iterations for early exxageration> */
+    int                 _exaggeration;          /*!< Number of iterations for early exageration> */
+    int                 _expDecay;              /*!< exponential decay> */
 };

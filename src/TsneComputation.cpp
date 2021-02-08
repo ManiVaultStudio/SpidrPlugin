@@ -63,6 +63,7 @@ _iterations(1000),
 _numTrees(4),
 _numChecks(1024),
 _exaggerationIter(250),
+_exponentialDecay(250),
 _perplexity(30), 
 _perplexity_multiplier(3),
 _numDimensionsOutput(2),
@@ -91,6 +92,7 @@ void TsneComputation::setup(const std::vector<int> knn_indices, const std::vecto
     _iterations = params._numIterations;
     _perplexity = params._perplexity;
     _exaggerationIter = params._exaggeration;
+    _exponentialDecay = params._expDecay;
     _nn = params._nn;                       // same as in constructor = _perplexity * 3 + 1;
     _numPoints = params._numPoints;
     _perplexity_multiplier = params._perplexity_multiplier;
@@ -150,7 +152,7 @@ void TsneComputation::initGradientDescent()
     tsneParams._embedding_dimensionality = _numDimensionsOutput;
     tsneParams._mom_switching_iter = _exaggerationIter;
     tsneParams._remove_exaggeration_iter = _exaggerationIter;
-    tsneParams._exponential_decay_iter = 150;
+    tsneParams._exponential_decay_iter = _exponentialDecay;
     tsneParams._exaggeration_factor = 4 + _numPoints / 60000.0;
     _A_tSNE.setTheta(std::min(0.5, std::max(0.0, (_numPoints - 1000.0)*0.00005)));
 
@@ -244,6 +246,11 @@ void TsneComputation::setIterations(int iterations)
 void TsneComputation::setExaggerationIter(int exaggerationIter)
 {
     _exaggerationIter = exaggerationIter;
+}
+
+void TsneComputation::setExponentialDecay(int exponentialDecay)
+{
+    _exponentialDecay = exponentialDecay;
 }
 
 void TsneComputation::setPerplexity(int perplexity)

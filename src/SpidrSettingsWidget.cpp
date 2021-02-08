@@ -33,35 +33,39 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     setMaximumWidth(2 * minimumWidth);
     
     // add data item according to enum knn_library (KNNUtils)
-    knnOptions.addItem("HNSW", QVariant(1));
-    knnOptions.addItem("Exact", QVariant(0));
-    knnOptions.addItem("Eval", QVariant(99));
-    knnOptions.setToolTip("HNSW: Approximate kNN \nExact: precise (slow) \nEval: precise and saves kNN indices&distances to disk (slow)");
+    knnOptions.addItem("HNSW", static_cast<unsigned int> (knn_library::KNN_HNSW));
+    knnOptions.addItem("Exact", static_cast<unsigned int> (knn_library::EXACT));
+    knnOptions.addItem("Eval Full", static_cast<unsigned int> (knn_library::EVAL_EXACT));
+    knnOptions.addItem("Eval akNN", static_cast<unsigned int> (knn_library::EVAL_KNN));
+    knnOptions.setToolTip("HNSW: Approximate kNN (fast) \nExact: precise (slow) \nEval Full: precise and saves (all+kNN) indices&distances and features to disk (slow) \nEval Full: Like Eval Full but for akNN (fast)");
 
-    // add options in the order as defined in enums in utils files
     // data values (QVariant) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
     // this is used as a nice way to cast this information internally in SpidrAnalysis
     distanceMetric.addItem("Texture Hist. (QF)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_QF));
     distanceMetric.addItem("Texture Hist. (EMD)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_EMD));
     distanceMetric.addItem("Texture Hist. (Hel)", MakeMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
-    distanceMetric.addItem("Local Moran's I (L2)", MakeMetricPair(feature_type::LISA, distance_metric::METRIC_EUC));
-    distanceMetric.addItem("Local Geary's C (L2)", MakeMetricPair(feature_type::GEARYC, distance_metric::METRIC_EUC));
+    distanceMetric.addItem("Local Moran's I (L2)", MakeMetricPair(feature_type::LOCALMORANSI, distance_metric::METRIC_EUC));
+    distanceMetric.addItem("Local Geary's C (L2)", MakeMetricPair(feature_type::LOCALGEARYC, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Point Clound (Chamfer)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
     distanceMetric.addItem("Point Clound (SSD)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_SSD));
     distanceMetric.addItem("Point Clound (Hausdorff)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU));
     distanceMetric.addItem("MVN (Attr./Spatial)", MakeMetricPair(feature_type::MVN, distance_metric::METRIC_MVN));
-    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance) \n MVN-Reduce (Combination of Spatial and Attribute distance)");
+    distanceMetric.addItem("Hausdorff (Min)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_min));
+    distanceMetric.addItem("Hausdorff (Median)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_med));
+    distanceMetric.addItem("Hausdorff (MedianMedian)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_medmed));
+    distanceMetric.addItem("Hausdorff (MinMax)", MakeMetricPair(feature_type::PCLOUD, distance_metric::METRIC_HAU_minmax));
+    distanceMetric.setToolTip("Vector feature: Texture histograms \nScalar features: Local indicators of spatial association (Local I and C) \nNo feature: Point Cloud (Chamfer distance, Sum of Squared differences, Hausdorff distance) \nMVN-Reduce (Combination of Spatial and Attribute distance)");
 
     // add data item according to enum loc_Neigh_Weighting (FeatureUtils)
-    kernelWeight.addItem("Uniform", QVariant(0));
-    kernelWeight.addItem("Binomial", QVariant(1));
-    kernelWeight.addItem("Gaussian", QVariant(2));
+    kernelWeight.addItem("Uniform", static_cast<unsigned int> (loc_Neigh_Weighting::WEIGHT_UNIF));
+    kernelWeight.addItem("Binomial", static_cast<unsigned int> (loc_Neigh_Weighting::WEIGHT_BINO));
+    kernelWeight.addItem("Gaussian", static_cast<unsigned int> (loc_Neigh_Weighting::WEIGHT_GAUS));
 
-    // add data item according to enum histBinSizeHeuristic (SpiderSettingsWidget.h)
-    histBinSizeHeur.addItem("Manual", QVariant(0));
-    histBinSizeHeur.addItem("Sqrt", QVariant(1));
-    histBinSizeHeur.addItem("Sturges", QVariant(2));
-    histBinSizeHeur.addItem("Rice", QVariant(3));
+    // add data item according to enum histBinSizeHeuristic (FeatureUtils)
+    histBinSizeHeur.addItem("Manual", static_cast<unsigned int> (histBinSizeHeuristic::MANUAL));
+    histBinSizeHeur.addItem("Sqrt", static_cast<unsigned int> (histBinSizeHeuristic::SQRT));
+    histBinSizeHeur.addItem("Sturges", static_cast<unsigned int> (histBinSizeHeuristic::STURGES));
+    histBinSizeHeur.addItem("Rice", static_cast<unsigned int> (histBinSizeHeuristic::RICE));
     histBinSizeHeur.setToolTip("Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))");
 
     // Initialize data options
@@ -134,9 +138,9 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     weightSpaAttrNum.setFixedWidth(50);
 
     numIterations.setValidator(new QIntValidator(1, 10000, this));
-    perplexity.setValidator(new QIntValidator(2, 50, this));
-    exaggeration.setValidator(new QIntValidator(1, 10000, this));
-    expDecay.setValidator(new QIntValidator(1, 10000, this));
+    perplexity.setValidator(new QIntValidator(2, 150, this));
+    exaggeration.setValidator(new QIntValidator(0, 10000, this));
+    expDecay.setValidator(new QIntValidator(0, 10000, this));
     numTrees.setValidator(new QIntValidator(1, 10000, this));
     numChecks.setValidator(new QIntValidator(1, 10000, this));
     kernelSize.setRange(1, 10000);
@@ -316,9 +320,9 @@ void SpidrSettingsWidget::onStartToggled(bool pressed)
 }
 
 void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {
-    int activeHeur = histBinSizeHeur.currentIndex();
+    histBinSizeHeuristic activeHeur = static_cast<histBinSizeHeuristic> (histBinSizeHeur.currentData().value<unsigned int>());
 
-    if (activeHeur == 0) 
+    if (activeHeur == histBinSizeHeuristic::MANUAL)
         return;
     else  {
         const int kernelSize_ = kernelSizeField.toInt();
@@ -326,9 +330,9 @@ void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {
         int binNum = 0;
         switch (activeHeur)
         {
-        case 1: binNum = SqrtBinSize(numLocNeighbors); break;
-        case 2: binNum = SturgesBinSize(numLocNeighbors); break;
-        case 3: binNum = RiceBinSize(numLocNeighbors); break;
+        case histBinSizeHeuristic::SQRT: binNum = SqrtBinSize(numLocNeighbors); break;
+        case histBinSizeHeuristic::STURGES: binNum = SturgesBinSize(numLocNeighbors); break;
+        case histBinSizeHeuristic::RICE: binNum = RiceBinSize(numLocNeighbors); break;
         default:
             break;
         }
@@ -340,13 +344,12 @@ void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {
 }
 
 void SpidrSettingsWidget::onDistanceMetricPicked(int distMetricBoxIndex) {
-    
-    // if the metric works on vector features
-    // provide options for the vector size
-    // also, check if neighborhood weighting is 
-    // available for the specific feature
-    if (distMetricBoxIndex >= 3) {
-        // PCD (no features) LISA, GC (scalar features)
+    distance_metric distMetric = GetDistMetricFromMetricPair(distanceMetric.itemData(distMetricBoxIndex));
+
+    // if the metric works on vector features provide options for the vector size
+    // also, check if neighborhood weighting is available for the specific feature
+    if (!(distMetric == distance_metric::METRIC_EMD || distMetric == distance_metric::METRIC_HEL || distMetric == distance_metric::METRIC_QF)) {
+        // only for histogram features 
         histBinSizeHeur.setEnabled(false);
         histBinSize.setEnabled(false);
     }
@@ -355,7 +358,8 @@ void SpidrSettingsWidget::onDistanceMetricPicked(int distMetricBoxIndex) {
         histBinSize.setEnabled(true);
     }
 
-    if (distMetricBoxIndex == 8) {
+    if (distMetric == distance_metric::METRIC_MVN) {
+        // only for MVN
         weightSpaAttrSlider.setEnabled(true);
         weightSpaAttrNum.setEnabled(true);
 

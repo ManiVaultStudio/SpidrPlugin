@@ -36,18 +36,18 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width() << ", " << _params._imgSize.height();
 }
 
-void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int kernelInd, const size_t numLocNeighbors, const size_t numHistBins,\
-                                               const int aknnAlgInd, const int aknnMetric, const float MVNweight, \
-                                               const int numIterations, const int perplexity, const int exaggeration) {
+void SpidrAnalysis::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins,\
+                                               const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
+                                               const int numIterations, const int perplexity, const int exaggeration, const int expDecay) {
     // initialize Feature Extraction Settings
     setFeatureType(featType);
-    setKernelWeight(kernelInd);
+    setKernelWeight(kernelWeightType);
     setNumLocNeighbors(numLocNeighbors);    // Sets _params._kernelWidth and _params._neighborhoodSize as well
     setNumHistBins(numHistBins);
 
     // initialize Distance Calculation Settings
     // number of nn is dertermined by perplexity, set in setPerplexity
-    setKnnAlgorithm(aknnAlgInd);
+    setKnnAlgorithm(aknnAlgType);
     setDistanceMetric(aknnMetric);
     setMVNWeight(MVNweight);
 
@@ -55,6 +55,7 @@ void SpidrAnalysis::initializeAnalysisSettings(const int featType, const int ker
     setNumIterations(numIterations);
     setPerplexity(perplexity);
     setExaggeration(exaggeration);
+    setExpDecay(expDecay);
 
     // Derived parameters
     setNumFeatureValsPerPoint(); 
@@ -126,6 +127,10 @@ void SpidrAnalysis::setNumIterations(const unsigned numIt) {
 
 void SpidrAnalysis::setExaggeration(const unsigned exag) {
     _params._exaggeration = exag;
+}
+
+void SpidrAnalysis::setExpDecay(const unsigned expDecay) {
+    _params._expDecay = expDecay;
 }
 
 void SpidrAnalysis::setNumFeatureValsPerPoint() {
