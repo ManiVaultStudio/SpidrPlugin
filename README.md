@@ -6,8 +6,10 @@ To clone the repo and some dependencies (hnsw lib):
 
 Build with the same generator as the HDPS core.
 
+Uses the Spidr implementation from [here](https://github.com/alxvth/Spidr/) and A-tSNE from the [HDILib](https://github.com/biovault/HDILib).
+
 ## Other Dependencies
-Not all dependencies are included in this repo, some need to be downloaded/install by yourself. 
+Not all dependencies are included in this repo, some need to be downloaded/installed by yourself. 
 Make sure to adjust your system variables respectively:
 - HDPS core, follow instructions [here](https://github.com/hdps/core)
 - Qt 5.14 (or newer)
