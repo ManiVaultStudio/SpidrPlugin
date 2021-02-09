@@ -64,6 +64,7 @@ include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
 include_directories ("lib/HDI/include")
 include_directories ("lib/hnswlib/")
 include_directories ("lib/Spidr/src/")
+include_directories ("lib/Spidr/external/spdlog/include/")
 include_directories(${Boost_INCLUDE_DIRS})
 
 if(MSVC)
