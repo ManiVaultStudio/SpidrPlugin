@@ -41,9 +41,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     setTitle(guiName);
     setSubtitle("");
 
-    const auto minimumWidth = 200;
-    setMinimumWidth(minimumWidth);
-    setMaximumWidth(2 * minimumWidth);
+    // make sure the entire widget is visible without horizontal scrolling
+    setMinimumWidth(200);
     
     // add data item according to enum knn_library (KNNUtils)
     knnOptions.addItem("HNSW", static_cast<unsigned int> (knn_library::KNN_HNSW));
