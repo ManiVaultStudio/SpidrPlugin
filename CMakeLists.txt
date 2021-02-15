@@ -44,7 +44,7 @@ set(DIMENSIONSELECTIONHOLDER
 file(GLOB WIDGETS src/*Widget.*)
 file(GLOB UIS ui/*.ui)
 file(GLOB JSON src/*.json)
-file(GLOB SPIDRLIB lib/Spidr/src/*)
+file(GLOB SPIDRLIB external/Spidr/src/*)	# this makes chaning the Spidr lib from this project easier
 
 set(SOURCES ${PLUGIN} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
 set(AUX ${JSON})
@@ -61,25 +61,25 @@ QT5_WRAP_UI(UI_HEADERS ${UIS})
 add_library(${PROJECT} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
 
 include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
-include_directories ("lib/HDI/include")
-include_directories ("lib/hnswlib/")
-include_directories ("lib/Spidr/src/")
-include_directories ("lib/Spidr/external/spdlog/include/")
+include_directories ("external/HDI/include")
+include_directories ("external/hnswlib/")
+include_directories ("external/Spidr/src/")
+include_directories ("external/Spidr/external/spdlog/include/")
 include_directories(${Boost_INCLUDE_DIRS})
 
 if(MSVC)
-    include_directories ("lib/Flann/Win/include")
+    include_directories ("external/Flann/Win/include")
 	ADD_DEFINITIONS(/arch:AVX)
 	add_definitions(-DUSE_SSE)
 	add_definitions(-DUSE_AVX)
 endif(MSVC)
 
 if(APPLE)
-    include_directories ("lib/Flann/OSX/include")
+    include_directories ("external/Flann/OSX/include")
 endif(APPLE)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    include_directories ("lib/Flann/Linux/include")
+    include_directories ("external/Flann/Linux/include")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 target_compile_definitions(${PROJECT} PRIVATE QT_MESSAGELOGCONTEXT)
@@ -105,29 +105,29 @@ target_link_libraries(${PROJECT} "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/Po
 
 if(MSVC)
     MESSAGE( STATUS "Linking Windows libraries...")
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/lib/HDI/Win/Debug/hdidimensionalityreduction.lib")
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/lib/HDI/Win/Debug/hdidata.lib")
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/lib/HDI/Win/Debug/hdiutils.lib")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/lib/HDI/Win/Release/hdidimensionalityreduction.lib")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/lib/HDI/Win/Release/hdidata.lib")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/lib/HDI/Win/Release/hdiutils.lib")
+    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/HDI/Win/Debug/hdidimensionalityreduction.lib")
+    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/HDI/Win/Debug/hdidata.lib")
+    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/HDI/Win/Debug/hdiutils.lib")
+    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/HDI/Win/Release/hdidimensionalityreduction.lib")
+    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/HDI/Win/Release/hdidata.lib")
+    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/HDI/Win/Release/hdiutils.lib")
 
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/lib/Flann/Win/Debug/flann_cpp_s.lib")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/lib/Flann/Win/Release/flann_cpp_s.lib")
+    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/Flann/Win/Debug/flann_cpp_s.lib")
+    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/Flann/Win/Release/flann_cpp_s.lib")
 endif(MSVC)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     MESSAGE( STATUS "Linking Linux libraries...")
-    target_link_libraries(${PROJECT} "${CMAKE_CURRENT_SOURCE_DIR}/lib/AtSNE/Linux/libbh_t_sne_library.a")
+    target_link_libraries(${PROJECT} "${CMAKE_CURRENT_SOURCE_DIR}/external/AtSNE/Linux/libbh_t_sne_library.a")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 if(APPLE)
     MESSAGE( STATUS "Linking Mac OS X libraries...")
 
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/lib/AtSNE/OSX/Debug/libbh_t_sne_library.a")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/lib/AtSNE/OSX/Release/libbh_t_sne_library.a")
+    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/AtSNE/OSX/Debug/libbh_t_sne_library.a")
+    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/AtSNE/OSX/Release/libbh_t_sne_library.a")
 
-    target_link_libraries(${PROJECT} "${CMAKE_CURRENT_SOURCE_DIR}/lib/Flann/OSX/libflann_s.a")
+    target_link_libraries(${PROJECT} "${CMAKE_CURRENT_SOURCE_DIR}/external/Flann/OSX/libflann_s.a")
 endif(APPLE)
 
 add_custom_command(TARGET ${PROJECT} POST_BUILD

@@ -1,6 +1,6 @@
 [submodule "lib/hnswlib"]
-	path = lib/hnswlib
+	path = external/hnswlib
 	url = https://github.com/nmslib/hnswlib.git
 [submodule "lib/Spidr"]
-	path = lib/Spidr
+	path = external/Spidr
 	url = https://github.com/alxvth/Spidr
