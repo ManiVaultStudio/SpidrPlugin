@@ -1,7 +1,6 @@
 #include "TsneComputation.h"
 
-#include "AnalysisParameters.h"
-#include "EvalUtils.h"
+#include "SpidrAnalysisParameters.h"
 
 #include <algorithm>            // std::min, max
 #include <vector>
@@ -58,7 +57,7 @@ private:
 
 OffscreenBuffer* offBuffer;
 
-TsneComputation::TsneComputation() :
+TsneComputationQt::TsneComputationQt() :
 _iterations(1000),
 _numTrees(4),
 _numChecks(1024),
@@ -76,18 +75,18 @@ _continueFromIteration(0)
     _nn = _perplexity * _perplexity_multiplier + 1;
 }
 
-TsneComputation::~TsneComputation()
+TsneComputationQt::~TsneComputationQt()
 {
 }
 
-void TsneComputation::computeGradientDescent()
+void TsneComputationQt::computeGradientDescent()
 {
     initGradientDescent();
 
     embed();
 }
 
-void TsneComputation::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const Parameters params) {
+void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params) {
     // Parameters
     _iterations = params._numIterations;
     _perplexity = params._perplexity;
@@ -111,7 +110,7 @@ void TsneComputation::setup(const std::vector<int> knn_indices, const std::vecto
 }
 
 
-void TsneComputation::initTSNE()
+void TsneComputationQt::initTSNE()
 {
         
     // Computation of the high dimensional similarities
@@ -141,7 +140,7 @@ void TsneComputation::initTSNE()
     }
 }
 
-void TsneComputation::initGradientDescent()
+void TsneComputationQt::initGradientDescent()
 {
     _continueFromIteration = 0;
 
@@ -168,7 +167,7 @@ void TsneComputation::initGradientDescent()
 }
 
 // Computing gradient descent
-void TsneComputation::embed()
+void TsneComputationQt::embed()
 {
     double elapsed = 0;
     double t = 0;
@@ -217,58 +216,58 @@ void TsneComputation::embed()
 
 }
 
-void TsneComputation::compute() {
+void TsneComputationQt::compute() {
     initTSNE();
     computeGradientDescent();
 }
 
 // Copy tSNE output to our output
-void TsneComputation::copyFloatOutput()
+void TsneComputationQt::copyFloatOutput()
 {
     _outputData = _embedding.getContainer();
 }
 
-const std::vector<float>& TsneComputation::output()
+const std::vector<float>& TsneComputationQt::output()
 {
     return _outputData;
 }
 
-void TsneComputation::setVerbose(bool verbose)
+void TsneComputationQt::setVerbose(bool verbose)
 {
     _verbose = verbose;
 }
 
-void TsneComputation::setIterations(int iterations)
+void TsneComputationQt::setIterations(int iterations)
 {
     _iterations = iterations;
 }
 
-void TsneComputation::setExaggerationIter(int exaggerationIter)
+void TsneComputationQt::setExaggerationIter(int exaggerationIter)
 {
     _exaggerationIter = exaggerationIter;
 }
 
-void TsneComputation::setExponentialDecay(int exponentialDecay)
+void TsneComputationQt::setExponentialDecay(int exponentialDecay)
 {
     _exponentialDecay = exponentialDecay;
 }
 
-void TsneComputation::setPerplexity(int perplexity)
+void TsneComputationQt::setPerplexity(int perplexity)
 {
     _perplexity = perplexity;
 }
 
-void TsneComputation::setNumDimensionsOutput(int numDimensionsOutput)
+void TsneComputationQt::setNumDimensionsOutput(int numDimensionsOutput)
 {
     _numDimensionsOutput = numDimensionsOutput;
 }
 
-void TsneComputation::stopGradientDescent()
+void TsneComputationQt::stopGradientDescent()
 {
     _isGradientDescentRunning = false;
 }
 
-void TsneComputation::markForDeletion()
+void TsneComputationQt::markForDeletion()
 {
     _isMarkedForDeletion = true;
 

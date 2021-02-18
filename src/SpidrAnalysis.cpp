@@ -4,23 +4,23 @@
 
 #include <QDebug>
 
-SpidrAnalysis::SpidrAnalysis(QObject* parent) : QThread(parent)
+SpidrAnalysisQt::SpidrAnalysisQt(QObject* parent) : QThread(parent)
 {
     // Connect embedding
     // connect(&_tsne, &TsneComputation::computationStopped, this, &SpidrAnalysis::embeddingComputationStopped);
-    connect(&_tsne, &TsneComputation::newEmbedding, this, &SpidrAnalysis::newEmbedding);
+    connect(&_tsne, &TsneComputationQt::newEmbedding, this, &SpidrAnalysisQt::newEmbedding);
 
 }
 
-SpidrAnalysis::~SpidrAnalysis()
+SpidrAnalysisQt::~SpidrAnalysisQt()
 {
 }
 
-void SpidrAnalysis::run() {
+void SpidrAnalysisQt::run() {
     spatialAnalysis();
 }
 
-void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal) {
+void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal) {
     // Set data
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
@@ -36,7 +36,7 @@ void SpidrAnalysis::setupData(const std::vector<float>& attribute_data, const st
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width << ", " << _params._imgSize.height;
 }
 
-void SpidrAnalysis::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins,\
+void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins,\
                                                const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
                                                const int numIterations, const int perplexity, const int exaggeration, const int expDecay) {
     // initialize Feature Extraction Settings
@@ -62,7 +62,7 @@ void SpidrAnalysis::initializeAnalysisSettings(const unsigned int featType, cons
 }
 
 
-void SpidrAnalysis::spatialAnalysis() {
+void SpidrAnalysisQt::spatialAnalysis() {
 
     // Extract features
     _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params);
@@ -82,37 +82,37 @@ void SpidrAnalysis::spatialAnalysis() {
     emit finishedEmbedding();
 }
 
-void SpidrAnalysis::embeddingComputationStopped() {
+void SpidrAnalysisQt::embeddingComputationStopped() {
     
 }
 
-void SpidrAnalysis::setFeatureType(const int feature_type_index) {
+void SpidrAnalysisQt::setFeatureType(const int feature_type_index) {
     _params._featureType = static_cast<feature_type> (feature_type_index);
 }
 
-void SpidrAnalysis::setKernelWeight(const int loc_Neigh_Weighting_index) {
+void SpidrAnalysisQt::setKernelWeight(const int loc_Neigh_Weighting_index) {
     _params._neighWeighting = static_cast<loc_Neigh_Weighting> (loc_Neigh_Weighting_index);
 }
 
-void SpidrAnalysis::setNumLocNeighbors(const size_t num) {
+void SpidrAnalysisQt::setNumLocNeighbors(const size_t num) {
     _params._numLocNeighbors = num;
     _params._kernelWidth = (2 * _params._numLocNeighbors) + 1;
     _params._neighborhoodSize = _params._kernelWidth * _params._kernelWidth;;
 }
 
-void SpidrAnalysis::setNumHistBins(const size_t num) {
+void SpidrAnalysisQt::setNumHistBins(const size_t num) {
     _params._numHistBins = num;
 }
 
-void SpidrAnalysis::setKnnAlgorithm(const int knn_library_index) {
+void SpidrAnalysisQt::setKnnAlgorithm(const int knn_library_index) {
     _params._aknn_algorithm = static_cast<knn_library> (knn_library_index);
 }
 
-void SpidrAnalysis::setDistanceMetric(const int distance_metric_index) {
+void SpidrAnalysisQt::setDistanceMetric(const int distance_metric_index) {
     _params._aknn_metric = static_cast<distance_metric> (distance_metric_index);
 }
 
-void SpidrAnalysis::setPerplexity(const unsigned perplexity) {
+void SpidrAnalysisQt::setPerplexity(const unsigned perplexity) {
     _params._perplexity = perplexity;
     _params._nn = (perplexity * _params._perplexity_multiplier) + 1;    // see Van Der Maaten, L. (2014). Accelerating t-SNE using tree-based algorithms. The Journal of Machine Learning Research, 15(1), 3221-3245.
 
@@ -121,44 +121,44 @@ void SpidrAnalysis::setPerplexity(const unsigned perplexity) {
         _params._nn = _params._numPoints;
 }
 
-void SpidrAnalysis::setNumIterations(const unsigned numIt) {
+void SpidrAnalysisQt::setNumIterations(const unsigned numIt) {
     _params._numIterations = numIt;
 }
 
-void SpidrAnalysis::setExaggeration(const unsigned exag) {
+void SpidrAnalysisQt::setExaggeration(const unsigned exag) {
     _params._exaggeration = exag;
 }
 
-void SpidrAnalysis::setExpDecay(const unsigned expDecay) {
+void SpidrAnalysisQt::setExpDecay(const unsigned expDecay) {
     _params._expDecay = expDecay;
 }
 
-void SpidrAnalysis::setNumFeatureValsPerPoint() {
+void SpidrAnalysisQt::setNumFeatureValsPerPoint() {
     _params._numFeatureValsPerPoint = NumFeatureValsPerPoint(_params._featureType, _params._numDims, _params._numHistBins, _params._neighborhoodSize);
 }
 
-void SpidrAnalysis::setMVNWeight(const float weight) {
+void SpidrAnalysisQt::setMVNWeight(const float weight) {
     _params._MVNweight = weight;
 }
 
-const size_t SpidrAnalysis::getNumEmbPoints() {
+const size_t SpidrAnalysisQt::getNumEmbPoints() {
     return _params._numPoints;
 }
 
-const size_t SpidrAnalysis::getNumImagePoints() {
+const size_t SpidrAnalysisQt::getNumImagePoints() {
     assert(_pointIDsGlobal.size() == _params._numPoints + _backgroundIDsGlobal.size());
     return _pointIDsGlobal.size();
 }
 
-bool SpidrAnalysis::embeddingIsRunning() {
+bool SpidrAnalysisQt::embeddingIsRunning() {
     return _tsne.isTsneRunning();
 }
 
-const std::vector<float>& SpidrAnalysis::output() {
+const std::vector<float>& SpidrAnalysisQt::output() {
     return _tsne.output();
 }
 
-const std::vector<float>& SpidrAnalysis::outputWithBackground() {
+const std::vector<float>& SpidrAnalysisQt::outputWithBackground() {
     const std::vector<float>& emb = _tsne.output();
     _emd_with_backgound.resize(_pointIDsGlobal.size() * 2);
 
@@ -208,11 +208,11 @@ const std::vector<float>& SpidrAnalysis::outputWithBackground() {
     }
 }
 
-void SpidrAnalysis::stopComputation() {
+void SpidrAnalysisQt::stopComputation() {
     _featExtraction.stopFeatureCopmutation();
     _tsne.stopGradientDescent();
 }
 
-const Parameters SpidrAnalysis::getParameters() {
+const SpidrParameters SpidrAnalysisQt::getParameters() {
     return _params;
 }

@@ -87,7 +87,7 @@ private:
      */
     void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
 
-    SpidrAnalysis _spidrAnalysis;                       /*!<> */
+    SpidrAnalysisQt _spidrAnalysis;                       /*!<> */
     std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */
     QString _embeddingName;                             /*!<> */
     QThread workerThread;                               /*!<> */

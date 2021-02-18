@@ -37,8 +37,8 @@ void SpidrPlugin::init()
     connect(_settings.get(), &SpidrSettingsWidget::dataSetPicked, this, &SpidrPlugin::dataSetPicked);
 
     // Connect embedding
-    connect(&_spidrAnalysis, &SpidrAnalysis::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
-    connect(&_spidrAnalysis, &SpidrAnalysis::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
+    connect(&_spidrAnalysis, &SpidrAnalysisQt::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
+    connect(&_spidrAnalysis, &SpidrAnalysisQt::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
     //connect(this, &SpidrPlugin::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
 }
 

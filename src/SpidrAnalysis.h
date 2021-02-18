@@ -3,7 +3,7 @@
 #include "TsneComputation.h"
 #include "DistanceCalculation.h"
 #include "FeatureExtraction.h"
-#include "AnalysisParameters.h"
+#include "SpidrAnalysisParameters.h"
 #include "FeatureUtils.h"
 #include "KNNUtils.h"
 
@@ -17,12 +17,12 @@
  * 
  * 
  */
-class SpidrAnalysis : public QThread
+class SpidrAnalysisQt : public QThread
 {
     Q_OBJECT
 public:
-    SpidrAnalysis(QObject* parent);
-    ~SpidrAnalysis() override;
+    SpidrAnalysisQt(QObject* parent);
+    ~SpidrAnalysisQt() override;
 
     /*!
      * 
@@ -75,7 +75,7 @@ public:
 
     const std::vector<float> &outputWithBackground();
 
-    const Parameters getParameters();
+    const SpidrParameters getParameters();
 
 public slots:
     void embeddingComputationStopped();
@@ -152,13 +152,13 @@ private:
     // worker classes
     FeatureExtraction _featExtraction;          /*!<> */
     DistanceCalculation _distCalc;              /*!<> */
-    TsneComputation _tsne;                      /*!<> */
+    TsneComputationQt _tsne;                      /*!<> */
     
     // data and setting
     std::vector<float> _attribute_data;         /*!<> */
     std::vector<unsigned int> _pointIDsGlobal;  /*!<> */
     std::vector<unsigned int> _backgroundIDsGlobal;  /*!< ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation > */
-    Parameters _params;                         /*!<> */
+    SpidrParameters _params;                         /*!<> */
     std::vector<float> _emd_with_backgound;
 };
 

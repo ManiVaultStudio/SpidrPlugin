@@ -9,18 +9,18 @@
 #include <vector>
 #include <string>
 
-class Parameters;
+class SpidrParameters;
 
 /*!
  * 
  * 
  */
-class TsneComputation : public QObject
+class TsneComputationQt : public QObject
 {
     Q_OBJECT
 public:
-    TsneComputation();
-    ~TsneComputation() override;
+    TsneComputationQt();
+    ~TsneComputationQt() override;
 
     void setVerbose(bool verbose);
     void setIterations(int iterations);
@@ -42,7 +42,7 @@ public:
      * \param knn_distances
      * \param params
      */
-    void setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const Parameters params);
+    void setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params);
     
     /*!
      * 

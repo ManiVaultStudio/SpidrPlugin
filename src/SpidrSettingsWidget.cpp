@@ -2,7 +2,7 @@
 
 #include "DimensionSelectionWidget.h"
 #include "SpidrPlugin.h"
-#include "FeatureUtils.h"
+#include "SpidrAnalysisParameters.h"
 
 // Qt header files:
 #include <QDebug>
