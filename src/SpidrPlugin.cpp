@@ -20,7 +20,7 @@ using namespace hdps;
 SpidrPlugin::SpidrPlugin()
 :
 AnalysisPlugin("Spidr"),
-_spidrAnalysis(this)
+_spidrAnalysisQt(this)
 {
 }
 
@@ -37,8 +37,8 @@ void SpidrPlugin::init()
     connect(_settings.get(), &SpidrSettingsWidget::dataSetPicked, this, &SpidrPlugin::dataSetPicked);
 
     // Connect embedding
-    connect(&_spidrAnalysis, &SpidrAnalysis::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
-    connect(&_spidrAnalysis, &SpidrAnalysis::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
+    connect(&_spidrAnalysisQt, &SpidrAnalysisQt::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
+    connect(&_spidrAnalysisQt, &SpidrAnalysisQt::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
     //connect(this, &SpidrPlugin::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
 }
 
@@ -107,7 +107,7 @@ void SpidrPlugin::startComputation()
     std::vector<unsigned int> pointIDsGlobal; // Global ID of each point in the image
     std::vector<float> attribute_data;        // Actual channel valures, only consider enabled dimensions
     std::vector<unsigned int> backgroundIDsGlobal;  // ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
-    QSize imgSize;
+    ImgSize imgSize;
     unsigned int numDims;
     QString dataName = _settings->dataOptions.currentText();
     retrieveData(dataName, pointIDsGlobal, attribute_data, numDims, imgSize, backgroundIDsGlobal);
@@ -124,17 +124,19 @@ void SpidrPlugin::startComputation()
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
 
-    _spidrAnalysis.setupData(attribute_data, pointIDsGlobal, numDims, imgSize, _embeddingName, backgroundIDsGlobal);
+    _spidrAnalysisQt.setupData(attribute_data, pointIDsGlobal, numDims, imgSize, _embeddingName, backgroundIDsGlobal);
     initializeAnalysisSettings();
 
     // Start spatial analysis
-    _spidrAnalysis.start();
+    _spidrAnalysisQt.start();
 
 }
 
-void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, QSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal) {
+void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal) {
     Points& points = _core->requestData<Points>(dataName);
-    imgSize = points.getProperty("ImageSize", QSize()).toSize();
+    QSize qtImgSize = points.getProperty("ImageSize", QSize()).toSize();
+    imgSize.width = qtImgSize.width();
+    imgSize.height = qtImgSize.height();
 
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 
@@ -199,24 +201,24 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
 
 
 void SpidrPlugin::onNewEmbedding() {
-    const std::vector<float>& outputData = _spidrAnalysis.output();
+    const std::vector<float>& outputData = _spidrAnalysisQt.output();
     Points& embedding = _core->requestData<Points>(_embeddingName);
     
-    embedding.setData(outputData.data(), _spidrAnalysis.getNumEmbPoints(), 2);
+    embedding.setData(outputData.data(), _spidrAnalysisQt.getNumEmbPoints(), 2);
 
     _core->notifyDataChanged(_embeddingName);
 }
 
 void SpidrPlugin::onFinishedEmbedding() {
-    const std::vector<float>& outputData = _spidrAnalysis.outputWithBackground();
+    const std::vector<float>& outputData = _spidrAnalysisQt.outputWithBackground();
 
     assert(outputData.size() % 2 == 0);
-    assert(outputData.size() == _spidrAnalysis.getNumImagePoints() * 2);
+    assert(outputData.size() == _spidrAnalysisQt.getNumImagePoints() * 2);
 
     qDebug() << "SpidrPlugin: Publishing final embedding";
 
     Points& embedding = _core->requestData<Points>(_embeddingName);
-    embedding.setData(outputData.data(), _spidrAnalysis.getNumImagePoints(), 2);
+    embedding.setData(outputData.data(), _spidrAnalysisQt.getNumImagePoints(), 2);
     _core->notifyDataChanged(_embeddingName);
 
     _settings.get()->computationStopped();
@@ -228,7 +230,7 @@ void SpidrPlugin::onFinishedEmbedding() {
 void SpidrPlugin::initializeAnalysisSettings() {
     // set all the parameters
     // TODO: use the strongly typed enum classes instead of all the int values
-    _spidrAnalysis.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().value<unsigned int>(), _settings->kernelSize.text().toInt(),  \
+    _spidrAnalysisQt.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().value<unsigned int>(), _settings->kernelSize.text().toInt(),  \
                                               _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().value<unsigned int>(), _settings->distanceMetric.currentData().toPoint().y(), \
                                               _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt(), _settings->expDecay.text().toInt());
 }
@@ -236,18 +238,18 @@ void SpidrPlugin::initializeAnalysisSettings() {
 
 void SpidrPlugin::stopComputation() {
     // Request interruption of the computation
-    if (_spidrAnalysis.isRunning())
+    if (_spidrAnalysisQt.isRunning())
     {
         // release openGL context 
-        _spidrAnalysis.stopComputation();
-        _spidrAnalysis.exit();
+        _spidrAnalysisQt.stopComputation();
+        _spidrAnalysisQt.exit();
 
         // Wait until the thread has terminated (max. 3 seconds)
-        if (!_spidrAnalysis.wait(3000))
+        if (!_spidrAnalysisQt.wait(3000))
         {
             qDebug() << "Spatial Analysis computation thread did not close in time, terminating...";
-            _spidrAnalysis.terminate();
-            _spidrAnalysis.wait();
+            _spidrAnalysisQt.terminate();
+            _spidrAnalysisQt.wait();
         }
         qDebug() << "Spatial Analysis computation stopped.";
 
