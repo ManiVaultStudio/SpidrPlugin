@@ -1,4 +1,4 @@
-#include "SpidrAnalysis.h"
+#include "SpidrAnalysisQt.h"
 
 #include <cmath>
 
@@ -7,7 +7,7 @@
 SpidrAnalysisQt::SpidrAnalysisQt(QObject* parent) : QThread(parent)
 {
     // Connect embedding
-    // connect(&_tsne, &TsneComputation::computationStopped, this, &SpidrAnalysis::embeddingComputationStopped);
+    // connect(&_tsne, &TsneComputationQt::computationStopped, this, &SpidrAnalysisQt::embeddingComputationStopped);
     connect(&_tsne, &TsneComputationQt::newEmbedding, this, &SpidrAnalysisQt::newEmbedding);
 
 }

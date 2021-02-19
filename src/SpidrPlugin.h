@@ -7,7 +7,7 @@
 #include <QtCore>
 #include <QSize>
 
-#include "SpidrAnalysis.h"
+#include "SpidrAnalysisQt.h"
 #include "PointData.h"
 
 #include "Application.h" 
@@ -87,7 +87,7 @@ private:
      */
     void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
 
-    SpidrAnalysisQt _spidrAnalysis;                       /*!<> */
+    SpidrAnalysisQt _spidrAnalysisQt;                       /*!<> */
     std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */
     QString _embeddingName;                             /*!<> */
     QThread workerThread;                               /*!<> */

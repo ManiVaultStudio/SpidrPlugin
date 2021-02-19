@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TsneComputation.h"
+#include "TsneComputationQt.h"
 #include "DistanceCalculation.h"
 #include "FeatureExtraction.h"
 #include "SpidrAnalysisParameters.h"

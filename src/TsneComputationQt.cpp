@@ -1,4 +1,4 @@
-#include "TsneComputation.h"
+#include "TsneComputationQt.h"
 
 #include "SpidrAnalysisParameters.h"
 
