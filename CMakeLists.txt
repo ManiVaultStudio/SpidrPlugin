@@ -56,13 +56,10 @@ QT5_WRAP_UI(UI_HEADERS ${UIS})
 
 add_library(${PROJECT} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
 
-include_directories("$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
-include_directories("external/Spidr/external/HDILib/HDI/include")
-include_directories("external/Spidr/external/hnswlib/")
-include_directories("external/Spidr/include/")
+target_include_directories(${PROJECT} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
+target_include_directories(${PROJECT} PRIVATE "external/Spidr/include/")
 
 if(MSVC)
-    include_directories ("external/Spidr/external/HDILib/Flann/Win/include")
 	ADD_DEFINITIONS(/arch:AVX)
 	add_definitions(-DUSE_SSE)
 	add_definitions(-DUSE_AVX)
@@ -70,31 +67,15 @@ endif(MSVC)
 
 target_compile_definitions(${PROJECT} PRIVATE QT_MESSAGELOGCONTEXT)
 
-# Request C++17, in order to use std::for_each_n with std::execution::par_unseq.
-set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 17)
+target_compile_features(${PROJECT} PUBLIC cxx_std_17)
 
-target_link_libraries(${PROJECT} Qt5::Widgets)
-target_link_libraries(${PROJECT} Qt5::WebEngineWidgets)
-target_link_libraries(${PROJECT} "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
-target_link_libraries(${PROJECT} "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/PointData.lib")
+target_link_libraries(${PROJECT} PRIVATE Qt5::Widgets)
+target_link_libraries(${PROJECT} PRIVATE Qt5::WebEngineWidgets)
+target_link_libraries(${PROJECT} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
+target_link_libraries(${PROJECT} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/PointData.lib")
 
 add_subdirectory("external/Spidr")
-target_link_libraries(${PROJECT} Spidr)
-
-if(MSVC)
-    MESSAGE( STATUS "Linking Windows libraries...")
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/HDILib/HDI/Win/Debug/hdidimensionalityreduction.lib")
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/HDILib/HDI/Win/Debug/hdidata.lib")
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/HDILib/HDI/Win/Debug/hdiutils.lib")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr//external/HDILib/HDI/Win/Release/hdidimensionalityreduction.lib")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/HDILib/HDI/Win/Release/hdidata.lib")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/HDILib/HDI/Win/Release/hdiutils.lib")
-
-    target_link_libraries(${PROJECT} debug "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/HDILib/Flann/Win/Debug/flann_cpp_s.lib")
-    target_link_libraries(${PROJECT} optimized "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/HDILib/Flann/Win/Release/flann_cpp_s.lib")
-else()
-	message(ERROR, "Only windows tested")    
-endif(MSVC)
+target_link_libraries(${PROJECT} PRIVATE SpidrLib)
 
 add_custom_command(TARGET ${PROJECT} POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
