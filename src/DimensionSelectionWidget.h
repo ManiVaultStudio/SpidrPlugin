@@ -10,8 +10,8 @@ class Points;
 namespace hdps
 {
     /*!
-     * 
-     * 
+     *
+     *
      */
     class DimensionSelectionWidget : public QWidget
     {

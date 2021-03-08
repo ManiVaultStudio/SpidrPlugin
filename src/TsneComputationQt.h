@@ -12,8 +12,8 @@
 class SpidrParameters;
 
 /*!
- * 
- * 
+ *
+ *
  */
 class TsneComputationQt : public QObject
 {
@@ -36,17 +36,17 @@ public:
     inline int numDimensionsOutput() { return _numDimensionsOutput; }
 
     /*!
-     * 
-     * 
+     *
+     *
      * \param knn_indices
      * \param knn_distances
      * \param params
      */
     void setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params);
-    
+
     /*!
-     * 
-     * 
+     *
+     *
      */
     void initTSNE();
     void stopGradientDescent();
@@ -54,14 +54,14 @@ public:
 
     /*!
      * !
-     * 
+     *
      */
     void compute();
 
     /*!
-     * 
-     * 
-     * \return 
+     *
+     *
+     * \return
      */
     const std::vector<float>& output();
 

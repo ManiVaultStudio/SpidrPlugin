@@ -33,7 +33,7 @@ feature_type GetFeatureTypeFromQtMetricPair(const QVariant metricPair) {
 SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     SettingsWidget(),
     _analysisPlugin(analysisPlugin),
-    backgroundNameLine(""), embNameLine("")
+    backgroundNameLine(""), embeddingNameLine("")
 {
     const auto guiName = analysisPlugin.getGuiName();
     setObjectName(guiName);
@@ -43,7 +43,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     // make sure the entire widget is visible without horizontal scrolling
     setMinimumWidth(200);
-    
+
     // add data item according to enum knn_library (KNNUtils)
     knnOptions.addItem("HNSW", static_cast<unsigned int> (knn_library::KNN_HNSW));
     knnOptions.addItem("Exact", static_cast<unsigned int> (knn_library::EXACT));
@@ -80,27 +80,28 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     histBinSizeHeur.addItem("Rice", static_cast<unsigned int> (histBinSizeHeuristic::RICE));
     histBinSizeHeur.setToolTip("Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))");
 
-    // Initialize data options
-    connect(&dataOptions,   SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
     // Initialize distance metric options
     connect(&distanceMetric, SIGNAL(currentIndexChanged(int)), this, SLOT(onDistanceMetricPicked(int)));
-    // Set embedding default name
-    connect(&dataOptions, SIGNAL(currentIndexChanged(QString)), this, SLOT(setEmbName(QString)));
     // as the kernel changes, the histogram bin number might change if it is not manually set
     connect(&kernelSize, &QSpinBox::textChanged, this, &SpidrSettingsWidget::onKernelSizeChanged);
     // change the hist bin size heuristic
     connect(&histBinSizeHeur, SIGNAL(currentIndexChanged(int)), this, SLOT(onHistBinSizeHeurPicked(int)));
     // connect weight slider and spin box
-    connect(&weightSpaAttrSlider, &QSlider::valueChanged, [this](const int& val) {weightSpaAttrNum.setValue(double(val)/100);});
+    connect(&weightSpaAttrSlider, &QSlider::valueChanged, [this](const int& val) {weightSpaAttrNum.setValue(double(val) / 100); });
     connect(&weightSpaAttrNum, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [this](const double& val) {weightSpaAttrSlider.setValue(val * 100); });
 
     connect(&numIterations, SIGNAL(textChanged(QString)), SLOT(numIterationsChanged(QString)));
-    connect(&perplexity,    SIGNAL(textChanged(QString)), SLOT(perplexityChanged(QString)));
-    connect(&exaggeration,  SIGNAL(textChanged(QString)), SLOT(exaggerationChanged(QString)));
-    connect(&expDecay,      SIGNAL(textChanged(QString)), SLOT(expDecayChanged(QString)));
-    connect(&numTrees,      SIGNAL(textChanged(QString)), SLOT(numTreesChanged(QString)));
-    connect(&numChecks,     SIGNAL(textChanged(QString)), SLOT(numChecksChanged(QString)));
-    connect(&theta,         SIGNAL(textChanged(QString)), SLOT(thetaChanged(QString)));
+    connect(&perplexity, SIGNAL(textChanged(QString)), SLOT(perplexityChanged(QString)));
+    connect(&exaggeration, SIGNAL(textChanged(QString)), SLOT(exaggerationChanged(QString)));
+    connect(&expDecay, SIGNAL(textChanged(QString)), SLOT(expDecayChanged(QString)));
+    connect(&numTrees, SIGNAL(textChanged(QString)), SLOT(numTreesChanged(QString)));
+    connect(&numChecks, SIGNAL(textChanged(QString)), SLOT(numChecksChanged(QString)));
+    connect(&theta, SIGNAL(textChanged(QString)), SLOT(thetaChanged(QString)));
+
+    // Initialize data options
+    _dataOptions = new QComboBox();
+    connect(_dataOptions, SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
+    connect(_dataOptions, SIGNAL(currentIndexChanged(QString)), this, SLOT(setEmbeddingName(QString)));
 
     // Initialize start button
     startButton.setText("Start Computation");
@@ -115,7 +116,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     advancedSettingsBox->setCheckable(true);
     advancedSettingsBox->setChecked(false);
-    
+
     // Build the labels for all the options
     QLabel* iterationLabel = new QLabel("Iteration Count");
     QLabel* perplexityLabel = new QLabel("Perplexity");
@@ -136,7 +137,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     QLabel* weightSpAttrLabel = new QLabel("MVN weight");
     weightSpAttrLabel->setToolTip("Weight Attribute (0) vs Spatial (1)");
-    
+
     // Set option default values
     numIterations.setFixedWidth(50);
     perplexity.setFixedWidth(50);
@@ -186,7 +187,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     settingsLayout->addWidget(distanceMetricLabel, 0, 1, 1, 3);  // (widget, row, col, rowSpan, colSpan)
     settingsLayout->addWidget(&distanceMetric, 1, 1, 1, 3);
-    
+
     settingsLayout->addWidget(kernelWeightLabel, 2, 0);
     settingsLayout->addWidget(&kernelWeight, 3, 0);
 
@@ -205,10 +206,10 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     settingsLayout->addWidget(iterationLabel, 6, 0);
     settingsLayout->addWidget(&numIterations, 7, 0);
-    
+
     settingsLayout->addWidget(perplexityLabel, 6, 1);
     settingsLayout->addWidget(&perplexity, 7, 1);
-        
+
     settingsBox->setLayout(settingsLayout);
 
     auto* const advancedSettingsLayout = new QGridLayout();
@@ -226,15 +227,15 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     advancedSettingsLayout->addWidget(&backgroundFromData, 6, 1);
     advancedSettingsBox->setLayout(advancedSettingsLayout);
 
-    
+
     auto* const computeLayout = new QGridLayout();
     computeLayout->addWidget(embNameLabel, 0, 0);
-    computeLayout->addWidget(&embNameLine, 1, 0, Qt::AlignTop);
+    computeLayout->addWidget(&embeddingNameLine, 1, 0, Qt::AlignTop);
     computeLayout->addWidget(&startButton, 0, 1, 2, 1, Qt::AlignCenter);
     computeBox->setLayout(computeLayout);
 
     // Add all the parts of the settings widget together
-    addWidget(&dataOptions);
+    addWidget(_dataOptions);
     addWidget(settingsBox);
     addWidget(&_dimensionSelectionWidget);
     addWidget(advancedSettingsBox);
@@ -242,14 +243,30 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
 }
 
-void SpidrSettingsWidget::setEmbName(QString embName)
+void SpidrSettingsWidget::setEmbeddingName(QString embName)
 {
-    embNameLine.setText(embName + "_sp-tsne_emb");
+    embeddingNameLine.setText(embName + "_sp-tsne_emb");
 }
 
 QString SpidrSettingsWidget::getEmbName()
 {
-    return embNameLine.text();
+    return embeddingNameLine.text();
+}
+
+QString SpidrSettingsWidget::getCurrentDataItem()
+{
+    return _dataOptions->currentText();
+}
+
+void SpidrSettingsWidget::addDataItem(const QString name)
+{
+    _dataOptions->addItem(name);
+}
+
+void SpidrSettingsWidget::removeDataItem(const QString name)
+{
+    int index = _dataOptions->findText(name);
+    _dataOptions->removeItem(index);
 }
 
 void SpidrSettingsWidget::computationStopped()
@@ -268,11 +285,6 @@ std::vector<bool> SpidrSettingsWidget::getEnabledDimensions()
     return _dimensionSelectionWidget.getEnabledDimensions();
 }
 
-
-QString SpidrSettingsWidget::currentData()
-{
-    return dataOptions.currentText();
-}
 
 // Check if all input values are valid
 bool SpidrSettingsWidget::hasValidSettings()
@@ -310,7 +322,7 @@ void SpidrSettingsWidget::checkInputStyle(QLineEdit& input)
 void SpidrSettingsWidget::onStartToggled(bool pressed)
 {
     // Do nothing if we have no data set selected
-    if (dataOptions.currentText().isEmpty()) {
+    if (getCurrentDataItem().isEmpty()) {
         return;
     }
 
@@ -336,7 +348,7 @@ void SpidrSettingsWidget::onKernelSizeChanged(const QString &kernelSizeField) {
 
     if (activeHeur == histBinSizeHeuristic::MANUAL)
         return;
-    else  {
+    else {
         const int kernelSize_ = kernelSizeField.toInt();
         const int numLocNeighbors = (2 * kernelSize_ + 1) * (2 * kernelSize_ + 1);
         int binNum = 0;
@@ -410,6 +422,10 @@ void SpidrSettingsWidget::onHistBinSizeHeurPicked(int value) {
 
 }
 
+hdps::DimensionSelectionWidget& SpidrSettingsWidget::getDimensionSelectionWidget()
+{
+    return _dimensionSelectionWidget;
+}
 
 void SpidrSettingsWidget::numIterationsChanged(const QString &)
 {
@@ -441,7 +457,7 @@ void SpidrSettingsWidget::numChecksChanged(const QString &)
     checkInputStyle(numChecks);
 }
 
-void SpidrSettingsWidget::thetaChanged(const QString& )
+void SpidrSettingsWidget::thetaChanged(const QString&)
 {
     checkInputStyle(theta);
 }

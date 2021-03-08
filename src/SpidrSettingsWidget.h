@@ -43,10 +43,15 @@ public:
 
     explicit SpidrSettingsWidget(SpidrPlugin&);
 
+    QString getCurrentDataItem();
+    void addDataItem(const QString name);
+    void removeDataItem(const QString name);
+
     std::vector<bool> getEnabledDimensions();
     bool hasValidSettings();
 
-    QString currentData();
+    hdps::DimensionSelectionWidget& getDimensionSelectionWidget();
+
     void dataChanged(const Points& points);
     QString getEmbName();
 
@@ -58,7 +63,7 @@ signals:
 
 public slots:
     void computationStopped();
-    void setEmbName(QString embName);
+    void setEmbeddingName(QString embName);
 
 private slots:
     void onStartToggled(bool pressed);
@@ -74,6 +79,7 @@ private slots:
     void thetaChanged(const QString& value);
 
 public:
+    QComboBox* _dataOptions;        //
     hdps::DimensionSelectionWidget _dimensionSelectionWidget;
 
     QComboBox dataOptions;
@@ -99,9 +105,9 @@ public:
     QLineEdit backgroundNameLine;
     QCheckBox backgroundFromData;   // if ticked take the data not the indices of the data as the background info (for loading background data sets)
 
-    QLineEdit embNameLine;
+    QLineEdit embeddingNameLine;
     QPushButton startButton;
 
 private:
-  SpidrPlugin& _analysisPlugin;
+    SpidrPlugin& _analysisPlugin;
 };

@@ -23,29 +23,24 @@ using namespace hdps::plugin;
 // =============================================================================
 
 /*!
- * 
- * 
+ *
+ *
  */
 class SpidrPlugin : public QObject, public AnalysisPlugin
 {
-    Q_OBJECT   
+    Q_OBJECT
 public:
     SpidrPlugin();
     ~SpidrPlugin(void) override;
-    
-    void init() override;
 
+    void init() override;
 
     /** Returns the icon of this plugin */
     QIcon getIcon() const override {
         return hdps::Application::getIconFont("FontAwesome").getIcon("table");
     }
 
-    void dataAdded(const QString name) Q_DECL_OVERRIDE;
-    void dataChanged(const QString name) Q_DECL_OVERRIDE;
-    void dataRemoved(const QString name) Q_DECL_OVERRIDE;
-    void selectionChanged(const QString dataName) Q_DECL_OVERRIDE;
-    hdps::DataTypes supportedDataTypes() const Q_DECL_OVERRIDE;
+    void onDataEvent(hdps::DataEvent* dataEvent);
 
     hdps::gui::SettingsWidget* const getSettings() override;
 
@@ -62,29 +57,20 @@ signals:
 
 private:
     /*!
-     * 
-     * 
+     *
+     *
      */
     void initializeAnalysisSettings();
 
     /**
-    * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions 
+    * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions
     * @param dataName Name of data set as defined in hdps core
+    * @param pointIDsGlobal  Will contain IDs of selected points in the data set
+    * @param attribute_data  Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
+    * @param numDims Will contain the number of dimensions
     * @param imgSize Will contain the size of the image (width and height)
-    * @param pointIDsGlobal Will contain IDs of selected points in the data set
-    * @param numDimensions Will contain the number of enabled dimensions 
-    * @param data Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
+    * @param backgroundIDsGlobal Will contain the global pixel IDs of a background that is ignored during t-SNE computation but taken into account for feature extraction
     */
-    /*!
-     * 
-     * 
-     * \param dataName
-     * \param pointIDsGlobal
-     * \param attribute_data
-     * \param numDims
-     * \param imgSize
-     * \param backgroundIDsGlobal
-     */
     void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
 
     SpidrAnalysisQt _spidrAnalysisQt;                       /*!<> */
@@ -100,13 +86,13 @@ private:
 class SpidrPluginFactory : public AnalysisPluginFactory
 {
     Q_INTERFACES(hdps::plugin::AnalysisPluginFactory hdps::plugin::PluginFactory)
-    Q_OBJECT
-    Q_PLUGIN_METADATA(IID   "nl.tudelft.SpidrPlugin"
-                      FILE  "SpidrPlugin.json")
-    
+        Q_OBJECT
+        Q_PLUGIN_METADATA(IID   "nl.tudelft.SpidrPlugin"
+            FILE  "SpidrPlugin.json")
+
 public:
     SpidrPluginFactory(void) {}
     ~SpidrPluginFactory(void) override {}
-    
+
     AnalysisPlugin* produce() override;
 };
