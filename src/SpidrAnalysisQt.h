@@ -14,8 +14,8 @@
 #include <vector>
 
 /*!
- * 
- * 
+ *
+ *
  */
 class SpidrAnalysisQt : public QThread
 {
@@ -25,8 +25,8 @@ public:
     ~SpidrAnalysisQt() override;
 
     /*!
-     * 
-     * 
+     *
+     *
      * \param attribute_data
      * \param pointIDsGlobal
      * \param numDimensions
@@ -35,18 +35,18 @@ public:
      * \param backgroundIDsGlobal ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
      */
     void setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
-                   const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal);
+        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal);
 
     // release openGL context of the t-SNE computation
     /*!
-     * 
-     * 
+     *
+     *
      */
     void stopComputation();
 
     /*! Set the parameters of the entire Analysis
      * Use the input from e.g a GUI
-     * 
+     *
      * \param featType
      * \param kernelInd
      * \param numLocNeighbors
@@ -59,17 +59,17 @@ public:
      * \param exaggeration
      */
     void initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
-                                    const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
-                                    const int numIterations, const int perplexity, const int exaggeration, const int expDecay);
+        const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
+        const int numIterations, const int perplexity, const int exaggeration, const int expDecay);
 
     // Getter
     const size_t getNumEmbPoints();
     const size_t getNumImagePoints();
     bool embeddingIsRunning();
     /*!
-     * 
-     * 
-     * \return 
+     *
+     *
+     * \return
      */
     const std::vector<float> &output();
 
@@ -86,10 +86,10 @@ signals:
 
 private:
     void run() override;
-    
+
     /*!
-     * 
-     * 
+     *
+     *
      */
     void spatialAnalysis();
 
@@ -153,7 +153,7 @@ private:
     FeatureExtraction _featExtraction;          /*!<> */
     DistanceCalculation _distCalc;              /*!<> */
     TsneComputationQt _tsne;                      /*!<> */
-    
+
     // data and setting
     std::vector<float> _attribute_data;         /*!<> */
     std::vector<unsigned int> _pointIDsGlobal;  /*!<> */

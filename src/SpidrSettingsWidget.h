@@ -109,5 +109,5 @@ public:
     QPushButton startButton;
 
 private:
-  SpidrPlugin& _analysisPlugin;
+    SpidrPlugin& _analysisPlugin;
 };

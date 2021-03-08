@@ -23,16 +23,16 @@ using namespace hdps::plugin;
 // =============================================================================
 
 /*!
- * 
- * 
+ *
+ *
  */
 class SpidrPlugin : public QObject, public AnalysisPlugin
 {
-    Q_OBJECT   
+    Q_OBJECT
 public:
     SpidrPlugin();
     ~SpidrPlugin(void) override;
-    
+
     void init() override;
 
     /** Returns the icon of this plugin */
@@ -57,13 +57,13 @@ signals:
 
 private:
     /*!
-     * 
-     * 
+     *
+     *
      */
     void initializeAnalysisSettings();
 
     /**
-    * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions 
+    * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions
     * @param dataName Name of data set as defined in hdps core
     * @param pointIDsGlobal  Will contain IDs of selected points in the data set
     * @param attribute_data  Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
@@ -86,13 +86,13 @@ private:
 class SpidrPluginFactory : public AnalysisPluginFactory
 {
     Q_INTERFACES(hdps::plugin::AnalysisPluginFactory hdps::plugin::PluginFactory)
-    Q_OBJECT
-    Q_PLUGIN_METADATA(IID   "nl.tudelft.SpidrPlugin"
-                      FILE  "SpidrPlugin.json")
-    
+        Q_OBJECT
+        Q_PLUGIN_METADATA(IID   "nl.tudelft.SpidrPlugin"
+            FILE  "SpidrPlugin.json")
+
 public:
     SpidrPluginFactory(void) {}
     ~SpidrPluginFactory(void) override {}
-    
+
     AnalysisPlugin* produce() override;
 };

@@ -58,19 +58,19 @@ private:
 OffscreenBuffer* offBuffer;
 
 TsneComputationQt::TsneComputationQt() :
-_iterations(1000),
-_numTrees(4),
-_numChecks(1024),
-_exaggerationIter(250),
-_exponentialDecay(250),
-_perplexity(30), 
-_perplexity_multiplier(3),
-_numDimensionsOutput(2),
-_verbose(false),
-_isGradientDescentRunning(false),
-_isTsneRunning(false),
-_isMarkedForDeletion(false),
-_continueFromIteration(0)
+    _iterations(1000),
+    _numTrees(4),
+    _numChecks(1024),
+    _exaggerationIter(250),
+    _exponentialDecay(250),
+    _perplexity(30),
+    _perplexity_multiplier(3),
+    _numDimensionsOutput(2),
+    _verbose(false),
+    _isGradientDescentRunning(false),
+    _isTsneRunning(false),
+    _isMarkedForDeletion(false),
+    _continueFromIteration(0)
 {
     _nn = _perplexity * _perplexity_multiplier + 1;
 }
@@ -112,7 +112,7 @@ void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vec
 
 void TsneComputationQt::initTSNE()
 {
-        
+
     // Computation of the high dimensional similarities
     {
         hdi::dr::HDJointProbabilityGenerator<float>::Parameters probGenParams;
@@ -162,7 +162,7 @@ void TsneComputationQt::initGradientDescent()
     // Initialize GPGPU-SNE
     offBuffer->bindContext();
     _GPGPU_tSNE.initialize(_probabilityDistribution, &_embedding, tsneParams);
-    
+
     copyFloatOutput();
 }
 
@@ -203,7 +203,7 @@ void TsneComputationQt::embed()
 
         copyFloatOutput();
         emit newEmbedding();
-        
+
         _isGradientDescentRunning = false;
         _isTsneRunning = false;
 

@@ -18,9 +18,9 @@ Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 
 using namespace hdps;
 SpidrPlugin::SpidrPlugin()
-:
-AnalysisPlugin("Spidr"),
-_spidrAnalysisQt(this)
+    :
+    AnalysisPlugin("Spidr"),
+    _spidrAnalysisQt(this)
 {
 }
 
@@ -63,9 +63,9 @@ void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
         // Passes changes to the current dataset to the dimension selection widget
         Points& points = _core->requestData<Points>(dataChangedEvent->dataSetName);
 
-// Only handle underived data?
-//        if (points.isDerivedData())
-//            return;
+        // Only handle underived data?
+        //        if (points.isDerivedData())
+        //            return;
 
         _settings->getDimensionSelectionWidget().dataChanged(points);
     }
@@ -99,7 +99,7 @@ void SpidrPlugin::startComputation()
 
     // Create a new data set and hand it to the hdps core
     qDebug() << "SpidrPlugin: Create new data set for embedding";
-    _embeddingName = _core->createDerivedData( _settings->getEmbName(), dataName);
+    _embeddingName = _core->createDerivedData(_settings->getEmbName(), dataName);
     Points& embedding = _core->requestData<Points>(_embeddingName);
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);
@@ -139,7 +139,7 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
 
     // For all selected points, retrieve values from each dimension
     attribute_data.reserve(pointIDsGlobal.size() * numEnabledDimensions);
-    
+
     points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, &numDimensions](auto beginOfData, auto endOfData)
     {
         for (const auto& pointId : pointIDsGlobal)
@@ -186,7 +186,7 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
 void SpidrPlugin::onNewEmbedding() {
     const std::vector<float>& outputData = _spidrAnalysisQt.output();
     Points& embedding = _core->requestData<Points>(_embeddingName);
-    
+
     embedding.setData(outputData.data(), _spidrAnalysisQt.getNumEmbPoints(), 2);
 
     _core->notifyDataChanged(_embeddingName);
@@ -213,9 +213,9 @@ void SpidrPlugin::onFinishedEmbedding() {
 void SpidrPlugin::initializeAnalysisSettings() {
     // set all the parameters
     // TODO: use the strongly typed enum classes instead of all the int values
-    _spidrAnalysisQt.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().value<unsigned int>(), _settings->kernelSize.text().toInt(),  \
-                                              _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().value<unsigned int>(), _settings->distanceMetric.currentData().toPoint().y(), \
-                                              _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt(), _settings->expDecay.text().toInt());
+    _spidrAnalysisQt.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().value<unsigned int>(), _settings->kernelSize.text().toInt(), \
+        _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().value<unsigned int>(), _settings->distanceMetric.currentData().toPoint().y(), \
+        _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt(), _settings->expDecay.text().toInt());
 }
 
 

@@ -36,9 +36,9 @@ void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const 
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width << ", " << _params._imgSize.height;
 }
 
-void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins,\
-                                               const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
-                                               const int numIterations, const int perplexity, const int exaggeration, const int expDecay) {
+void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins, \
+    const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
+    const int numIterations, const int perplexity, const int exaggeration, const int expDecay) {
     // initialize Feature Extraction Settings
     setFeatureType(featType);
     setKernelWeight(kernelWeightType);
@@ -58,7 +58,7 @@ void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, co
     setExpDecay(expDecay);
 
     // Derived parameters
-    setNumFeatureValsPerPoint(); 
+    setNumFeatureValsPerPoint();
 }
 
 
@@ -83,7 +83,7 @@ void SpidrAnalysisQt::spatialAnalysis() {
 }
 
 void SpidrAnalysisQt::embeddingComputationStopped() {
-    
+
 }
 
 void SpidrAnalysisQt::setFeatureType(const int feature_type_index) {
@@ -180,8 +180,8 @@ const std::vector<float>& SpidrAnalysisQt::outputWithBackground() {
             if (emb[i] < minx)
                 minx = emb[i];
 
-            if (emb[i+1] < miny)
-                miny = emb[i+1];
+            if (emb[i + 1] < miny)
+                miny = emb[i + 1];
         }
 
         minx -= std::abs(minx) * 0.05;
