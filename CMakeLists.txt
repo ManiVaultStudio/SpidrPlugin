@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.17)
 
-set(PROJECT "SpidrPlugin")
+set(SPIDRPLUGIN "SpidrPlugin")
 
-PROJECT(${PROJECT})
+PROJECT(${SPIDRPLUGIN})
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -54,10 +54,10 @@ source_group(Aux FILES ${AUX})
 
 QT5_WRAP_UI(UI_HEADERS ${UIS})
 
-add_library(${PROJECT} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
+add_library(${SPIDRPLUGIN} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
 
-target_include_directories(${PROJECT} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
-target_include_directories(${PROJECT} PRIVATE "external/Spidr/include/")
+target_include_directories(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
+target_include_directories(${SPIDRPLUGIN} PRIVATE "external/Spidr/include/")
 
 if(MSVC)
 	ADD_DEFINITIONS(/arch:AVX)
@@ -65,20 +65,20 @@ if(MSVC)
 	add_definitions(-DUSE_AVX)
 endif(MSVC)
 
-target_compile_definitions(${PROJECT} PRIVATE QT_MESSAGELOGCONTEXT)
+target_compile_definitions(${SPIDRPLUGIN} PRIVATE QT_MESSAGELOGCONTEXT)
 
-target_compile_features(${PROJECT} PUBLIC cxx_std_17)
+target_compile_features(${SPIDRPLUGIN} PUBLIC cxx_std_17)
 
-target_link_libraries(${PROJECT} PRIVATE Qt5::Widgets)
-target_link_libraries(${PROJECT} PRIVATE Qt5::WebEngineWidgets)
-target_link_libraries(${PROJECT} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
-target_link_libraries(${PROJECT} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/PointData.lib")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt5::Widgets)
+target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt5::WebEngineWidgets)
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/PointData.lib")
 
 add_subdirectory("external/Spidr")
-target_link_libraries(${PROJECT} PRIVATE SpidrLib)
+target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)
 
-add_custom_command(TARGET ${PROJECT} POST_BUILD
+add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-    "$<TARGET_FILE:${PROJECT}>"
-    "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/Plugins/$<TARGET_FILE_NAME:${PROJECT}>"
+    "$<TARGET_FILE:${SPIDRPLUGIN}>"
+    "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/Plugins/$<TARGET_FILE_NAME:${SPIDRPLUGIN}>"
 )
