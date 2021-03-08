@@ -40,50 +40,35 @@ void SpidrPlugin::init()
     connect(&_spidrAnalysisQt, &SpidrAnalysisQt::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
     connect(&_spidrAnalysisQt, &SpidrAnalysisQt::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
     //connect(this, &SpidrPlugin::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
+
+    registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
+
 }
 
-void SpidrPlugin::dataAdded(const QString name)
+void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
 {
-    // For now, only handle underived data until Points implementation 
-    // provides functionality to seamlessly obtain global IDs from derived data
-    Points& points = _core->requestData<Points>(name);
-    if (points.isDerivedData())
-        return;
-    // Only accept valid image data
-    QSize imageSize = points.getProperty("ImageSize", QSize()).toSize();
-    if ((imageSize.height() <= 0) || (imageSize.width() <= 0))
-        return;
+    if (dataEvent->getType() == EventType::DataAdded)
+        _settings->addDataItem(static_cast<DataAddedEvent*>(dataEvent)->dataSetName);
 
-    _settings->dataOptions.addItem(name);
-}
+    if (dataEvent->getType() == EventType::DataRemoved)
+        _settings->removeDataItem(static_cast<DataRemovedEvent*>(dataEvent)->dataSetName);
 
-void SpidrPlugin::dataChanged(const QString name)
-{
-    if (name != _settings->currentData()) {
-        return;
+    if (dataEvent->getType() == EventType::DataChanged) {
+        auto dataChangedEvent = static_cast<DataChangedEvent*>(dataEvent);
+
+        // If we are not looking at the changed dataset, ignore it
+        if (dataChangedEvent->dataSetName != _settings->getCurrentDataItem())
+            return;
+
+        // Passes changes to the current dataset to the dimension selection widget
+        Points& points = _core->requestData<Points>(dataChangedEvent->dataSetName);
+
+// Only handle underived data?
+//        if (points.isDerivedData())
+//            return;
+
+        _settings->getDimensionSelectionWidget().dataChanged(points);
     }
-
-    Points& points = _core->requestData<Points>(name);
-
-    _settings->dataChanged(points);
-}
-
-void SpidrPlugin::dataRemoved(const QString name)
-{
-    // Currently, data sets cannot be removed through the UI at this moment
-}
-
-void SpidrPlugin::selectionChanged(const QString dataName)
-{
-
-}
-
-
-DataTypes SpidrPlugin::supportedDataTypes() const
-{
-    DataTypes supportedTypes;
-    supportedTypes.append(PointType);
-    return supportedTypes;
 }
 
 hdps::gui::SettingsWidget* const SpidrPlugin::getSettings()
@@ -109,14 +94,12 @@ void SpidrPlugin::startComputation()
     std::vector<unsigned int> backgroundIDsGlobal;  // ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
     ImgSize imgSize;
     unsigned int numDims;
-    QString dataName = _settings->dataOptions.currentText();
+    QString dataName = _settings->getCurrentDataItem();
     retrieveData(dataName, pointIDsGlobal, attribute_data, numDims, imgSize, backgroundIDsGlobal);
 
     // Create a new data set and hand it to the hdps core
     qDebug() << "SpidrPlugin: Create new data set for embedding";
-
-    _embeddingName = _core->createDerivedData("Points", _settings->getEmbName(), dataName);
-    // _embeddingName = _core->addData("Points", _settings->getEmbName());
+    _embeddingName = _core->createDerivedData( _settings->getEmbName(), dataName);
     Points& embedding = _core->requestData<Points>(_embeddingName);
     embedding.setData(nullptr, 0, 2);
     _core->notifyDataAdded(_embeddingName);
