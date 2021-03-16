@@ -38,7 +38,7 @@ void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const 
 
 void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins, \
     const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
-    const int numIterations, const int perplexity, const int exaggeration, const int expDecay) {
+    const int numIterations, const int perplexity, const int exaggeration, const int expDecay, bool publishTicked) {
     // initialize Feature Extraction Settings
     setFeatureType(featType);
     setKernelWeight(kernelWeightType);
@@ -59,6 +59,9 @@ void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, co
 
     // Derived parameters
     setNumFeatureValsPerPoint();
+
+    // Publish features to core?
+    setPublishFeaturesToCore(publishTicked);
 }
 
 
@@ -67,10 +70,17 @@ void SpidrAnalysisQt::spatialAnalysis() {
     // Extract features
     _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params);
     _featExtraction.compute();
-    const std::vector<float> dataFeats = _featExtraction.output();
+    //const std::vector<float> dataFeats = _featExtraction.output();
+    _dataFeats = _featExtraction.output();
+
+    // Publish feature to the core
+    if (publishFeaturesToCore)
+    {
+        emit publishFeatures();
+    }
 
     // Caclculate distances and kNN
-    _distCalc.setup(dataFeats, _backgroundIDsGlobal, _params);
+    _distCalc.setup(_dataFeats, _backgroundIDsGlobal, _params);
     _distCalc.compute();
     const std::vector<int> knn_indices = _distCalc.get_knn_indices();
     const std::vector<float> knn_distances_squared = _distCalc.get_knn_distances_squared();
@@ -141,13 +151,25 @@ void SpidrAnalysisQt::setMVNWeight(const float weight) {
     _params._MVNweight = weight;
 }
 
+void SpidrAnalysisQt::setPublishFeaturesToCore(const bool publishTicked) {
+    publishFeaturesToCore = publishTicked;
+}
+
 const size_t SpidrAnalysisQt::getNumEmbPoints() {
     return _params._numPoints;
+}
+
+const size_t SpidrAnalysisQt::getNumFeatureValsPerPoint() {
+    return _params._numFeatureValsPerPoint;
 }
 
 const size_t SpidrAnalysisQt::getNumImagePoints() {
     assert(_pointIDsGlobal.size() == _params._numPoints + _backgroundIDsGlobal.size());
     return _pointIDsGlobal.size();
+}
+
+const std::vector<float>* SpidrAnalysisQt::getFeatures() {
+    return &_dataFeats;
 }
 
 bool SpidrAnalysisQt::embeddingIsRunning() {

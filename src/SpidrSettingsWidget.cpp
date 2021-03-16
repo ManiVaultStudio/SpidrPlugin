@@ -138,6 +138,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     QLabel* weightSpAttrLabel = new QLabel("MVN weight");
     weightSpAttrLabel->setToolTip("Weight Attribute (0) vs Spatial (1)");
 
+    QLabel* publishFeaturesToCoreLabel = new QLabel("Publish features");
+
     // Set option default values
     numIterations.setFixedWidth(50);
     perplexity.setFixedWidth(50);
@@ -203,6 +205,9 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     settingsLayout->addWidget(histBinSizeLabel, 4, 1);
     settingsLayout->addWidget(&histBinSize, 5, 1);
+
+    settingsLayout->addWidget(publishFeaturesToCoreLabel, 4, 2, 1, 2);
+    settingsLayout->addWidget(&publishFeaturesToCore, 5, 2);
 
     settingsLayout->addWidget(iterationLabel, 6, 0);
     settingsLayout->addWidget(&numIterations, 7, 0);

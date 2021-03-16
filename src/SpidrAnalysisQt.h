@@ -57,15 +57,22 @@ public:
      * \param numIterations
      * \param perplexity
      * \param exaggeration
+     * \param publishTicked
      */
     void initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
         const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
-        const int numIterations, const int perplexity, const int exaggeration, const int expDecay);
+        const int numIterations, const int perplexity, const int exaggeration, const int expDecay, bool publishTicked);
 
     // Getter
     const size_t getNumEmbPoints();
     const size_t getNumImagePoints();
+
+    const size_t getNumFeatureValsPerPoint();
+
+    const std::vector<float>* getFeatures();
+
     bool embeddingIsRunning();
+    
     /*!
      *
      *
@@ -83,6 +90,8 @@ public slots:
 signals:
     void newEmbedding();
     void finishedEmbedding();
+
+    void publishFeatures();
 
 private:
     void run() override;
@@ -148,6 +157,9 @@ private:
     /*! Sets the spatial-attribut distance weight, 0 for only attributes and 1 for only spatial */
     void setMVNWeight(const float weight);
 
+    /*! Sets whether features should be published to the core */
+    void setPublishFeaturesToCore(const bool publishTicked);
+
 private:
     // worker classes
     FeatureExtraction _featExtraction;          /*!<> */
@@ -160,6 +172,9 @@ private:
     std::vector<unsigned int> _backgroundIDsGlobal;  /*!< ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation > */
     SpidrParameters _params;                         /*!<> */
     std::vector<float> _emd_with_backgound;
+
+    bool publishFeaturesToCore;
+    std::vector<float> _dataFeats;
 };
 
 

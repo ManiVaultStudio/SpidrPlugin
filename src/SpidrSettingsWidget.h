@@ -94,6 +94,8 @@ public:
     QSlider   weightSpaAttrSlider;
     QDoubleSpinBox weightSpaAttrNum;
 
+    QCheckBox publishFeaturesToCore;
+
     QLineEdit numIterations;
     QLineEdit perplexity;
     QLineEdit exaggeration;
