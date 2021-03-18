@@ -156,7 +156,8 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
     });
 
     // If a background data set is given, store the background indices
-    QString backgroundName = _settings->backgroundNameLine.text();
+    QString backgroundName = _settings->backgroundNameLine->currentText();
+
     if (!backgroundName.isEmpty()) {
         Points& backgroundPoints = _core->requestData<Points>(backgroundName);
 

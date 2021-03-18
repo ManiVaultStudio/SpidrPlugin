@@ -33,7 +33,7 @@ feature_type GetFeatureTypeFromQtMetricPair(const QVariant metricPair) {
 SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     SettingsWidget(),
     _analysisPlugin(analysisPlugin),
-    backgroundNameLine(""), embeddingNameLine("")
+    embeddingNameLine("")
 {
     const auto guiName = analysisPlugin.getGuiName();
     setObjectName(guiName);
@@ -102,6 +102,10 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     _dataOptions = new QComboBox();
     connect(_dataOptions, SIGNAL(currentIndexChanged(QString)), this, SIGNAL(dataSetPicked(QString)));
     connect(_dataOptions, SIGNAL(currentIndexChanged(QString)), this, SLOT(setEmbeddingName(QString)));
+
+    // Initialize the background data (advanced setting)
+    backgroundNameLine = new QComboBox();
+    backgroundNameLine->addItem("");
 
     // Initialize start button
     startButton.setText("Start Computation");
@@ -227,7 +231,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     advancedSettingsLayout->addWidget(numChecksLabel, 2, 1);
     advancedSettingsLayout->addWidget(&numChecks, 3, 1);
     advancedSettingsLayout->addWidget(backgroundNameLabel, 4, 0);
-    advancedSettingsLayout->addWidget(&backgroundNameLine, 5, 0, 1, 2);
+    advancedSettingsLayout->addWidget(backgroundNameLine, 5, 0, 1, 2);
     advancedSettingsLayout->addWidget(backgroundTickLabel, 6, 0);
     advancedSettingsLayout->addWidget(&backgroundFromData, 6, 1);
     advancedSettingsBox->setLayout(advancedSettingsLayout);
@@ -266,12 +270,14 @@ QString SpidrSettingsWidget::getCurrentDataItem()
 void SpidrSettingsWidget::addDataItem(const QString name)
 {
     _dataOptions->addItem(name);
+    backgroundNameLine->addItem(name);
 }
 
 void SpidrSettingsWidget::removeDataItem(const QString name)
 {
     int index = _dataOptions->findText(name);
     _dataOptions->removeItem(index);
+    backgroundNameLine->removeItem(index);
 }
 
 void SpidrSettingsWidget::computationStopped()
