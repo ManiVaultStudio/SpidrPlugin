@@ -39,6 +39,7 @@ void SpidrPlugin::init()
     // Connect embedding
     connect(&_spidrAnalysisQt, &SpidrAnalysisQt::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
     connect(&_spidrAnalysisQt, &SpidrAnalysisQt::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
+    connect(&_spidrAnalysisQt, &SpidrAnalysisQt::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
     //connect(this, &SpidrPlugin::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
 
     registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
@@ -155,7 +156,8 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
     });
 
     // If a background data set is given, store the background indices
-    QString backgroundName = _settings->backgroundNameLine.text();
+    QString backgroundName = _settings->backgroundNameLine->currentText();
+
     if (!backgroundName.isEmpty()) {
         Points& backgroundPoints = _core->requestData<Points>(backgroundName);
 
@@ -209,13 +211,21 @@ void SpidrPlugin::onFinishedEmbedding() {
     qDebug() << "SpidrPlugin: Done.";
 }
 
+void SpidrPlugin::onPublishFeatures() {
+    qDebug() << "SpidrPlugin: Publish features to core";
+    QString featureDataSetName = _core->createDerivedData(_settings->getEmbName() + "_Features", _settings->getCurrentDataItem());
+    Points& featureDataSet = _core->requestData<Points>(featureDataSetName);
+    featureDataSet.setData(_spidrAnalysisQt.getFeatures()->data(), _spidrAnalysisQt.getNumEmbPoints(), _spidrAnalysisQt.getNumFeatureValsPerPoint());
+}
+
 
 void SpidrPlugin::initializeAnalysisSettings() {
     // set all the parameters
     // TODO: use the strongly typed enum classes instead of all the int values
     _spidrAnalysisQt.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().value<unsigned int>(), _settings->kernelSize.text().toInt(), \
         _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().value<unsigned int>(), _settings->distanceMetric.currentData().toPoint().y(), \
-        _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt(), _settings->expDecay.text().toInt());
+        _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt(), _settings->expDecay.text().toInt(), \
+        _settings->publishFeaturesToCore.isChecked());
 }
 
 

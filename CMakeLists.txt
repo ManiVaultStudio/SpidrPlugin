@@ -59,12 +59,6 @@ add_library(${SPIDRPLUGIN} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
 target_include_directories(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
 target_include_directories(${SPIDRPLUGIN} PRIVATE "external/Spidr/include/")
 
-if(MSVC)
-	ADD_DEFINITIONS(/arch:AVX)
-	add_definitions(-DUSE_SSE)
-	add_definitions(-DUSE_AVX)
-endif(MSVC)
-
 target_compile_definitions(${SPIDRPLUGIN} PRIVATE QT_MESSAGELOGCONTEXT)
 
 target_compile_features(${SPIDRPLUGIN} PUBLIC cxx_std_17)

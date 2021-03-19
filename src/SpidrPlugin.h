@@ -52,6 +52,8 @@ public slots:
     void onNewEmbedding();
     void onFinishedEmbedding();
 
+    void onPublishFeatures();
+
 signals:
     void embeddingComputationStopped();
 

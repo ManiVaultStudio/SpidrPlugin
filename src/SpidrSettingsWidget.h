@@ -94,6 +94,8 @@ public:
     QSlider   weightSpaAttrSlider;
     QDoubleSpinBox weightSpaAttrNum;
 
+    QCheckBox publishFeaturesToCore;
+
     QLineEdit numIterations;
     QLineEdit perplexity;
     QLineEdit exaggeration;
@@ -102,7 +104,7 @@ public:
     QLineEdit numChecks;
     QLineEdit theta;
 
-    QLineEdit backgroundNameLine;
+    QComboBox* backgroundNameLine;
     QCheckBox backgroundFromData;   // if ticked take the data not the indices of the data as the background info (for loading background data sets)
 
     QLineEdit embeddingNameLine;
