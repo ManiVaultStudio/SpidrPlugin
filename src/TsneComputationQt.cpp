@@ -112,6 +112,7 @@ void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vec
 
 void TsneComputationQt::initTSNE()
 {
+    emit progressMessage("Initializing A-tSNE...");
 
     // Computation of the high dimensional similarities
     {
@@ -122,6 +123,8 @@ void TsneComputationQt::initTSNE()
         probGenParams._num_checks = _numChecks;
 
         qDebug() << "tSNE initialized.";
+
+        emit progressMessage("Calculate probability distributions");
 
         _probabilityDistribution.clear();
         _probabilityDistribution.resize(_numPoints);
@@ -138,12 +141,15 @@ void TsneComputationQt::initTSNE()
         qDebug() << "A-tSNE: Compute probability distribution: " << t / 1000 << " seconds";
         qDebug() << "--------------------------------------------------------------------------------";
     }
+
+    emit progressMessage("Probability distributions calculated");
 }
 
 void TsneComputationQt::initGradientDescent()
 {
-    _continueFromIteration = 0;
+    emit progressMessage("Initializing gradient descent");
 
+    _continueFromIteration = 0;
     _isTsneRunning = true;
 
     hdi::dr::TsneParameters tsneParams;
@@ -169,6 +175,8 @@ void TsneComputationQt::initGradientDescent()
 // Computing gradient descent
 void TsneComputationQt::embed()
 {
+    emit progressMessage("Embedding");
+
     double elapsed = 0;
     double t = 0;
     {
@@ -198,6 +206,10 @@ void TsneComputationQt::embed()
                 qDebug() << "Time: " << t;
 
             elapsed += t;
+
+#ifdef NDEBUG
+            emit progressMessage(QString("Computing gradient descent: %1 %").arg(QString::number(100.0f * static_cast<float>(iter) / static_cast<float>(_iterations), 'f', 1)));
+#endif
         }
         offBuffer->releaseContext();
 

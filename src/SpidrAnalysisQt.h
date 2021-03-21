@@ -92,6 +92,7 @@ signals:
     void finishedEmbedding();
 
     void publishFeatures();
+    void progressMessage(const QString& message);
 
 private:
     void run() override;

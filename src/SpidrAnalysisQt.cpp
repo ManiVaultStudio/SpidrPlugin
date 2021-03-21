@@ -1,5 +1,7 @@
 #include "SpidrAnalysisQt.h"
 
+#include "SpidrPlugin.h"
+
 #include <cmath>
 
 #include <QDebug>
@@ -9,6 +11,8 @@ SpidrAnalysisQt::SpidrAnalysisQt(QObject* parent) : QThread(parent)
     // Connect embedding
     // connect(&_tsne, &TsneComputationQt::computationStopped, this, &SpidrAnalysisQt::embeddingComputationStopped);
     connect(&_tsne, &TsneComputationQt::newEmbedding, this, &SpidrAnalysisQt::newEmbedding);
+
+    connect(&_tsne, &TsneComputationQt::progressMessage, this, &SpidrAnalysisQt::progressMessage);
 
 }
 
@@ -80,6 +84,7 @@ void SpidrAnalysisQt::spatialAnalysis() {
     }
 
     // Caclculate distances and kNN
+    emit progressMessage("Calculate distances and kNN");
     _distCalc.setup(_dataFeats, _backgroundIDsGlobal, _params);
     _distCalc.compute();
     const std::vector<int> knn_indices = _distCalc.get_knn_indices();
@@ -190,6 +195,7 @@ const std::vector<float>& SpidrAnalysisQt::outputWithBackground() {
     }
     else
     {
+        emit progressMessage("Add background back to embedding");
         qDebug() << "SpidrAnalysis: Add background back to embedding";
 
         qDebug() << "SpidrAnalysis: Determine background position in embedding";

@@ -79,6 +79,8 @@ signals:
     void newEmbedding();
     void computationStopped();
 
+    void progressMessage(const QString& message);
+
 private:
     // TSNE structures
     hdi::dr::HDJointProbabilityGenerator<float>::sparse_scalar_matrix_type _probabilityDistribution;
