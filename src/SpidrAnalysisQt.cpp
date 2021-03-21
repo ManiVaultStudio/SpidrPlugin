@@ -72,6 +72,7 @@ void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, co
 void SpidrAnalysisQt::spatialAnalysis() {
 
     // Extract features
+    emit progressMessage("Calculate features");
     _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params);
     _featExtraction.compute();
     //const std::vector<float> dataFeats = _featExtraction.output();
