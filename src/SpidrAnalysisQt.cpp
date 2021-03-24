@@ -3,7 +3,7 @@
 #include "SpidrPlugin.h"
 
 #include <cmath>
-
+#include <algorithm>
 #include <QDebug>
 
 SpidrAnalysisQt::SpidrAnalysisQt(QObject* parent) : QThread(parent)
@@ -29,6 +29,7 @@ void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const 
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
     _backgroundIDsGlobal = backgroundIDsGlobal;
+    std::sort(_backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end());
 
     // Set parameters
     _params._numPoints = _pointIDsGlobal.size();
@@ -38,6 +39,8 @@ void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const 
     _params._dataVecBegin = _attribute_data.data();          // used in point cloud distance
 
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width << ", " << _params._imgSize.height;
+    if (!_backgroundIDsGlobal.empty())
+        qDebug() << "SpidrAnalysis: Excluding "<< _backgroundIDsGlobal.size() << " background points and respective features";
 }
 
 void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins, \
@@ -73,7 +76,7 @@ void SpidrAnalysisQt::spatialAnalysis() {
 
     // Extract features
     emit progressMessage("Calculate features");
-    _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params);
+    _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params, &_backgroundIDsGlobal);
     _featExtraction.compute();
     //const std::vector<float> dataFeats = _featExtraction.output();
     _dataFeats = _featExtraction.output();

@@ -1,3 +1,4 @@
 [submodule "external/Spidr"]
 	path = external/Spidr
 	url = https://github.com/alxvth/Spidr
+	branch = main
