@@ -1,7 +1,9 @@
 #include "SpidrAnalysisQt.h"
 
-#include <cmath>
+#include "SpidrPlugin.h"
 
+#include <cmath>
+#include <algorithm>
 #include <QDebug>
 
 SpidrAnalysisQt::SpidrAnalysisQt(QObject* parent) : QThread(parent)
@@ -9,6 +11,8 @@ SpidrAnalysisQt::SpidrAnalysisQt(QObject* parent) : QThread(parent)
     // Connect embedding
     // connect(&_tsne, &TsneComputationQt::computationStopped, this, &SpidrAnalysisQt::embeddingComputationStopped);
     connect(&_tsne, &TsneComputationQt::newEmbedding, this, &SpidrAnalysisQt::newEmbedding);
+
+    connect(&_tsne, &TsneComputationQt::progressMessage, this, &SpidrAnalysisQt::progressMessage);
 
 }
 
@@ -25,6 +29,7 @@ void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const 
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
     _backgroundIDsGlobal = backgroundIDsGlobal;
+    std::sort(_backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end());
 
     // Set parameters
     _params._numPoints = _pointIDsGlobal.size();
@@ -34,6 +39,8 @@ void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const 
     _params._dataVecBegin = _attribute_data.data();          // used in point cloud distance
 
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width << ", " << _params._imgSize.height;
+    if (!_backgroundIDsGlobal.empty())
+        qDebug() << "SpidrAnalysis: Excluding "<< _backgroundIDsGlobal.size() << " background points and respective features";
 }
 
 void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins, \
@@ -68,7 +75,8 @@ void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, co
 void SpidrAnalysisQt::spatialAnalysis() {
 
     // Extract features
-    _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params);
+    emit progressMessage("Calculate features");
+    _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params, &_backgroundIDsGlobal);
     _featExtraction.compute();
     //const std::vector<float> dataFeats = _featExtraction.output();
     _dataFeats = _featExtraction.output();
@@ -80,6 +88,7 @@ void SpidrAnalysisQt::spatialAnalysis() {
     }
 
     // Caclculate distances and kNN
+    emit progressMessage("Calculate distances and kNN");
     _distCalc.setup(_dataFeats, _backgroundIDsGlobal, _params);
     _distCalc.compute();
     const std::vector<int> knn_indices = _distCalc.get_knn_indices();
@@ -190,6 +199,7 @@ const std::vector<float>& SpidrAnalysisQt::outputWithBackground() {
     }
     else
     {
+        emit progressMessage("Add background back to embedding");
         qDebug() << "SpidrAnalysis: Add background back to embedding";
 
         qDebug() << "SpidrAnalysis: Determine background position in embedding";

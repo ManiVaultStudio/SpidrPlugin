@@ -42,6 +42,8 @@ void SpidrPlugin::init()
     connect(&_spidrAnalysisQt, &SpidrAnalysisQt::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
     //connect(this, &SpidrPlugin::embeddingComputationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
 
+    connect(&_spidrAnalysisQt, &SpidrAnalysisQt::progressMessage, [this](const QString& message) {_settings->setSubtitle(message);});
+
     registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
 
 }
@@ -209,6 +211,7 @@ void SpidrPlugin::onFinishedEmbedding() {
     _settings.get()->computationStopped();
 
     qDebug() << "SpidrPlugin: Done.";
+    _settings->setSubtitle("");
 }
 
 void SpidrPlugin::onPublishFeatures() {
