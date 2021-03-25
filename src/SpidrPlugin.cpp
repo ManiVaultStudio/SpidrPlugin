@@ -168,12 +168,15 @@ void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& poin
             qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set values)";
             auto totalNumPoints = backgroundPoints.getNumPoints();
             backgroundIDsGlobal.clear();
-            backgroundIDsGlobal.reserve(totalNumPoints);
+            backgroundIDsGlobal.resize(totalNumPoints);
             backgroundPoints.visitFromBeginToEnd([&backgroundIDsGlobal, totalNumPoints](auto beginOfData, auto endOfData)
             {
-                for (unsigned int i = 0; i < totalNumPoints; i++)
+#ifdef NDEBUG
+#pragma omp parallel for
+#endif
+                for (int i = 0; i < totalNumPoints; i++)
                 {
-                    backgroundIDsGlobal.push_back(beginOfData[i]);
+                    backgroundIDsGlobal[i] = beginOfData[i];
                 }
             });
         }
