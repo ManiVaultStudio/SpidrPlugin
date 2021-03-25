@@ -78,7 +78,7 @@ void SpidrAnalysisQt::spatialAnalysis() {
     emit progressMessage("Calculate features");
     _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params, &_backgroundIDsGlobal);
     _featExtraction.compute();
-    qDebug << "SpidrAnalysis: Get computed feature values";
+    qDebug() << "SpidrAnalysis: Get computed feature values";
     _dataFeats = _featExtraction.output();
 
     // Publish feature to the core
@@ -89,7 +89,7 @@ void SpidrAnalysisQt::spatialAnalysis() {
 
     // Caclculate distances and kNN
     emit progressMessage("Calculate distances and kNN");
-    qDebug << "SpidrAnalysis: Set up distance calculation";
+    qDebug() << "SpidrAnalysis: Set up distance calculation";
     _distCalc.setup(_dataFeats, _backgroundIDsGlobal, _params);
     _distCalc.compute();
     const std::vector<int> knn_indices = _distCalc.get_knn_indices();
