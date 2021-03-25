@@ -107,6 +107,18 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     backgroundNameLine = new QComboBox();
     backgroundNameLine->addItem("");
 
+    connect(backgroundNameLine, &QComboBox::currentTextChanged, [this](const QString& dataSetName) { 
+        if (dataSetName != "") 
+        { 
+            publishFeaturesToCore.setChecked(false); 
+            publishFeaturesToCore.setDisabled(true); 
+        } 
+        else
+        {
+            publishFeaturesToCore.setDisabled(false);
+        }
+    });
+
     // Initialize start button
     startButton.setText("Start Computation");
     startButton.setFixedSize(QSize(150, 50));
