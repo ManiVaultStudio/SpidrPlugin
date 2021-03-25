@@ -52,7 +52,7 @@ public slots:
     void onNewEmbedding();
     void onFinishedEmbedding();
 
-    void onPublishFeatures();
+    void onPublishFeatures(const unsigned int dataFeatsSize);
 
 signals:
     void embeddingComputationStopped();

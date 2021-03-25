@@ -217,11 +217,11 @@ void SpidrPlugin::onFinishedEmbedding() {
     _settings->setSubtitle("");
 }
 
-void SpidrPlugin::onPublishFeatures() {
+void SpidrPlugin::onPublishFeatures(const unsigned int dataFeatsSize) {
     qDebug() << "SpidrPlugin: Publish features to core";
     QString featureDataSetName = _core->createDerivedData(_settings->getEmbName() + "_Features", _settings->getCurrentDataItem());
     Points& featureDataSet = _core->requestData<Points>(featureDataSetName);
-    featureDataSet.setData(_spidrAnalysisQt.getFeatures()->data(), _spidrAnalysisQt.getNumEmbPoints(), _spidrAnalysisQt.getNumFeatureValsPerPoint());
+    featureDataSet.setData(_spidrAnalysisQt.getFeatures()->data(), dataFeatsSize, _spidrAnalysisQt.getNumFeatureValsPerPoint());
 
     // Set dimension names of feature data set
     std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();

@@ -91,7 +91,7 @@ signals:
     void newEmbedding();
     void finishedEmbedding();
 
-    void publishFeatures();
+    void publishFeatures(const unsigned int dataFeatsSize);
     void progressMessage(const QString& message);
 
 private:

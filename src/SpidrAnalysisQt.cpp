@@ -37,7 +37,6 @@ void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const 
     _params._imgSize = imgSize;
     _params._embeddingName = embeddingName.toStdString();
     _params._dataVecBegin = _attribute_data.data();          // used in point cloud distance
-    _params._forceCalcBackgroundFeatures = _forcePublishFeaturesToCore;
 
     qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width << ", " << _params._imgSize.height;
     if (!_backgroundIDsGlobal.empty())
@@ -84,9 +83,9 @@ void SpidrAnalysisQt::spatialAnalysis() {
     _dataFeats = _featExtraction.output();
 
     // Publish feature to the core
-    if (_publishFeaturesToCore || _forcePublishFeaturesToCore)
+    if (_publishFeaturesToCore || _params._forceCalcBackgroundFeatures)
     {
-        emit publishFeatures();
+        emit publishFeatures(_dataFeats.size() / _params._numFeatureValsPerPoint);
     }
 
     // Caclculate distances and kNN
@@ -167,7 +166,7 @@ void SpidrAnalysisQt::setPublishFeaturesToCore(const bool publishTicked) {
 }
 
 void SpidrAnalysisQt::setForcePublishFeaturesToCore(const bool ForcePublishTicked) {
-    _forcePublishFeaturesToCore = ForcePublishTicked;
+    _params._forceCalcBackgroundFeatures = ForcePublishTicked;
 }
 
 const size_t SpidrAnalysisQt::getNumEmbPoints() {
