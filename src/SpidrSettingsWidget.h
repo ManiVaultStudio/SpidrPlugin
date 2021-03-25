@@ -106,6 +106,7 @@ public:
 
     QComboBox* backgroundNameLine;
     QCheckBox backgroundFromData;   // if ticked take the data not the indices of the data as the background info (for loading background data sets)
+    QCheckBox forceBackgroundFeatures;
 
     QLineEdit embeddingNameLine;
     QPushButton startButton;

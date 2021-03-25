@@ -61,7 +61,7 @@ public:
      */
     void initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
         const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
-        const int numIterations, const int perplexity, const int exaggeration, const int expDecay, bool publishTicked);
+        const int numIterations, const int perplexity, const int exaggeration, const int expDecay, bool publishTicked, bool forcePublishTicked);
 
     // Getter
     const size_t getNumEmbPoints();
@@ -160,6 +160,7 @@ private:
 
     /*! Sets whether features should be published to the core */
     void setPublishFeaturesToCore(const bool publishTicked);
+    void setForcePublishFeaturesToCore(const bool forcePublishTicked);
 
 private:
     // worker classes
@@ -174,7 +175,8 @@ private:
     SpidrParameters _params;                         /*!<> */
     std::vector<float> _emd_with_backgound;
 
-    bool publishFeaturesToCore;
+    bool _publishFeaturesToCore;
+    bool _forcePublishFeaturesToCore;
     std::vector<float> _dataFeats;
 };
 

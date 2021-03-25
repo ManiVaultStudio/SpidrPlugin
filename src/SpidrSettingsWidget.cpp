@@ -112,12 +112,16 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
         { 
             publishFeaturesToCore.setChecked(false); 
             publishFeaturesToCore.setDisabled(true); 
+            forceBackgroundFeatures.setDisabled(false);
         } 
         else
         {
             publishFeaturesToCore.setDisabled(false);
+            forceBackgroundFeatures.setDisabled(true);
         }
     });
+
+    forceBackgroundFeatures.setDisabled(true);
 
     // Initialize start button
     startButton.setText("Start Computation");
@@ -155,6 +159,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     weightSpAttrLabel->setToolTip("Weight Attribute (0) vs Spatial (1)");
 
     QLabel* publishFeaturesToCoreLabel = new QLabel("Publish features");
+    QLabel* forcePublishFeaturesToCoreLabel = new QLabel("Force publish features");
 
     // Set option default values
     numIterations.setFixedWidth(50);
@@ -246,6 +251,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     advancedSettingsLayout->addWidget(backgroundNameLine, 5, 0, 1, 2);
     advancedSettingsLayout->addWidget(backgroundTickLabel, 6, 0);
     advancedSettingsLayout->addWidget(&backgroundFromData, 6, 1);
+    advancedSettingsLayout->addWidget(forcePublishFeaturesToCoreLabel, 7, 0);
+    advancedSettingsLayout->addWidget(&forceBackgroundFeatures, 7, 1);
     advancedSettingsBox->setLayout(advancedSettingsLayout);
 
 

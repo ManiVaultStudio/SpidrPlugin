@@ -222,6 +222,19 @@ void SpidrPlugin::onPublishFeatures() {
     QString featureDataSetName = _core->createDerivedData(_settings->getEmbName() + "_Features", _settings->getCurrentDataItem());
     Points& featureDataSet = _core->requestData<Points>(featureDataSetName);
     featureDataSet.setData(_spidrAnalysisQt.getFeatures()->data(), _spidrAnalysisQt.getNumEmbPoints(), _spidrAnalysisQt.getNumFeatureValsPerPoint());
+
+    // Set dimension names of feature data set
+    std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
+    std::vector<QString> dimensionNames = _core->requestData<Points>(_settings->getCurrentDataItem()).getDimensionNames();
+    std::vector<QString> enabledDimensionNames;
+
+    assert(enabledDimensions.size() == dimensionNames.size());
+
+    for (int i = 0; i < enabledDimensions.size(); i++) {
+        if (enabledDimensions[i])
+            enabledDimensionNames.push_back(dimensionNames[i]);
+    }
+    featureDataSet.setDimensionNames(enabledDimensionNames);
 }
 
 
@@ -231,7 +244,7 @@ void SpidrPlugin::initializeAnalysisSettings() {
     _spidrAnalysisQt.initializeAnalysisSettings(_settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().value<unsigned int>(), _settings->kernelSize.text().toInt(), \
         _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().value<unsigned int>(), _settings->distanceMetric.currentData().toPoint().y(), \
         _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt(), _settings->expDecay.text().toInt(), \
-        _settings->publishFeaturesToCore.isChecked());
+        _settings->publishFeaturesToCore.isChecked(), _settings->forceBackgroundFeatures.isChecked());
 }
 
 
