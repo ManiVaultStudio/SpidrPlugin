@@ -91,7 +91,6 @@ void SpidrAnalysisQt::spatialAnalysis() {
 
     // Caclculate distances and kNN
     emit progressMessage("Calculate distances and kNN");
-    qDebug() << "SpidrAnalysis: Set up distance calculation";
     _distCalc.setup(_dataFeats, _backgroundIDsGlobal, _params);
     _distCalc.compute();
     const std::vector<int> knn_indices = _distCalc.get_knn_indices();
@@ -230,9 +229,6 @@ const std::vector<float>& SpidrAnalysisQt::outputWithBackground() {
 
         // add (0,0) to embedding at background positions
         size_t emdCounter = 0;
-#ifdef NDEBUG
-#pragma omp parallel for
-#endif
         for (int globalIDCounter = 0; globalIDCounter < _pointIDsGlobal.size(); globalIDCounter++) {
             // if background, insert (0,0)
             if (std::find(_backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end(), globalIDCounter) != _backgroundIDsGlobal.end()) {

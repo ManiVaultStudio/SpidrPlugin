@@ -42,7 +42,7 @@ public:
      * \param knn_distances
      * \param params
      */
-    void setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params);
+    void setup(const std::vector<int>& knn_indices, const std::vector<float>& knn_distances, const SpidrParameters params);
 
     /*!
      *

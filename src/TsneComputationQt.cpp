@@ -86,7 +86,7 @@ void TsneComputationQt::computeGradientDescent()
     embed();
 }
 
-void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params) {
+void TsneComputationQt::setup(const std::vector<int>& knn_indices, const std::vector<float>& knn_distances, const SpidrParameters params) {
     // Parameters
     _iterations = params._numIterations;
     _perplexity = params._perplexity;
