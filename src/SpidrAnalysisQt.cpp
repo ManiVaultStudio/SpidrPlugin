@@ -4,252 +4,124 @@
 
 #include <cmath>
 #include <algorithm>
+#include <tuple>
+
 #include <QDebug>
 
-SpidrAnalysisQt::SpidrAnalysisQt(QObject* parent) : QThread(parent)
-{
-    // Connect embedding
-    // connect(&_tsne, &TsneComputationQt::computationStopped, this, &SpidrAnalysisQt::embeddingComputationStopped);
-    connect(&_tsne, &TsneComputationQt::newEmbedding, this, &SpidrAnalysisQt::newEmbedding);
 
-    connect(&_tsne, &TsneComputationQt::progressMessage, this, &SpidrAnalysisQt::progressMessage);
+SpidrAnalysisQtWrapper::SpidrAnalysisQtWrapper() 
+{
 
 }
 
-SpidrAnalysisQt::~SpidrAnalysisQt()
+
+SpidrAnalysisQtWrapper::~SpidrAnalysisQtWrapper()
 {
 }
 
-void SpidrAnalysisQt::run() {
-    spatialAnalysis();
-}
-
-void SpidrAnalysisQt::setupData(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal) {
-    // Set data
+void SpidrAnalysisQtWrapper::setup(const std::vector<float>* attribute_data, const std::vector<unsigned int>* pointIDsGlobal, \
+        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>* backgroundIDsGlobal, \
+        const unsigned int aknnMetric, const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
+        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, const float MVNweight, \
+        bool publishFeaturesToCore, bool forceBackgroundFeatures)
+{
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
     _backgroundIDsGlobal = backgroundIDsGlobal;
-    std::sort(_backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end());
-
-    // Set parameters
-    _params._numPoints = _pointIDsGlobal.size();
-    _params._numDims = numDimensions;
-    _params._imgSize = imgSize;
-    _params._embeddingName = embeddingName.toStdString();
-    _params._dataVecBegin = _attribute_data.data();          // used in point cloud distance
-
-    qDebug() << "SpidrAnalysis: Num data points: " << _params._numPoints << " Num dims: " << _params._numDims << " Image size (width, height): " << _params._imgSize.width << ", " << _params._imgSize.height;
-    if (!_backgroundIDsGlobal.empty())
-        qDebug() << "SpidrAnalysis: Excluding "<< _backgroundIDsGlobal.size() << " background points and respective features";
+    _numDimensions = numDimensions;
+    _imgSize = imgSize;
+    _embeddingName = embeddingName;
+    _aknnMetric = aknnMetric;
+    _featType = featType;
+    _kernelType = kernelType;
+    _numLocNeighbors = numLocNeighbors;
+    _numHistBins = numHistBins;
+    _aknnAlgType = aknnAlgType;
+    _numIterations = numIterations;
+    _perplexity = perplexity;
+    _exaggeration = exaggeration;
+    _expDecay = expDecay;
+    _MVNweight = MVNweight;
+    _publishFeaturesToCore = publishFeaturesToCore;
+    _forceBackgroundFeatures = forceBackgroundFeatures;
 }
 
-void SpidrAnalysisQt::initializeAnalysisSettings(const unsigned int featType, const unsigned int kernelWeightType, const size_t numLocNeighbors, const size_t numHistBins, \
-    const unsigned int aknnAlgType, const unsigned int aknnMetric, const float MVNweight, \
-    const int numIterations, const int perplexity, const int exaggeration, const int expDecay, bool publishTicked, bool forcePublishTicked) {
-    // initialize Feature Extraction Settings
-    setFeatureType(featType);
-    setKernelWeight(kernelWeightType);
-    setNumLocNeighbors(numLocNeighbors);    // Sets _params._kernelWidth and _params._neighborhoodSize as well
-    setNumHistBins(numHistBins);
+void SpidrAnalysisQtWrapper::spatialAnalysis() {
 
-    // initialize Distance Calculation Settings
-    // number of nn is dertermined by perplexity, set in setPerplexity
-    setKnnAlgorithm(aknnAlgType);
-    setDistanceMetric(aknnMetric);
-    setMVNWeight(MVNweight);
+    _SpidrAnalysis = std::make_unique<SpidrAnalysis>();
 
-    // Initialize the tSNE computation
-    setNumIterations(numIterations);
-    setPerplexity(perplexity);
-    setExaggeration(exaggeration);
-    setExpDecay(expDecay);
-
-    // Derived parameters
-    setNumFeatureValsPerPoint();
-
-    // Publish features to core?
-    setPublishFeaturesToCore(publishTicked);
-    setForcePublishFeaturesToCore(forcePublishTicked);
-}
-
-
-void SpidrAnalysisQt::spatialAnalysis() {
-
-    // Extract features
-    emit progressMessage("Calculate features");
-    _featExtraction.setup(_pointIDsGlobal, _attribute_data, _params, &_backgroundIDsGlobal);
-    _featExtraction.compute();
-    qDebug() << "SpidrAnalysis: Get computed feature values";
-    _dataFeats = _featExtraction.output();
-
-    // Publish feature to the core
-    if (_publishFeaturesToCore || _params._forceCalcBackgroundFeatures)
+    // Pass data to SpidrLib
+    if (!_backgroundIDsGlobal->empty())
+        _SpidrAnalysis->setupData(*_attribute_data, *_pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString());
+    else
     {
-        emit publishFeatures(_dataFeats.size() / _params._numFeatureValsPerPoint);
+        _SpidrAnalysis->setupData(*_attribute_data, *_pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString(), *_backgroundIDsGlobal);
     }
 
-    // Caclculate distances and kNN
+    // Init all settings (setupData must have been called before initing the settings.)
+    _SpidrAnalysis->initializeAnalysisSettings(static_cast<feature_type> (_featType), static_cast<loc_Neigh_Weighting> (_kernelType), _numLocNeighbors, _numHistBins, 
+        static_cast<knn_library> (_aknnAlgType), static_cast<distance_metric> (_aknnMetric), _MVNweight, _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
+
+    // Compute data features
+    emit progressMessage("Calculate features");
+    _SpidrAnalysis->computeFeatures();
+    _dataFeats = _SpidrAnalysis->getDataFeatures();
+
+    // Publish feature to the core
+    if (_publishFeaturesToCore || _forceBackgroundFeatures)
+    {
+        emit publishFeatures(_dataFeats.size() / _SpidrAnalysis->getParameters()._numFeatureValsPerPoint);
+    }
+    
+    // Compute knn dists and inds
     emit progressMessage("Calculate distances and kNN");
-    _distCalc.setup(_dataFeats, _backgroundIDsGlobal, _params);
-    _distCalc.compute();
-    const std::vector<int> knn_indices = _distCalc.get_knn_indices();
-    const std::vector<float> knn_distances_squared = _distCalc.get_knn_distances_squared();
+    _SpidrAnalysis->computekNN();
+    //std::tie(_knnIds, _knnDists) = _SpidrAnalysis->getKNN();
+    emit finishedKnn(); // this triggers the t-SNE computation in TsneComputationQt
 
-    // Compute t-SNE with the given data
-    _tsne.setup(knn_indices, knn_distances_squared, _params);
-    _tsne.compute();
-
-    emit finishedEmbedding();
+    // transform in TsneComputationQt
+    //_SpidrAnalysis->computeEmbedding();
+    //_emd_with_backgound = _SpidrAnalysis->outputWithBackground();
+    //emit finishedEmbedding();
 }
 
-void SpidrAnalysisQt::embeddingComputationStopped() {
-
+const std::tuple<std::vector<int>, std::vector<float>> SpidrAnalysisQtWrapper::getKNN() {
+    return _SpidrAnalysis->getKNN();
 }
 
-void SpidrAnalysisQt::setFeatureType(const int feature_type_index) {
-    _params._featureType = static_cast<feature_type> (feature_type_index);
+void SpidrAnalysisQtWrapper::addBackgroundToEmbedding(std::vector<float>& emb, const std::vector<float>& emb_wo_bg) {
+    return _SpidrAnalysis->addBackgroundToEmbedding(emb, emb_wo_bg);
 }
 
-void SpidrAnalysisQt::setKernelWeight(const int loc_Neigh_Weighting_index) {
-    _params._neighWeighting = static_cast<loc_Neigh_Weighting> (loc_Neigh_Weighting_index);
+const size_t SpidrAnalysisQtWrapper::getNumEmbPoints() {
+    return _SpidrAnalysis->getParameters()._numPoints;
 }
 
-void SpidrAnalysisQt::setNumLocNeighbors(const size_t num) {
-    _params._numLocNeighbors = num;
-    _params._kernelWidth = (2 * _params._numLocNeighbors) + 1;
-    _params._neighborhoodSize = _params._kernelWidth * _params._kernelWidth;;
+const size_t SpidrAnalysisQtWrapper::getNumFeatureValsPerPoint() {
+    return _SpidrAnalysis->getParameters()._numFeatureValsPerPoint;
 }
 
-void SpidrAnalysisQt::setNumHistBins(const size_t num) {
-    _params._numHistBins = num;
+const size_t SpidrAnalysisQtWrapper::getNumImagePoints() {
+    assert(_pointIDsGlobal->size() == _SpidrAnalysis->getParameters()._numPoints + _backgroundIDsGlobal->size());
+    return _pointIDsGlobal->size();
 }
 
-void SpidrAnalysisQt::setKnnAlgorithm(const int knn_library_index) {
-    _params._aknn_algorithm = static_cast<knn_library> (knn_library_index);
-}
-
-void SpidrAnalysisQt::setDistanceMetric(const int distance_metric_index) {
-    _params._aknn_metric = static_cast<distance_metric> (distance_metric_index);
-}
-
-void SpidrAnalysisQt::setPerplexity(const unsigned perplexity) {
-    _params._perplexity = perplexity;
-    _params._nn = (perplexity * _params._perplexity_multiplier) + 1;    // see Van Der Maaten, L. (2014). Accelerating t-SNE using tree-based algorithms. The Journal of Machine Learning Research, 15(1), 3221-3245.
-
-    // For small images, use less kNN
-    if (_params._nn > _params._numPoints)
-        _params._nn = _params._numPoints;
-}
-
-void SpidrAnalysisQt::setNumIterations(const unsigned numIt) {
-    _params._numIterations = numIt;
-}
-
-void SpidrAnalysisQt::setExaggeration(const unsigned exag) {
-    _params._exaggeration = exag;
-}
-
-void SpidrAnalysisQt::setExpDecay(const unsigned expDecay) {
-    _params._expDecay = expDecay;
-}
-
-void SpidrAnalysisQt::setNumFeatureValsPerPoint() {
-    _params._numFeatureValsPerPoint = NumFeatureValsPerPoint(_params._featureType, _params._numDims, _params._numHistBins, _params._neighborhoodSize);
-}
-
-void SpidrAnalysisQt::setMVNWeight(const float weight) {
-    _params._MVNweight = weight;
-}
-
-void SpidrAnalysisQt::setPublishFeaturesToCore(const bool publishTicked) {
-    _publishFeaturesToCore = publishTicked;
-}
-
-void SpidrAnalysisQt::setForcePublishFeaturesToCore(const bool ForcePublishTicked) {
-    _params._forceCalcBackgroundFeatures = ForcePublishTicked;
-}
-
-const size_t SpidrAnalysisQt::getNumEmbPoints() {
-    return _params._numPoints;
-}
-
-const size_t SpidrAnalysisQt::getNumFeatureValsPerPoint() {
-    return _params._numFeatureValsPerPoint;
-}
-
-const size_t SpidrAnalysisQt::getNumImagePoints() {
-    assert(_pointIDsGlobal.size() == _params._numPoints + _backgroundIDsGlobal.size());
-    return _pointIDsGlobal.size();
-}
-
-const std::vector<float>* SpidrAnalysisQt::getFeatures() {
+const std::vector<float>* SpidrAnalysisQtWrapper::getFeatures() {
     return &_dataFeats;
 }
 
-bool SpidrAnalysisQt::embeddingIsRunning() {
-    return _tsne.isTsneRunning();
+bool SpidrAnalysisQtWrapper::embeddingIsRunning() {
+    return _SpidrAnalysis->embeddingIsRunning();
 }
 
-const std::vector<float>& SpidrAnalysisQt::output() {
-    return _tsne.output();
+const std::vector<float>& SpidrAnalysisQtWrapper::output() {
+    return _SpidrAnalysis->output();
 }
 
-const std::vector<float>& SpidrAnalysisQt::outputWithBackground() {
-    const std::vector<float>& emb = _tsne.output();
-    _emd_with_backgound.resize(_pointIDsGlobal.size() * 2);
-
-    if (_backgroundIDsGlobal.empty())
-    {
-        return emb;
-    }
-    else
-    {
-        emit progressMessage("Add background back to embedding");
-        qDebug() << "SpidrAnalysis: Add background back to embedding";
-
-        qDebug() << "SpidrAnalysis: Determine background position in embedding";
-
-        // find min x and min y embedding positions
-        float minx = emb[0];
-        float miny = emb[1];
-
-        for (size_t i = 0; i < emb.size(); i += 2) {
-            if (emb[i] < minx)
-                minx = emb[i];
-
-            if (emb[i + 1] < miny)
-                miny = emb[i + 1];
-        }
-
-        minx -= std::abs(minx) * 0.05;
-        miny -= std::abs(miny) * 0.05;
-
-        qDebug() << "SpidrAnalysis: Inserting background in embedding";
-
-        // add (0,0) to embedding at background positions
-        size_t emdCounter = 0;
-        for (int globalIDCounter = 0; globalIDCounter < _pointIDsGlobal.size(); globalIDCounter++) {
-            // if background, insert (0,0)
-            if (std::find(_backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end(), globalIDCounter) != _backgroundIDsGlobal.end()) {
-                _emd_with_backgound[2 * globalIDCounter] = minx;
-                _emd_with_backgound[2 * globalIDCounter + 1] = miny;
-            }
-            else {
-                _emd_with_backgound[2 * globalIDCounter] = emb[2 * emdCounter];
-                _emd_with_backgound[2 * globalIDCounter + 1] = emb[2 * emdCounter + 1];
-                emdCounter++;
-            }
-        }
-
-        return _emd_with_backgound;
-    }
+const std::vector<float>& SpidrAnalysisQtWrapper::outputWithBackground() {
+    return _SpidrAnalysis->outputWithBackground();
 }
 
-void SpidrAnalysisQt::stopComputation() {
-    _featExtraction.stopFeatureCopmutation();
-    _tsne.stopGradientDescent();
-}
-
-const SpidrParameters SpidrAnalysisQt::getParameters() {
-    return _params;
+const SpidrParameters SpidrAnalysisQtWrapper::getParameters() {
+    return _SpidrAnalysis->getParameters();
 }

@@ -226,6 +226,7 @@ void TsneComputationQt::embed()
     qDebug() << "A-tSNE: Finished embedding of " << "tSNE Analysis" << " in: " << elapsed / 1000 << " seconds ";
     qDebug() << "================================================================================";
 
+    emit finishedEmbedding();
 }
 
 void TsneComputationQt::compute() {
