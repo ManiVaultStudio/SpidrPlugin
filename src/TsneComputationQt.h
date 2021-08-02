@@ -64,7 +64,7 @@ public:
      *
      * \return
      */
-    const std::vector<float>& output();
+    std::vector<float> output();
 
     inline bool isTsneRunning() { return _isTsneRunning; }
     inline bool isGradientDescentRunning() { return _isGradientDescentRunning; }

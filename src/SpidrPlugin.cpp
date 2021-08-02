@@ -243,7 +243,7 @@ void SpidrPlugin::onNewEmbedding() {
 }
 
 void SpidrPlugin::onFinishedEmbedding() {
-    const std::vector<float>& outputData = _tnseWrapper->output();
+    std::vector<float> outputData = _tnseWrapper->output();
     std::vector<float> embWithBg;
     _spidrAnalysisWrapper->addBackgroundToEmbedding(embWithBg, outputData);
 

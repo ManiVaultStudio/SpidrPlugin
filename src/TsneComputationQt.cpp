@@ -227,7 +227,7 @@ void TsneComputationQt::copyFloatOutput()
     _outputData = _embedding.getContainer();
 }
 
-const std::vector<float>& TsneComputationQt::output()
+std::vector<float> TsneComputationQt::output()
 {
     return _outputData;
 }

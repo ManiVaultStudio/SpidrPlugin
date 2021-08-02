@@ -54,7 +54,7 @@ public:
     const std::tuple<std::vector<int>, std::vector<float>> getKNN();
 
     /* Add bg points to emb */
-    void addBackgroundToEmbedding(std::vector<float>& emb, const std::vector<float>& emb_wo_bg);
+    void addBackgroundToEmbedding(std::vector<float>& emb, std::vector<float>& emb_wo_bg);
 
 
 public slots:

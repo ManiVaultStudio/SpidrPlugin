@@ -51,7 +51,7 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     _SpidrAnalysis = std::make_unique<SpidrAnalysis>();
 
     // Pass data to SpidrLib
-    if (!_backgroundIDsGlobal.empty())
+    if (_backgroundIDsGlobal.empty())
         _SpidrAnalysis->setupData(_attribute_data, _pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString());
     else
     {
@@ -92,8 +92,16 @@ const std::tuple<std::vector<int>, std::vector<float>> SpidrAnalysisQtWrapper::g
     return _SpidrAnalysis->getKNN();
 }
 
-void SpidrAnalysisQtWrapper::addBackgroundToEmbedding(std::vector<float>& emb, const std::vector<float>& emb_wo_bg) {
-    return _SpidrAnalysis->addBackgroundToEmbedding(emb, emb_wo_bg);
+void SpidrAnalysisQtWrapper::addBackgroundToEmbedding(std::vector<float>& emb, std::vector<float>& emb_wo_bg) {
+    if (_backgroundIDsGlobal.empty())
+    {
+        std::swap(emb, emb_wo_bg);
+    }
+    else
+    {
+        _SpidrAnalysis->addBackgroundToEmbedding(emb, emb_wo_bg);
+    }
+
 }
 
 const size_t SpidrAnalysisQtWrapper::getNumEmbPoints() {
