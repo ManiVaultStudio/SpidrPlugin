@@ -19,8 +19,8 @@ SpidrAnalysisQtWrapper::~SpidrAnalysisQtWrapper()
 {
 }
 
-void SpidrAnalysisQtWrapper::setup(const std::vector<float>* attribute_data, const std::vector<unsigned int>* pointIDsGlobal, \
-        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>* backgroundIDsGlobal, \
+void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
+        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
         const unsigned int aknnMetric, const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
         const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, const float MVNweight, \
         bool publishFeaturesToCore, bool forceBackgroundFeatures)
@@ -51,11 +51,11 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     _SpidrAnalysis = std::make_unique<SpidrAnalysis>();
 
     // Pass data to SpidrLib
-    if (!_backgroundIDsGlobal->empty())
-        _SpidrAnalysis->setupData(*_attribute_data, *_pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString());
+    if (!_backgroundIDsGlobal.empty())
+        _SpidrAnalysis->setupData(_attribute_data, _pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString());
     else
     {
-        _SpidrAnalysis->setupData(*_attribute_data, *_pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString(), *_backgroundIDsGlobal);
+        _SpidrAnalysis->setupData(_attribute_data, _pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString(), _backgroundIDsGlobal);
     }
 
     // Init all settings (setupData must have been called before initing the settings.)
@@ -63,7 +63,9 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
         static_cast<knn_library> (_aknnAlgType), static_cast<distance_metric> (_aknnMetric), _MVNweight, _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
 
     // Compute data features
+#ifdef NDEBUG
     emit progressMessage("Calculate features");
+#endif
     _SpidrAnalysis->computeFeatures();
     _dataFeats = _SpidrAnalysis->getDataFeatures();
 
@@ -74,12 +76,13 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     }
     
     // Compute knn dists and inds
+#ifdef NDEBUG
     emit progressMessage("Calculate distances and kNN");
+#endif
     _SpidrAnalysis->computekNN();
     //std::tie(_knnIds, _knnDists) = _SpidrAnalysis->getKNN();
-    emit finishedKnn(); // this triggers the t-SNE computation in TsneComputationQt
-
-    // transform in TsneComputationQt
+    emit finishedKnn(); // this connects to SpidrPlugin::tsneComputation, which triggers the t-SNE computation in TsneComputationQt
+    // We don't do the following but instead transform in TsneComputationQt so that we can easily update the embedding view live
     //_SpidrAnalysis->computeEmbedding();
     //_emd_with_backgound = _SpidrAnalysis->outputWithBackground();
     //emit finishedEmbedding();
@@ -102,8 +105,8 @@ const size_t SpidrAnalysisQtWrapper::getNumFeatureValsPerPoint() {
 }
 
 const size_t SpidrAnalysisQtWrapper::getNumImagePoints() {
-    assert(_pointIDsGlobal->size() == _SpidrAnalysis->getParameters()._numPoints + _backgroundIDsGlobal->size());
-    return _pointIDsGlobal->size();
+    assert(_pointIDsGlobal.size() == _SpidrAnalysis->getParameters()._numPoints + _backgroundIDsGlobal.size());
+    return _pointIDsGlobal.size();
 }
 
 const std::vector<float>* SpidrAnalysisQtWrapper::getFeatures() {

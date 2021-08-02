@@ -1,61 +1,20 @@
 #include "TsneComputationQt.h"
 
 #include "SpidrAnalysisParameters.h"
+#include "EvalUtils.h"
 
 #include <algorithm>            // std::min, max
 #include <vector>
 #include <assert.h>
 
-#include <QDebug>
-
 #include "hdi/dimensionality_reduction/tsne_parameters.h"
 #include "hdi/utils/scoped_timers.h"
+#include "spdlog/spdlog-inl.h"
 
-#include <QWindow>
-#include <QOpenGLContext>
-
-class OffscreenBuffer : public QWindow
-{
-public:
-    OffscreenBuffer()
-    {
-        setSurfaceType(QWindow::OpenGLSurface);
-
-        create();
-    }
-
-    QOpenGLContext* getContext() { return _context; }
-
-    void initialize()
-    {
-        QOpenGLContext* globalContext = QOpenGLContext::globalShareContext();
-        _context = new QOpenGLContext(this);
-        _context->setFormat(globalContext->format());
-
-        if (!_context->create())
-            qFatal("Cannot create requested OpenGL context.");
-
-        _context->makeCurrent(this);
-        if (!gladLoadGL()) {
-            qFatal("No OpenGL context is currently bound, therefore OpenGL function loading has failed.");
-        }
-    }
-
-    void bindContext()
-    {
-        _context->makeCurrent(this);
-    }
-
-    void releaseContext()
-    {
-        _context->doneCurrent();
-    }
-
-private:
-    QOpenGLContext* _context;
-};
-
-OffscreenBuffer* offBuffer;
+// not present in glfw 3.1.2
+#ifndef GLFW_FALSE
+#define GLFW_FALSE 0
+#endif
 
 TsneComputationQt::TsneComputationQt() :
     _iterations(1000),
@@ -75,9 +34,6 @@ TsneComputationQt::TsneComputationQt() :
     _nn = _perplexity * _perplexity_multiplier + 1;
 }
 
-TsneComputationQt::~TsneComputationQt()
-{
-}
 
 void TsneComputationQt::computeGradientDescent()
 {
@@ -86,8 +42,8 @@ void TsneComputationQt::computeGradientDescent()
     embed();
 }
 
-void TsneComputationQt::setup(const std::vector<int>& knn_indices, const std::vector<float>& knn_distances, const SpidrParameters params) {
-    // Parameters
+void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params) {
+    // SpidrParameters
     _iterations = params._numIterations;
     _perplexity = params._perplexity;
     _exaggerationIter = params._exaggeration;
@@ -104,7 +60,7 @@ void TsneComputationQt::setup(const std::vector<int>& knn_indices, const std::ve
     _knn_indices = knn_indices;
     _knn_distances = knn_distances;
 
-    qDebug() << "t-SNE computation: Num data points: " << _numPoints << " with " << params._nn << " precalculated nearest neighbors. Perplexity: " << _perplexity << ", Iterations: " << _iterations;
+    spdlog::info("t-SNE computation: Num data points: {0} with {1} precalculated nearest neighbors. Perplexity: {2}, Iterations: {3}", _numPoints, params._nn, _perplexity, _iterations);
 
     assert(_knn_indices.size() == _numPoints * _nn);
 }
@@ -112,7 +68,9 @@ void TsneComputationQt::setup(const std::vector<int>& knn_indices, const std::ve
 
 void TsneComputationQt::initTSNE()
 {
+#ifdef NDEBUG
     emit progressMessage("Initializing A-tSNE...");
+#endif
 
     // Computation of the high dimensional similarities
     {
@@ -122,13 +80,15 @@ void TsneComputationQt::initTSNE()
         probGenParams._num_trees = _numTrees;
         probGenParams._num_checks = _numChecks;
 
-        qDebug() << "tSNE initialized.";
+        spdlog::info("tSNE initialized.");
 
+#ifdef NDEBUG
         emit progressMessage("Calculate probability distributions");
+#endif
 
         _probabilityDistribution.clear();
         _probabilityDistribution.resize(_numPoints);
-        qDebug() << "Sparse matrix allocated.";
+        spdlog::info("Sparse matrix allocated.");
 
         hdi::dr::HDJointProbabilityGenerator<float> probabilityGenerator;
         double t = 0.0;
@@ -136,18 +96,24 @@ void TsneComputationQt::initTSNE()
             hdi::utils::ScopedTimer<double> timer(t);
             probabilityGenerator.computeGaussianDistributions(_knn_distances, _knn_indices, _nn, _probabilityDistribution, probGenParams);
         }
-        qDebug() << "Probability distributions calculated.";
-        qDebug() << "================================================================================";
-        qDebug() << "A-tSNE: Compute probability distribution: " << t / 1000 << " seconds";
-        qDebug() << "--------------------------------------------------------------------------------";
+        spdlog::info("Probability distributions calculated.");
+        spdlog::info("================================================================================");
+        spdlog::info("A-tSNE: Compute probability distribution: {} seconds", t / 1000);
+        spdlog::info("--------------------------------------------------------------------------------");
     }
 
+#ifdef NDEBUG
     emit progressMessage("Probability distributions calculated");
+#endif
+
 }
 
 void TsneComputationQt::initGradientDescent()
 {
+
+#ifdef NDEBUG
     emit progressMessage("Initializing gradient descent");
+#endif
 
     _continueFromIteration = 0;
     _isTsneRunning = true;
@@ -161,12 +127,29 @@ void TsneComputationQt::initGradientDescent()
     tsneParams._exaggeration_factor = 4 + _numPoints / 60000.0;
     _A_tSNE.setTheta(std::min(0.5, std::max(0.0, (_numPoints - 1000.0)*0.00005)));
 
-    // Create a context local to this thread that shares with the global share context
-    offBuffer = new OffscreenBuffer();
-    offBuffer->initialize();
+    // Create a offscreen window
+    if (!glfwInit()) {
+        throw std::runtime_error("Unable to initialize GLFW.");
+    }
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#endif
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);  // invisible - ie offscreen, window
+    _offscreen_context = glfwCreateWindow(640, 480, "", NULL, NULL);
+    if (_offscreen_context == NULL) {
+        glfwTerminate();
+        throw std::runtime_error("Failed to create GLFW window");
+    }
+    glfwMakeContextCurrent(_offscreen_context);
 
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        glfwTerminate();
+        throw std::runtime_error("Failed to initialize OpenGL context");
+    }
     // Initialize GPGPU-SNE
-    offBuffer->bindContext();
     _GPGPU_tSNE.initialize(_probabilityDistribution, &_embedding, tsneParams);
 
     copyFloatOutput();
@@ -175,12 +158,14 @@ void TsneComputationQt::initGradientDescent()
 // Computing gradient descent
 void TsneComputationQt::embed()
 {
+#ifdef NDEBUG
     emit progressMessage("Embedding");
+#endif
 
     double elapsed = 0;
     double t = 0;
     {
-        qDebug() << "A-tSNE: Computing gradient descent..\n";
+        spdlog::info("A-tSNE: Computing gradient descent..\n");
         _isGradientDescentRunning = true;
 
         // Performs gradient descent for every iteration
@@ -203,7 +188,7 @@ void TsneComputationQt::embed()
             }
 
             if (t > 1000)
-                qDebug() << "Time: " << t;
+                spdlog::info("Time: {}", t);
 
             elapsed += t;
 
@@ -211,7 +196,8 @@ void TsneComputationQt::embed()
             emit progressMessage(QString("Computing gradient descent: %1 %").arg(QString::number(100.0f * static_cast<float>(iter) / static_cast<float>(_iterations), 'f', 1)));
 #endif
         }
-        offBuffer->releaseContext();
+        glfwDestroyWindow(_offscreen_context);
+        glfwTerminate();
 
         copyFloatOutput();
         emit newEmbedding();
@@ -219,14 +205,15 @@ void TsneComputationQt::embed()
         _isGradientDescentRunning = false;
         _isTsneRunning = false;
 
-        // emit computationStopped();
+        emit computationStopped();
     }
 
-    qDebug() << "--------------------------------------------------------------------------------";
-    qDebug() << "A-tSNE: Finished embedding of " << "tSNE Analysis" << " in: " << elapsed / 1000 << " seconds ";
-    qDebug() << "================================================================================";
+    spdlog::info("--------------------------------------------------------------------------------");
+    spdlog::info("A-tSNE: Finished embedding of tSNE Analysis in: {} seconds", elapsed / 1000);
+    spdlog::info("================================================================================");
 
     emit finishedEmbedding();
+
 }
 
 void TsneComputationQt::compute() {

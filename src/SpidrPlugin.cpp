@@ -105,17 +105,27 @@ void SpidrPlugin::startComputation()
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
 
-    // set the data and all the parameters
-    _spidrAnalysisWrapper->setup(&attribute_data, &pointIDsGlobal, numDims, imgSize, _embeddingName, &backgroundIDsGlobal,
-        _settings->distanceMetric.currentData().toPoint().x(), _settings->kernelWeight.currentData().value<unsigned int>(), _settings->kernelSize.text().toInt(), \
-        _settings->histBinSize.text().toInt(), _settings->knnOptions.currentData().value<unsigned int>(), _settings->distanceMetric.currentData().toPoint().y(), \
-        _settings->weightSpaAttrNum.value(), _settings->numIterations.text().toInt(), _settings->perplexity.text().toInt(), _settings->exaggeration.text().toInt(), _settings->expDecay.text().toInt(), \
-        _settings->publishFeaturesToCore.isChecked(), _settings->forceBackgroundFeatures.isChecked());
-
     // Start spatial analysis in worker thread
     delete _spidrAnalysisWrapper; delete _tnseWrapper;
     _spidrAnalysisWrapper = new SpidrAnalysisQtWrapper();
     _tnseWrapper = new TsneComputationQt();
+
+    // set the data and all the parameters
+    _spidrAnalysisWrapper->setup(attribute_data, pointIDsGlobal, numDims, imgSize, _embeddingName, backgroundIDsGlobal,
+        _settings->distanceMetric.currentData().toPoint().y(),  // aknnMetric
+        _settings->distanceMetric.currentData().toPoint().x(),  // featType
+        _settings->kernelWeight.currentData().value<unsigned int>(),   // kernelType
+        _settings->kernelSize.text().toInt(),       // numLocNeighbors
+        _settings->histBinSize.text().toInt(), 
+        _settings->knnOptions.currentData().value<unsigned int>(),   // aknnAlgType
+        _settings->numIterations.text().toInt(),
+        _settings->perplexity.text().toInt(), 
+        _settings->exaggeration.text().toInt(), 
+        _settings->expDecay.text().toInt(), \
+        _settings->weightSpaAttrNum.value(),        // MVNweight
+        _settings->publishFeaturesToCore.isChecked(),
+        _settings->forceBackgroundFeatures.isChecked()
+    );
 
     _spidrAnalysisWrapper->moveToThread(&workerThreadSpidr);
     _tnseWrapper->moveToThread(&workerThreadtSNE);
@@ -123,7 +133,7 @@ void SpidrPlugin::startComputation()
     //    connect(&workerThreadSpidr, &QThread::finished, _spidrAnalysisWrapper, &QObject::deleteLater);
     // TODO delete once embedding finished
     connect(this, &SpidrPlugin::startAnalysis, _spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::spatialAnalysis);
-    connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedEmbedding, this, &SpidrPlugin::tsneComputation);
+    connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedKnn, this, &SpidrPlugin::tsneComputation);
     connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
     connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::progressMessage, [this](const QString& message) {_settings->setSubtitle(message); });
     connect(this, &SpidrPlugin::starttSNE, _tnseWrapper, &TsneComputationQt::compute);

@@ -1,26 +1,27 @@
 #pragma once
 
+#ifdef __APPLE__
+#include "glad/glad_3_3.h"
+#define __gl3_h_
+#endif
+#include <GLFW/glfw3.h>
+
 #include "hdi/dimensionality_reduction/hd_joint_probability_generator.h"
 #include "hdi/dimensionality_reduction/sparse_tsne_user_def_probabilities.h"
 #include "hdi/dimensionality_reduction/gradient_descent_tsne_texture.h"
 
-#include <QObject>
-
 #include <vector>
 #include <string>
 
+#include <QObject> 
+
 class SpidrParameters;
 
-/*!
- *
- *
- */
 class TsneComputationQt : public QObject
 {
     Q_OBJECT
 public:
     TsneComputationQt();
-    ~TsneComputationQt() override;
 
     void setVerbose(bool verbose);
     void setIterations(int iterations);
@@ -42,7 +43,7 @@ public:
      * \param knn_distances
      * \param params
      */
-    void setup(const std::vector<int>& knn_indices, const std::vector<float>& knn_distances, const SpidrParameters params);
+    void setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params);
 
     /*!
      *
@@ -69,18 +70,17 @@ public:
     inline bool isGradientDescentRunning() { return _isGradientDescentRunning; }
     inline bool isMarkedForDeletion() { return _isMarkedForDeletion; }
 
+signals:
+    void finishedEmbedding();
+    void computationStopped();
+    void newEmbedding();
+    void progressMessage(const QString& message);
+
 private:
     void computeGradientDescent();
     void initGradientDescent();
     void embed();
     void copyFloatOutput();
-
-signals:
-    void newEmbedding();
-    void finishedEmbedding();
-    void computationStopped();
-
-    void progressMessage(const QString& message);
 
 private:
     // TSNE structures
@@ -117,4 +117,5 @@ private:
     bool _isMarkedForDeletion;
 
     int _continueFromIteration;
+    GLFWwindow* _offscreen_context;
 };

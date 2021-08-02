@@ -54,11 +54,6 @@ source_group(Aux FILES ${AUX})
 
 QT5_WRAP_UI(UI_HEADERS ${UIS})
 
-# Prevent glfw including the OpenGL headers
-# On Windows and Linux these come from glad in the HDILib
-add_definitions(-DGLFW_INCLUDE_NONE)
-
-
 add_library(${SPIDRPLUGIN} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
 
 target_include_directories(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
@@ -75,6 +70,10 @@ target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURA
 
 add_subdirectory("external/Spidr")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)
+
+# Prevent glfw including the OpenGL headers
+# On Windows and Linux these come from glad in the HDILib, which is part of the SpidrLib
+add_definitions(-DGLFW_INCLUDE_NONE)
 
 add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different

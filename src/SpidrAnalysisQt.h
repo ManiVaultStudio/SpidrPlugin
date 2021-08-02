@@ -21,8 +21,8 @@ public:
     /*!
      *
      */
-    void setup(const std::vector<float>* attribute_data, const std::vector<unsigned int>* pointIDsGlobal, \
-        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>* backgroundIDsGlobal, \
+    void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
+        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
         const unsigned int aknnMetric, const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors,  const size_t numHistBins, \
         const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, const float MVNweight, \
         bool publishFeaturesToCore, bool forceBackgroundFeatures);
@@ -80,9 +80,9 @@ private:
     std::unique_ptr<SpidrAnalysis> _SpidrAnalysis;
 
     // data
-    const std::vector<float>* _attribute_data;
-    const std::vector<unsigned int>* _pointIDsGlobal;
-    const std::vector<unsigned int>* _backgroundIDsGlobal;
+    std::vector<float> _attribute_data;
+    std::vector<unsigned int> _pointIDsGlobal;
+    std::vector<unsigned int> _backgroundIDsGlobal;
     size_t _numDimensions;
     ImgSize _imgSize;
     QString _embeddingName;
