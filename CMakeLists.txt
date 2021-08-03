@@ -21,10 +21,10 @@ set(PLUGIN
     src/SpidrPlugin.h
     src/SpidrPlugin.cpp
     src/SpidrPlugin.json
-    src/SpidrAnalysisQt.h
-    src/SpidrAnalysisQt.cpp
-    src/TsneComputationQt.h
-    src/TsneComputationQt.cpp
+    src/SpidrAnalysisQtWrapper.h
+    src/SpidrAnalysisQtWrapper.cpp
+    src/TsneComputationQtWrapper.h
+    src/TsneComputationQtWrapper.cpp
 )
 
 set(DIMENSIONSELECTIONHOLDER
@@ -70,6 +70,10 @@ target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURA
 
 add_subdirectory("external/Spidr")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)
+
+# Prevent glfw including the OpenGL headers
+# On Windows and Linux these come from glad in the HDILib, which is part of the SpidrLib
+add_definitions(-DGLFW_INCLUDE_NONE)
 
 add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different

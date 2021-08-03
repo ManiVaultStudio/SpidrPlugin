@@ -1,26 +1,27 @@
 #pragma once
 
+#ifdef __APPLE__
+#include "glad/glad_3_3.h"
+#define __gl3_h_
+#endif
+#include <GLFW/glfw3.h>
+
 #include "hdi/dimensionality_reduction/hd_joint_probability_generator.h"
 #include "hdi/dimensionality_reduction/sparse_tsne_user_def_probabilities.h"
 #include "hdi/dimensionality_reduction/gradient_descent_tsne_texture.h"
 
-#include <QObject>
-
 #include <vector>
 #include <string>
 
+#include <QObject> 
+
 class SpidrParameters;
 
-/*!
- *
- *
- */
-class TsneComputationQt : public QObject
+class TsneComputationQtWrapper : public QObject
 {
     Q_OBJECT
 public:
-    TsneComputationQt();
-    ~TsneComputationQt() override;
+    TsneComputationQtWrapper();
 
     void setVerbose(bool verbose);
     void setIterations(int iterations);
@@ -63,23 +64,23 @@ public:
      *
      * \return
      */
-    const std::vector<float>& output();
+    std::vector<float> output();
 
     inline bool isTsneRunning() { return _isTsneRunning; }
     inline bool isGradientDescentRunning() { return _isGradientDescentRunning; }
     inline bool isMarkedForDeletion() { return _isMarkedForDeletion; }
+
+signals:
+    void finishedEmbedding();
+    void computationStopped();
+    void newEmbedding();
+    void progressMessage(const QString& message);
 
 private:
     void computeGradientDescent();
     void initGradientDescent();
     void embed();
     void copyFloatOutput();
-
-signals:
-    void newEmbedding();
-    void computationStopped();
-
-    void progressMessage(const QString& message);
 
 private:
     // TSNE structures
@@ -91,7 +92,7 @@ private:
     // Data
     std::vector<int> _knn_indices;               /*!<> */
     std::vector<float> _knn_distances;           /*!<> */
-    size_t _numPoints;                            /*!<> */
+    size_t _numForegroundPoints;                            /*!<> */
     std::vector<float> _outputData;                     /*!<> */
 
     // Options
@@ -116,4 +117,5 @@ private:
     bool _isMarkedForDeletion;
 
     int _continueFromIteration;
+    GLFWwindow* _offscreen_context;
 };

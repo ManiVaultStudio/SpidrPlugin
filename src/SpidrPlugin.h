@@ -7,10 +7,11 @@
 #include <QtCore>
 #include <QSize>
 
-#include "SpidrAnalysisQt.h"
+#include "SpidrAnalysisQtWrapper.h"
+#include "TsneComputationQtWrapper.h"
 #include "PointData.h"
 
-#include "Application.h" 
+#include "Application.h"  // form hdps
 
 class SpidrSettingsWidget;
 
@@ -52,17 +53,17 @@ public slots:
     void onNewEmbedding();
     void onFinishedEmbedding();
 
-    void onPublishFeatures();
+    void onPublishFeatures(const unsigned int dataFeatsSize);
+
+private slots:
+    void tsneComputation();
 
 signals:
     void embeddingComputationStopped();
+    void startAnalysis();
+    void starttSNE();
 
 private:
-    /*!
-     *
-     *
-     */
-    void initializeAnalysisSettings();
 
     /**
     * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions
@@ -75,10 +76,12 @@ private:
     */
     void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
 
-    SpidrAnalysisQt _spidrAnalysisQt;                       /*!<> */
+    SpidrAnalysisQtWrapper* _spidrAnalysisWrapper;       /*!<> */
+    TsneComputationQtWrapper* _tnseWrapper;                     /*!<> */
     std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */
     QString _embeddingName;                             /*!<> */
-    QThread workerThread;                               /*!<> */
+    QThread workerThreadSpidr;                               /*!<> */
+    QThread workerThreadtSNE;                               /*!<> */
 };
 
 // =============================================================================

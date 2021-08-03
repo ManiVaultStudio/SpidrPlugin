@@ -46,9 +46,9 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
 
     // add data item according to enum knn_library (KNNUtils)
     knnOptions.addItem("HNSW", static_cast<unsigned int> (knn_library::KNN_HNSW));
-    knnOptions.addItem("Exact", static_cast<unsigned int> (knn_library::EXACT));
-    knnOptions.addItem("Eval Full", static_cast<unsigned int> (knn_library::EVAL_EXACT));
-    knnOptions.addItem("Eval akNN", static_cast<unsigned int> (knn_library::EVAL_KNN));
+    knnOptions.addItem("Exact kNN", static_cast<unsigned int> (knn_library::KKN_EXACT));
+    knnOptions.addItem("Eval exact kNN", static_cast<unsigned int> (knn_library::EVAL_KNN_EXACT));
+    knnOptions.addItem("Eval akNN", static_cast<unsigned int> (knn_library::EVAL_KNN_HNSW));
     knnOptions.setToolTip("HNSW: Approximate kNN (fast) \nExact: precise (slow) \nEval Full: precise and saves (all+kNN) indices&distances and features to disk (slow) \nEval Full: Like Eval Full but for akNN (fast)");
 
     // data values (QVariant) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 
@@ -107,6 +107,22 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     backgroundNameLine = new QComboBox();
     backgroundNameLine->addItem("");
 
+    connect(backgroundNameLine, &QComboBox::currentTextChanged, [this](const QString& dataSetName) { 
+        if (dataSetName != "") 
+        { 
+            publishFeaturesToCore.setChecked(false); 
+            publishFeaturesToCore.setDisabled(true); 
+            forceBackgroundFeatures.setDisabled(false);
+        } 
+        else
+        {
+            publishFeaturesToCore.setDisabled(false);
+            forceBackgroundFeatures.setDisabled(true);
+        }
+    });
+
+    forceBackgroundFeatures.setDisabled(true);
+
     // Initialize start button
     startButton.setText("Start Computation");
     startButton.setFixedSize(QSize(150, 50));
@@ -143,6 +159,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     weightSpAttrLabel->setToolTip("Weight Attribute (0) vs Spatial (1)");
 
     QLabel* publishFeaturesToCoreLabel = new QLabel("Publish features");
+    QLabel* forcePublishFeaturesToCoreLabel = new QLabel("Force publish features");
 
     // Set option default values
     numIterations.setFixedWidth(50);
@@ -234,6 +251,8 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     advancedSettingsLayout->addWidget(backgroundNameLine, 5, 0, 1, 2);
     advancedSettingsLayout->addWidget(backgroundTickLabel, 6, 0);
     advancedSettingsLayout->addWidget(&backgroundFromData, 6, 1);
+    advancedSettingsLayout->addWidget(forcePublishFeaturesToCoreLabel, 7, 0);
+    advancedSettingsLayout->addWidget(&forceBackgroundFeatures, 7, 1);
     advancedSettingsBox->setLayout(advancedSettingsLayout);
 
 
