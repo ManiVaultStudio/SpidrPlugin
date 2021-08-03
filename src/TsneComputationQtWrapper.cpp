@@ -45,12 +45,12 @@ void TsneComputationQtWrapper::computeGradientDescent()
 void TsneComputationQtWrapper::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params) {
     // SpidrParameters
     _iterations = params._numIterations;
-    _perplexity = params._perplexity;
+    _perplexity = params.get_perplexity();
     _exaggerationIter = params._exaggeration;
     _exponentialDecay = params._expDecay;
-    _nn = params._nn;                       // same as in constructor = _perplexity * 3 + 1;
+    _nn = params.get_nn();                       // same as in constructor = _perplexity * 3 + 1;
     _numForegroundPoints = params._numForegroundPoints;
-    _perplexity_multiplier = params._perplexity_multiplier;
+    _perplexity_multiplier = params.get_perplexity_multiplier();
 
     // Evaluation (for determining the filename when saving the embedding to disk)
     _embeddingName = params._embeddingName;
@@ -60,7 +60,7 @@ void TsneComputationQtWrapper::setup(const std::vector<int> knn_indices, const s
     _knn_indices = knn_indices;
     _knn_distances = knn_distances;
 
-    spdlog::info("t-SNE computation: Num data points: {0} with {1} precalculated nearest neighbors. Perplexity: {2}, Iterations: {3}", _numForegroundPoints, params._nn, _perplexity, _iterations);
+    spdlog::info("t-SNE computation: Num data points: {0} with {1} precalculated nearest neighbors. Perplexity: {2}, Iterations: {3}", _numForegroundPoints, params.get_nn(), _perplexity, _iterations);
 
     assert(_knn_indices.size() == _numForegroundPoints * _nn);
 }
