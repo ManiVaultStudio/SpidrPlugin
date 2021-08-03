@@ -104,8 +104,8 @@ void SpidrAnalysisQtWrapper::addBackgroundToEmbedding(std::vector<float>& emb, s
 
 }
 
-const size_t SpidrAnalysisQtWrapper::getNumEmbPoints() {
-    return _SpidrAnalysis->getParameters()._numPoints;
+const size_t SpidrAnalysisQtWrapper::getNumForegroundPoints() {
+    return _SpidrAnalysis->getParameters()._numForegroundPoints;
 }
 
 const size_t SpidrAnalysisQtWrapper::getNumFeatureValsPerPoint() {
@@ -113,8 +113,8 @@ const size_t SpidrAnalysisQtWrapper::getNumFeatureValsPerPoint() {
 }
 
 const size_t SpidrAnalysisQtWrapper::getNumImagePoints() {
-    assert(_pointIDsGlobal.size() == _SpidrAnalysis->getParameters()._numPoints + _backgroundIDsGlobal.size());
-    return _pointIDsGlobal.size();
+    assert(_pointIDsGlobal.size() == _SpidrAnalysis->getParameters()._numForegroundPoints + _backgroundIDsGlobal.size());
+    return _SpidrAnalysis->getParameters()._numPoints;
 }
 
 const std::vector<float>* SpidrAnalysisQtWrapper::getFeatures() {

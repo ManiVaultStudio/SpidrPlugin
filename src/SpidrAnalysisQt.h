@@ -29,7 +29,7 @@ public:
 
 
     // Getter
-    const size_t getNumEmbPoints();
+    const size_t getNumForegroundPoints();
 
     const size_t getNumImagePoints();
 

@@ -237,7 +237,7 @@ void SpidrPlugin::onNewEmbedding() {
     const std::vector<float>& outputData = _tnseWrapper->output();
     Points& embedding = _core->requestData<Points>(_embeddingName);
 
-    embedding.setData(outputData.data(), _spidrAnalysisWrapper->getNumEmbPoints(), 2);  // getNumEmbPoints might not agree with the numPoints w/o bg
+    embedding.setData(outputData.data(), _spidrAnalysisWrapper->getNumForegroundPoints(), 2);
 
     _core->notifyDataChanged(_embeddingName);
 }

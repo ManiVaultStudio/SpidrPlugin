@@ -49,7 +49,7 @@ void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vec
     _exaggerationIter = params._exaggeration;
     _exponentialDecay = params._expDecay;
     _nn = params._nn;                       // same as in constructor = _perplexity * 3 + 1;
-    _numPoints = params._numPoints;
+    _numForegroundPoints = params._numForegroundPoints;
     _perplexity_multiplier = params._perplexity_multiplier;
 
     // Evaluation (for determining the filename when saving the embedding to disk)
@@ -60,9 +60,9 @@ void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vec
     _knn_indices = knn_indices;
     _knn_distances = knn_distances;
 
-    spdlog::info("t-SNE computation: Num data points: {0} with {1} precalculated nearest neighbors. Perplexity: {2}, Iterations: {3}", _numPoints, params._nn, _perplexity, _iterations);
+    spdlog::info("t-SNE computation: Num data points: {0} with {1} precalculated nearest neighbors. Perplexity: {2}, Iterations: {3}", _numForegroundPoints, params._nn, _perplexity, _iterations);
 
-    assert(_knn_indices.size() == _numPoints * _nn);
+    assert(_knn_indices.size() == _numForegroundPoints * _nn);
 }
 
 
@@ -87,7 +87,7 @@ void TsneComputationQt::initTSNE()
 #endif
 
         _probabilityDistribution.clear();
-        _probabilityDistribution.resize(_numPoints);
+        _probabilityDistribution.resize(_numForegroundPoints);
         spdlog::info("Sparse matrix allocated.");
 
         hdi::dr::HDJointProbabilityGenerator<float> probabilityGenerator;
@@ -124,8 +124,8 @@ void TsneComputationQt::initGradientDescent()
     tsneParams._mom_switching_iter = _exaggerationIter;
     tsneParams._remove_exaggeration_iter = _exaggerationIter;
     tsneParams._exponential_decay_iter = _exponentialDecay;
-    tsneParams._exaggeration_factor = 4 + _numPoints / 60000.0;
-    _A_tSNE.setTheta(std::min(0.5, std::max(0.0, (_numPoints - 1000.0)*0.00005)));
+    tsneParams._exaggeration_factor = 4 + _numForegroundPoints / 60000.0;
+    _A_tSNE.setTheta(std::min(0.5, std::max(0.0, (_numForegroundPoints - 1000.0)*0.00005)));
 
     // Create a offscreen window
     if (!glfwInit()) {
