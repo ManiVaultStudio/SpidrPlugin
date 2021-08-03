@@ -1,12 +1,10 @@
-#include "SpidrAnalysisQt.h"
+#include "SpidrAnalysisQtWrapper.h"
 
 #include "SpidrPlugin.h"
 
 #include <cmath>
 #include <algorithm>
 #include <tuple>
-
-#include <QDebug>
 
 
 SpidrAnalysisQtWrapper::SpidrAnalysisQtWrapper() 
@@ -81,8 +79,8 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
 #endif
     _SpidrAnalysis->computekNN();
     //std::tie(_knnIds, _knnDists) = _SpidrAnalysis->getKNN();
-    emit finishedKnn(); // this connects to SpidrPlugin::tsneComputation, which triggers the t-SNE computation in TsneComputationQt
-    // We don't do the following but instead transform in TsneComputationQt so that we can easily update the embedding view live
+    emit finishedKnn(); // this connects to SpidrPlugin::tsneComputation, which triggers the t-SNE computation in TsneComputationQtWrapper
+    // We don't do the following but instead transform in TsneComputationQtWrapper so that we can easily update the embedding view live
     //_SpidrAnalysis->computeEmbedding();
     //_emd_with_backgound = _SpidrAnalysis->outputWithBackground();
     //emit finishedEmbedding();

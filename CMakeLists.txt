@@ -21,10 +21,10 @@ set(PLUGIN
     src/SpidrPlugin.h
     src/SpidrPlugin.cpp
     src/SpidrPlugin.json
-    src/SpidrAnalysisQt.h
-    src/SpidrAnalysisQt.cpp
-    src/TsneComputationQt.h
-    src/TsneComputationQt.cpp
+    src/SpidrAnalysisQtWrapper.h
+    src/SpidrAnalysisQtWrapper.cpp
+    src/TsneComputationQtWrapper.h
+    src/TsneComputationQtWrapper.cpp
 )
 
 set(DIMENSIONSELECTIONHOLDER

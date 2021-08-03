@@ -1,4 +1,4 @@
-#include "TsneComputationQt.h"
+#include "TsneComputationQtWrapper.h"
 
 #include "SpidrAnalysisParameters.h"
 #include "EvalUtils.h"
@@ -16,7 +16,7 @@
 #define GLFW_FALSE 0
 #endif
 
-TsneComputationQt::TsneComputationQt() :
+TsneComputationQtWrapper::TsneComputationQtWrapper() :
     _iterations(1000),
     _numTrees(4),
     _numChecks(1024),
@@ -35,14 +35,14 @@ TsneComputationQt::TsneComputationQt() :
 }
 
 
-void TsneComputationQt::computeGradientDescent()
+void TsneComputationQtWrapper::computeGradientDescent()
 {
     initGradientDescent();
 
     embed();
 }
 
-void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params) {
+void TsneComputationQtWrapper::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params) {
     // SpidrParameters
     _iterations = params._numIterations;
     _perplexity = params._perplexity;
@@ -66,7 +66,7 @@ void TsneComputationQt::setup(const std::vector<int> knn_indices, const std::vec
 }
 
 
-void TsneComputationQt::initTSNE()
+void TsneComputationQtWrapper::initTSNE()
 {
 #ifdef NDEBUG
     emit progressMessage("Initializing A-tSNE...");
@@ -108,7 +108,7 @@ void TsneComputationQt::initTSNE()
 
 }
 
-void TsneComputationQt::initGradientDescent()
+void TsneComputationQtWrapper::initGradientDescent()
 {
 
 #ifdef NDEBUG
@@ -156,7 +156,7 @@ void TsneComputationQt::initGradientDescent()
 }
 
 // Computing gradient descent
-void TsneComputationQt::embed()
+void TsneComputationQtWrapper::embed()
 {
 #ifdef NDEBUG
     emit progressMessage("Embedding");
@@ -216,58 +216,58 @@ void TsneComputationQt::embed()
 
 }
 
-void TsneComputationQt::compute() {
+void TsneComputationQtWrapper::compute() {
     initTSNE();
     computeGradientDescent();
 }
 
 // Copy tSNE output to our output
-void TsneComputationQt::copyFloatOutput()
+void TsneComputationQtWrapper::copyFloatOutput()
 {
     _outputData = _embedding.getContainer();
 }
 
-std::vector<float> TsneComputationQt::output()
+std::vector<float> TsneComputationQtWrapper::output()
 {
     return _outputData;
 }
 
-void TsneComputationQt::setVerbose(bool verbose)
+void TsneComputationQtWrapper::setVerbose(bool verbose)
 {
     _verbose = verbose;
 }
 
-void TsneComputationQt::setIterations(int iterations)
+void TsneComputationQtWrapper::setIterations(int iterations)
 {
     _iterations = iterations;
 }
 
-void TsneComputationQt::setExaggerationIter(int exaggerationIter)
+void TsneComputationQtWrapper::setExaggerationIter(int exaggerationIter)
 {
     _exaggerationIter = exaggerationIter;
 }
 
-void TsneComputationQt::setExponentialDecay(int exponentialDecay)
+void TsneComputationQtWrapper::setExponentialDecay(int exponentialDecay)
 {
     _exponentialDecay = exponentialDecay;
 }
 
-void TsneComputationQt::setPerplexity(int perplexity)
+void TsneComputationQtWrapper::setPerplexity(int perplexity)
 {
     _perplexity = perplexity;
 }
 
-void TsneComputationQt::setNumDimensionsOutput(int numDimensionsOutput)
+void TsneComputationQtWrapper::setNumDimensionsOutput(int numDimensionsOutput)
 {
     _numDimensionsOutput = numDimensionsOutput;
 }
 
-void TsneComputationQt::stopGradientDescent()
+void TsneComputationQtWrapper::stopGradientDescent()
 {
     _isGradientDescentRunning = false;
 }
 
-void TsneComputationQt::markForDeletion()
+void TsneComputationQtWrapper::markForDeletion()
 {
     _isMarkedForDeletion = true;
 

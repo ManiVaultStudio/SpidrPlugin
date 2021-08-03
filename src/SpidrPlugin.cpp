@@ -108,7 +108,7 @@ void SpidrPlugin::startComputation()
     // Start spatial analysis in worker thread
     delete _spidrAnalysisWrapper; delete _tnseWrapper;
     _spidrAnalysisWrapper = new SpidrAnalysisQtWrapper();
-    _tnseWrapper = new TsneComputationQt();
+    _tnseWrapper = new TsneComputationQtWrapper();
 
     // set the data and all the parameters
     _spidrAnalysisWrapper->setup(attribute_data, pointIDsGlobal, numDims, imgSize, _embeddingName, backgroundIDsGlobal,
@@ -136,13 +136,13 @@ void SpidrPlugin::startComputation()
     connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedKnn, this, &SpidrPlugin::tsneComputation);
     connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
     connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::progressMessage, [this](const QString& message) {_settings->setSubtitle(message); });
-    connect(this, &SpidrPlugin::starttSNE, _tnseWrapper, &TsneComputationQt::compute);
+    connect(this, &SpidrPlugin::starttSNE, _tnseWrapper, &TsneComputationQtWrapper::compute);
 
     // Connect embedding
-    connect(_tnseWrapper, &TsneComputationQt::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
-    connect(_tnseWrapper, &TsneComputationQt::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
-    connect(_tnseWrapper, &TsneComputationQt::progressMessage, [this](const QString& message) {_settings->setSubtitle(message); });
-    connect(_tnseWrapper, &TsneComputationQt::computationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
+    connect(_tnseWrapper, &TsneComputationQtWrapper::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
+    connect(_tnseWrapper, &TsneComputationQtWrapper::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
+    connect(_tnseWrapper, &TsneComputationQtWrapper::progressMessage, [this](const QString& message) {_settings->setSubtitle(message); });
+    connect(_tnseWrapper, &TsneComputationQtWrapper::computationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
 
     workerThreadSpidr.start();
     emit startAnalysis();

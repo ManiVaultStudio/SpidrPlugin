@@ -7,8 +7,8 @@
 #include <QtCore>
 #include <QSize>
 
-#include "SpidrAnalysisQt.h"
-#include "TsneComputationQt.h"
+#include "SpidrAnalysisQtWrapper.h"
+#include "TsneComputationQtWrapper.h"
 #include "PointData.h"
 
 #include "Application.h"  // form hdps
@@ -77,7 +77,7 @@ private:
     void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
 
     SpidrAnalysisQtWrapper* _spidrAnalysisWrapper;       /*!<> */
-    TsneComputationQt* _tnseWrapper;                     /*!<> */
+    TsneComputationQtWrapper* _tnseWrapper;                     /*!<> */
     std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */
     QString _embeddingName;                             /*!<> */
     QThread workerThreadSpidr;                               /*!<> */

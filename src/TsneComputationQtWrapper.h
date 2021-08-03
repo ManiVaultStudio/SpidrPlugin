@@ -17,11 +17,11 @@
 
 class SpidrParameters;
 
-class TsneComputationQt : public QObject
+class TsneComputationQtWrapper : public QObject
 {
     Q_OBJECT
 public:
-    TsneComputationQt();
+    TsneComputationQtWrapper();
 
     void setVerbose(bool verbose);
     void setIterations(int iterations);
