@@ -56,6 +56,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Texture Hist. (QF)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_QF));
     distanceMetric.addItem("Texture Hist. (EMD)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_EMD));
     distanceMetric.addItem("Texture Hist. (Hel)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
+    distanceMetric.addItem("Covmat & Means (Bat)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_BHATTACHARYYA));
     distanceMetric.addItem("Local Moran's I (L2)", MakeQtMetricPair(feature_type::LOCALMORANSI, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Local Geary's C (L2)", MakeQtMetricPair(feature_type::LOCALGEARYC, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Point Clound (Chamfer)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
