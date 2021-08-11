@@ -122,7 +122,6 @@ void SpidrPlugin::startComputation()
         _settings->perplexity.text().toInt(), 
         _settings->exaggeration.text().toInt(), 
         _settings->expDecay.text().toInt(), \
-        _settings->weightSpaAttrNum.value(),        // MVNweight
         _settings->publishFeaturesToCore.isChecked(),
         _settings->forceBackgroundFeatures.isChecked()
     );
@@ -263,23 +262,23 @@ void SpidrPlugin::onFinishedEmbedding() {
 }
 
 void SpidrPlugin::onPublishFeatures(const unsigned int dataFeatsSize) {
-    qDebug() << "SpidrPlugin: Publish features to core";
-    QString featureDataSetName = _core->createDerivedData(_settings->getEmbName() + "_Features", _settings->getCurrentDataItem());
-    Points& featureDataSet = _core->requestData<Points>(featureDataSetName);
-    featureDataSet.setData(_spidrAnalysisWrapper->getFeatures()->data(), dataFeatsSize, _spidrAnalysisWrapper->getNumFeatureValsPerPoint());
+    qDebug() << "SpidrPlugin: Publish features to core (WARNING: Not currently enabled)";
+    //QString featureDataSetName = _core->createDerivedData(_settings->getEmbName() + "_Features", _settings->getCurrentDataItem());
+    //Points& featureDataSet = _core->requestData<Points>(featureDataSetName);
+    //featureDataSet.setData(_spidrAnalysisWrapper->getFeatures()->data(), dataFeatsSize, _spidrAnalysisWrapper->getNumFeatureValsPerPoint());
 
-    // Set dimension names of feature data set
-    std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
-    std::vector<QString> dimensionNames = _core->requestData<Points>(_settings->getCurrentDataItem()).getDimensionNames();
-    std::vector<QString> enabledDimensionNames;
+    //// Set dimension names of feature data set
+    //std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
+    //std::vector<QString> dimensionNames = _core->requestData<Points>(_settings->getCurrentDataItem()).getDimensionNames();
+    //std::vector<QString> enabledDimensionNames;
 
-    assert(enabledDimensions.size() == dimensionNames.size());
+    //assert(enabledDimensions.size() == dimensionNames.size());
 
-    for (int i = 0; i < enabledDimensions.size(); i++) {
-        if (enabledDimensions[i])
-            enabledDimensionNames.push_back(dimensionNames[i]);
-    }
-    featureDataSet.setDimensionNames(enabledDimensionNames);
+    //for (int i = 0; i < enabledDimensions.size(); i++) {
+    //    if (enabledDimensions[i])
+    //        enabledDimensionNames.push_back(dimensionNames[i]);
+    //}
+    //featureDataSet.setDimensionNames(enabledDimensionNames);
 }
 
 

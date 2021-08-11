@@ -91,9 +91,6 @@ public:
     QComboBox histBinSizeHeur;
     QSpinBox  histBinSize;
 
-    QSlider   weightSpaAttrSlider;
-    QDoubleSpinBox weightSpaAttrNum;
-
     QCheckBox publishFeaturesToCore;
 
     QLineEdit numIterations;

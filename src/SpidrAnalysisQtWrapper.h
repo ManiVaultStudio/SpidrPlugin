@@ -24,7 +24,7 @@ public:
     void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
         const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
         const unsigned int aknnMetric, const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors,  const size_t numHistBins, \
-        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, const float MVNweight, \
+        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, \
         bool publishFeaturesToCore, bool forceBackgroundFeatures);
 
 
@@ -35,7 +35,7 @@ public:
 
     const size_t getNumFeatureValsPerPoint();
 
-    const std::vector<float>* getFeatures();
+    const Feature* getFeatures();
 
     bool embeddingIsRunning();
     
@@ -98,13 +98,12 @@ private:
     int _perplexity;
     int _exaggeration;
     int _expDecay;
-    float _MVNweight;
     bool _publishFeaturesToCore;
     bool _forceBackgroundFeatures;
 
     // output
     std::vector<float> _emd_with_backgound;
-    std::vector<float> _dataFeats;
+    Feature _dataFeats;
     std::vector<int> _knnIds;
     std::vector<float> _knnDists;
 

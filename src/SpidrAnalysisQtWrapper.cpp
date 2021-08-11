@@ -20,7 +20,7 @@ SpidrAnalysisQtWrapper::~SpidrAnalysisQtWrapper()
 void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
         const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
         const unsigned int aknnMetric, const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
-        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, const float MVNweight, \
+        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, \
         bool publishFeaturesToCore, bool forceBackgroundFeatures)
 {
     _attribute_data = attribute_data;
@@ -39,7 +39,6 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _perplexity = perplexity;
     _exaggeration = exaggeration;
     _expDecay = expDecay;
-    _MVNweight = MVNweight;
     _publishFeaturesToCore = publishFeaturesToCore;
     _forceBackgroundFeatures = forceBackgroundFeatures;
 }
@@ -58,7 +57,7 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
 
     // Init all settings (setupData must have been called before initing the settings.)
     _SpidrAnalysis->initializeAnalysisSettings(static_cast<feature_type> (_featType), static_cast<loc_Neigh_Weighting> (_kernelType), _numLocNeighbors, _numHistBins, 
-        static_cast<knn_library> (_aknnAlgType), static_cast<distance_metric> (_aknnMetric), _MVNweight, _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
+        static_cast<knn_library> (_aknnAlgType), static_cast<distance_metric> (_aknnMetric), _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
 
     // Compute data features
 #ifdef NDEBUG
@@ -68,9 +67,11 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     _dataFeats = _SpidrAnalysis->getDataFeatures();
 
     // Publish feature to the core
+    // TODO: Re-enable publishing features to core, maybe? See SpidrPlugin::onPublishFeatures
     if (_publishFeaturesToCore || _forceBackgroundFeatures)
     {
-        emit publishFeatures(_dataFeats.size() / _SpidrAnalysis->getParameters()._numFeatureValsPerPoint);
+        //emit publishFeatures(_dataFeats.size() / _SpidrAnalysis->getParameters()._numFeatureValsPerPoint);
+        emit publishFeatures(0);
     }
     
     // Compute knn dists and inds
@@ -115,7 +116,7 @@ const size_t SpidrAnalysisQtWrapper::getNumImagePoints() {
     return _SpidrAnalysis->getParameters()._numPoints;
 }
 
-const std::vector<float>* SpidrAnalysisQtWrapper::getFeatures() {
+const Feature* SpidrAnalysisQtWrapper::getFeatures() {
     return &_dataFeats;
 }
 
