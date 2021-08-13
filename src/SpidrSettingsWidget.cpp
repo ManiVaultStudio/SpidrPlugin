@@ -56,6 +56,11 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Texture Hist. (QF)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_QF));
     distanceMetric.addItem("Texture Hist. (Hel)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
     distanceMetric.addItem("Covmat & Means (Bat)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_BHATTACHARYYA));
+    distanceMetric.addItem("Covmat & Means (Det)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_DETMATRATIO));
+    distanceMetric.addItem("Covmat & Means (CMD)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_CMD_covmat));
+    distanceMetric.addItem("Covmat & Means (FrG)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_FRECHET_Gen));
+    distanceMetric.addItem("Covmat & Means (FrC)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_FRECHET_CovMat));
+    distanceMetric.addItem("Covmat & Means (Fro)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_FROBENIUS_CovMat));
     distanceMetric.addItem("Local Moran's I (L2)", MakeQtMetricPair(feature_type::LOCALMORANSI, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Local Geary's C (L2)", MakeQtMetricPair(feature_type::LOCALGEARYC, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Point Clound (Chamfer)", MakeQtMetricPair(feature_type::PCLOUD, distance_metric::METRIC_CHA));
