@@ -55,6 +55,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     // this is used as a nice way to cast this information internally in SpidrAnalysis
     distanceMetric.addItem("Texture Hist. (QF)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_QF));
     distanceMetric.addItem("Texture Hist. (Hel)", MakeQtMetricPair(feature_type::TEXTURE_HIST_1D, distance_metric::METRIC_HEL));
+    distanceMetric.addItem("Channel Hist. (L2)", MakeQtMetricPair(feature_type::CHANNEL_HIST, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Covmat & Means (Bat)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_BHATTACHARYYA));
     distanceMetric.addItem("Covmat & Means (Det)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_DETMATRATIO));
     distanceMetric.addItem("Covmat & Means (CMD)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_CMD_covmat));
