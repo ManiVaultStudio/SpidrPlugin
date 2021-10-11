@@ -26,8 +26,6 @@ SpidrPlugin::SpidrPlugin()
 SpidrPlugin::~SpidrPlugin(void)
 {
     stopComputation();
-    delete _spidrAnalysisWrapper;
-    delete _tnseWrapper;
 }
 
 void SpidrPlugin::init()
@@ -105,8 +103,7 @@ void SpidrPlugin::startComputation()
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
 
-    // Start spatial analysis in worker thread
-    delete _spidrAnalysisWrapper; delete _tnseWrapper;
+    // deleted in stopComputation(), which is also called by the destructor
     _spidrAnalysisWrapper = new SpidrAnalysisQtWrapper();
     _tnseWrapper = new TsneComputationQtWrapper();
 
@@ -126,11 +123,18 @@ void SpidrPlugin::startComputation()
         _settings->forceBackgroundFeatures.isChecked()
     );
 
-    _spidrAnalysisWrapper->moveToThread(&workerThreadSpidr);
-    _tnseWrapper->moveToThread(&workerThreadtSNE);
+    // Start spatial analysis in worker thread
+    _workerThreadSpidr = new QThread();
+    _workerThreadtSNE = new QThread();
 
-    //    connect(&workerThreadSpidr, &QThread::finished, _spidrAnalysisWrapper, &QObject::deleteLater);
-    // TODO delete once embedding finished
+    _spidrAnalysisWrapper->moveToThread(_workerThreadSpidr);
+    _tnseWrapper->moveToThread(_workerThreadtSNE);
+
+    // delete threads after work is done
+    connect(_workerThreadSpidr, &QThread::finished, _workerThreadSpidr, &QObject::deleteLater);
+    connect(_workerThreadtSNE, &QThread::finished, _workerThreadtSNE, &QObject::deleteLater);
+
+    // connect wrappers
     connect(this, &SpidrPlugin::startAnalysis, _spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::spatialAnalysis);
     connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedKnn, this, &SpidrPlugin::tsneComputation);
     connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
@@ -141,9 +145,9 @@ void SpidrPlugin::startComputation()
     connect(_tnseWrapper, &TsneComputationQtWrapper::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
     connect(_tnseWrapper, &TsneComputationQtWrapper::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
     connect(_tnseWrapper, &TsneComputationQtWrapper::progressMessage, [this](const QString& message) {_settings->setSubtitle(message); });
-    connect(_tnseWrapper, &TsneComputationQtWrapper::computationStopped, _settings.get(), &SpidrSettingsWidget::computationStopped);
 
-    workerThreadSpidr.start();
+    qDebug() << "SpidrPlugin: Start Analysis";
+    _workerThreadSpidr->start();
     emit startAnalysis();
 
 }
@@ -155,7 +159,7 @@ void SpidrPlugin::tsneComputation()
     std::vector<float> _knnDists;
     std::tie(_knnIds, _knnDists) = _spidrAnalysisWrapper->getKNN();
     _tnseWrapper->setup(_knnIds, _knnDists, _spidrAnalysisWrapper->getParameters()); // maybe I have to do this differently by sending a signal and getting hte values as a return...
-    workerThreadtSNE.start();
+    _workerThreadtSNE->start();
     emit starttSNE();
 }
 
@@ -259,10 +263,11 @@ void SpidrPlugin::onFinishedEmbedding() {
 
     qDebug() << "SpidrPlugin: Done.";
     _settings->setSubtitle("");
+
 }
 
 void SpidrPlugin::onPublishFeatures(const unsigned int dataFeatsSize) {
-    qDebug() << "SpidrPlugin: Publish features to core (WARNING: Not currently enabled)";
+    qDebug() << "SpidrPlugin: Publish features to core (WARNING: Not currently enabled - no features are published to the core)";
     //QString featureDataSetName = _core->createDerivedData(_settings->getEmbName() + "_Features", _settings->getCurrentDataItem());
     //Points& featureDataSet = _core->requestData<Points>(featureDataSetName);
     //featureDataSet.setData(_spidrAnalysisWrapper->getFeatures()->data(), dataFeatsSize, _spidrAnalysisWrapper->getNumFeatureValsPerPoint());
@@ -284,22 +289,42 @@ void SpidrPlugin::onPublishFeatures(const unsigned int dataFeatsSize) {
 
 void SpidrPlugin::stopComputation() {
     // Request interruption of the computation
-    if (workerThreadtSNE.isRunning())
+
+    if (_workerThreadSpidr->isRunning())
+    {
+        _workerThreadSpidr->exit();
+
+        // Wait until the thread has terminated (max. 3 seconds)
+        if (!_workerThreadSpidr->wait(3000))
+        {
+            qDebug() << "SpidrPlugin: Spidr computation thread did not close in time, terminating...";
+            _workerThreadSpidr->terminate();
+            _workerThreadSpidr->wait();
+        }
+
+    }
+
+    if (_workerThreadtSNE->isRunning())
     {
         // release openGL context 
         _tnseWrapper->stopGradientDescent();
-        workerThreadtSNE.exit();
+        _workerThreadtSNE->exit();
 
         // Wait until the thread has terminated (max. 3 seconds)
-        if (!workerThreadtSNE.wait(3000))
+        if (!_workerThreadtSNE->wait(3000))
         {
-            qDebug() << "Spatial Analysis computation thread did not close in time, terminating...";
-            workerThreadtSNE.terminate();
-            workerThreadtSNE.wait();
+            qDebug() << "SpidrPlugin: t-SNE computation thread did not close in time, terminating...";
+            _workerThreadtSNE->terminate();
+            _workerThreadtSNE->wait();
         }
-        qDebug() << "Spatial Analysis computation stopped.";
 
     }
+
+    qDebug() << "SpidrPlugin: Spatial t-SNE Analysis computation stopped.";
+
+    delete _spidrAnalysisWrapper; _spidrAnalysisWrapper = NULL;
+    delete _tnseWrapper; _tnseWrapper = NULL;
+
 }
 
 // =============================================================================

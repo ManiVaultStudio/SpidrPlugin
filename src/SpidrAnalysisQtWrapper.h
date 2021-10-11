@@ -35,7 +35,7 @@ public:
 
     const size_t getNumFeatureValsPerPoint();
 
-    const Feature* getFeatures();
+    const Feature getFeatures();
 
     bool embeddingIsRunning();
     

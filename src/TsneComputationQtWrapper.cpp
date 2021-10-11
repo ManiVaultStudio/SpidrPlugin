@@ -205,15 +205,13 @@ void TsneComputationQtWrapper::embed()
         _isGradientDescentRunning = false;
         _isTsneRunning = false;
 
-        emit computationStopped();
     }
+
+    emit finishedEmbedding();
 
     spdlog::info("--------------------------------------------------------------------------------");
     spdlog::info("A-tSNE: Finished embedding of tSNE Analysis in: {} seconds", elapsed / 1000);
     spdlog::info("================================================================================");
-
-    emit finishedEmbedding();
-
 }
 
 void TsneComputationQtWrapper::compute() {

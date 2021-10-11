@@ -58,6 +58,7 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     distanceMetric.addItem("Channel Hist. (L2)", MakeQtMetricPair(feature_type::CHANNEL_HIST, distance_metric::METRIC_EUC));
     distanceMetric.addItem("Covmat & Means (Bat)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_BHATTACHARYYA));
     distanceMetric.addItem("Covmat & Means (Det)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_DETMATRATIO));
+    distanceMetric.addItem("Covmat & Means (Means)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_BHATTACHARYYATESTONLYMEANS));
     distanceMetric.addItem("Covmat & Means (CMD)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_CMD_covmat));
     distanceMetric.addItem("Covmat & Means (FrG)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_FRECHET_Gen));
     distanceMetric.addItem("Covmat & Means (FrC)", MakeQtMetricPair(feature_type::MULTIVAR_NORM, distance_metric::METRIC_FRECHET_CovMat));

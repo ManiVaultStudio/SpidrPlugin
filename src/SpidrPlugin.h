@@ -76,12 +76,12 @@ private:
     */
     void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
 
-    SpidrAnalysisQtWrapper* _spidrAnalysisWrapper;       /*!<> */
-    TsneComputationQtWrapper* _tnseWrapper;                     /*!<> */
-    std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */
+    SpidrAnalysisQtWrapper* _spidrAnalysisWrapper;      /*!< TODO: use QScopedPointer > */
+    TsneComputationQtWrapper* _tnseWrapper;             /*!< TODO: use QScopedPointer > */
+    std::unique_ptr<SpidrSettingsWidget> _settings;     /*!< TODO: use QScopedPointer, for consistence > */
     QString _embeddingName;                             /*!<> */
-    QThread workerThreadSpidr;                               /*!<> */
-    QThread workerThreadtSNE;                               /*!<> */
+    QThread* _workerThreadSpidr;                        /*!<> */
+    QThread* _workerThreadtSNE;                         /*!<> */
 };
 
 // =============================================================================

@@ -72,7 +72,6 @@ public:
 
 signals:
     void finishedEmbedding();
-    void computationStopped();
     void newEmbedding();
     void progressMessage(const QString& message);
 

@@ -116,8 +116,8 @@ const size_t SpidrAnalysisQtWrapper::getNumImagePoints() {
     return _SpidrAnalysis->getParameters()._numPoints;
 }
 
-const Feature* SpidrAnalysisQtWrapper::getFeatures() {
-    return &_dataFeats;
+const Feature SpidrAnalysisQtWrapper::getFeatures() {
+    return _dataFeats;
 }
 
 bool SpidrAnalysisQtWrapper::embeddingIsRunning() {
