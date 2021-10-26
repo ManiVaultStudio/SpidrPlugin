@@ -50,8 +50,8 @@ public:
 
     const SpidrParameters getParameters();
 
-    /* Returns _knn_indices, _knn_distances_squared, use with std::tie(_knnIds, _knnDists) = getKNN(); */
-    const std::tuple<std::vector<int>, std::vector<float>> getKNN();
+    /* Returns _knn_indices, _knn_distances, use with std::tie(_knnIds, _knnDists) = getKnn(); */
+    const std::tuple<std::vector<int>, std::vector<float>> getKnn();
 
     /* Add bg points to emb */
     void addBackgroundToEmbedding(std::vector<float>& emb, std::vector<float>& emb_wo_bg);

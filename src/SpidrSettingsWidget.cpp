@@ -47,8 +47,6 @@ SpidrSettingsWidget::SpidrSettingsWidget(SpidrPlugin& analysisPlugin) :
     // add data item according to enum knn_library (KNNUtils)
     knnOptions.addItem("HNSW", static_cast<unsigned int> (knn_library::KNN_HNSW));
     knnOptions.addItem("Exact kNN", static_cast<unsigned int> (knn_library::KKN_EXACT));
-    knnOptions.addItem("Eval exact kNN", static_cast<unsigned int> (knn_library::EVAL_KNN_EXACT));
-    knnOptions.addItem("Eval akNN", static_cast<unsigned int> (knn_library::EVAL_KNN_HNSW));
     knnOptions.setToolTip("HNSW: Approximate kNN (fast) \nExact: precise (slow) \nEval Full: precise and saves (all+kNN) indices&distances and features to disk (slow) \nEval Full: Like Eval Full but for akNN (fast)");
 
     // data values (QVariant) store feature_type (FeatureUtils) and distance_metric (KNNUtils) values as x and y 

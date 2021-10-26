@@ -157,7 +157,7 @@ void SpidrPlugin::tsneComputation()
     // is called once knn computation is finished in _spidrAnalysisWrapper
     std::vector<int> _knnIds;
     std::vector<float> _knnDists;
-    std::tie(_knnIds, _knnDists) = _spidrAnalysisWrapper->getKNN();
+    std::tie(_knnIds, _knnDists) = _spidrAnalysisWrapper->getKnn();
     _tnseWrapper->setup(_knnIds, _knnDists, _spidrAnalysisWrapper->getParameters()); // maybe I have to do this differently by sending a signal and getting hte values as a return...
     _workerThreadtSNE->start();
     emit starttSNE();

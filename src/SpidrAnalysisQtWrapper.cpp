@@ -79,7 +79,7 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     emit progressMessage("Calculate distances and kNN");
 #endif
     _SpidrAnalysis->computekNN();
-    //std::tie(_knnIds, _knnDists) = _SpidrAnalysis->getKNN();
+    //std::tie(_knnIds, _knnDists) = _SpidrAnalysis->getKnn();
     emit finishedKnn(); // this connects to SpidrPlugin::tsneComputation, which triggers the t-SNE computation in TsneComputationQtWrapper
     // We don't do the following but instead transform in TsneComputationQtWrapper so that we can easily update the embedding view live
     //_SpidrAnalysis->computeEmbedding();
@@ -87,8 +87,8 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     //emit finishedEmbedding();
 }
 
-const std::tuple<std::vector<int>, std::vector<float>> SpidrAnalysisQtWrapper::getKNN() {
-    return _SpidrAnalysis->getKNN();
+const std::tuple<std::vector<int>, std::vector<float>> SpidrAnalysisQtWrapper::getKnn() {
+    return _SpidrAnalysis->getKnn();
 }
 
 void SpidrAnalysisQtWrapper::addBackgroundToEmbedding(std::vector<float>& emb, std::vector<float>& emb_wo_bg) {
