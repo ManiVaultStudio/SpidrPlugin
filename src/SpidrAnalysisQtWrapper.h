@@ -92,7 +92,7 @@ private:
     unsigned int _featType;
     unsigned int _kernelType;
     unsigned int _aknnAlgType;
-    size_t _numLocNeighbors;
+    size_t _numNeighborsInEachDirection;
     size_t _numHistBins;
     int _numIterations;
     int _perplexity;

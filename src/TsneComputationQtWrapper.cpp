@@ -1,6 +1,5 @@
 #include "TsneComputationQtWrapper.h"
 
-#include "SpidrAnalysisParameters.h"
 #include "EvalUtils.h"
 
 #include <algorithm>            // std::min, max
@@ -9,7 +8,6 @@
 
 #include "hdi/dimensionality_reduction/tsne_parameters.h"
 #include "hdi/utils/scoped_timers.h"
-#include "spdlog/spdlog-inl.h"
 
 // not present in glfw 3.1.2
 #ifndef GLFW_FALSE

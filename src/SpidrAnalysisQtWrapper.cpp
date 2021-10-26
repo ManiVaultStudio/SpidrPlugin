@@ -32,7 +32,7 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _aknnMetric = aknnMetric;
     _featType = featType;
     _kernelType = kernelType;
-    _numLocNeighbors = numLocNeighbors;
+    _numNeighborsInEachDirection = numLocNeighbors;
     _numHistBins = numHistBins;
     _aknnAlgType = aknnAlgType;
     _numIterations = numIterations;
@@ -56,7 +56,7 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     }
 
     // Init all settings (setupData must have been called before initing the settings.)
-    _SpidrAnalysis->initializeAnalysisSettings(static_cast<feature_type> (_featType), static_cast<loc_Neigh_Weighting> (_kernelType), _numLocNeighbors, _numHistBins, 
+    _SpidrAnalysis->initializeAnalysisSettings(static_cast<feature_type> (_featType), static_cast<loc_Neigh_Weighting> (_kernelType), _numNeighborsInEachDirection, _numHistBins, 
         static_cast<knn_library> (_aknnAlgType), static_cast<distance_metric> (_aknnMetric), _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
 
     // Compute data features
