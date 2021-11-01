@@ -67,7 +67,7 @@ void TsneComputationQtWrapper::setup(const std::vector<int> knn_indices, const s
 void TsneComputationQtWrapper::initTSNE()
 {
 #ifdef NDEBUG
-    emit progressMessage("Initializing A-tSNE...");
+    emit progressSection("Initializing A-tSNE");
 #endif
 
     // Computation of the high dimensional similarities
@@ -81,7 +81,7 @@ void TsneComputationQtWrapper::initTSNE()
         spdlog::info("tSNE initialized.");
 
 #ifdef NDEBUG
-        emit progressMessage("Calculate probability distributions");
+        emit progressSection("Calculate probability distributions");
 #endif
 
         _probabilityDistribution.clear();
@@ -101,7 +101,7 @@ void TsneComputationQtWrapper::initTSNE()
     }
 
 #ifdef NDEBUG
-    emit progressMessage("Probability distributions calculated");
+    emit progressSection("Probability distributions calculated");
 #endif
 
 }
@@ -110,7 +110,7 @@ void TsneComputationQtWrapper::initGradientDescent()
 {
 
 #ifdef NDEBUG
-    emit progressMessage("Initializing gradient descent");
+    emit progressSection("Initializing gradient descent");
 #endif
 
     _continueFromIteration = 0;
@@ -157,8 +157,13 @@ void TsneComputationQtWrapper::initGradientDescent()
 void TsneComputationQtWrapper::embed()
 {
 #ifdef NDEBUG
-    emit progressMessage("Embedding");
+    emit progressSection("Embedding");
 #endif
+    
+    const auto emitEmbeddingUpdate = [this](const std::uint32_t& numProcessed, const std::uint32_t& numTotal) -> void {
+        emit progressSection(QString("Embedding (step %1 of %2)").arg(QString::number(numProcessed), QString::number(numTotal)));
+        emit progressPercentage(static_cast<float>(numProcessed) / static_cast<float>(numTotal));
+    };
 
     double elapsed = 0;
     double t = 0;
@@ -183,6 +188,9 @@ void TsneComputationQtWrapper::embed()
             {
                 copyFloatOutput();
                 emit newEmbedding();
+#ifdef NDEBUG
+                emitEmbeddingUpdate(iter, _iterations);
+#endif
             }
 
             if (t > 1000)
@@ -190,9 +198,9 @@ void TsneComputationQtWrapper::embed()
 
             elapsed += t;
 
-#ifdef NDEBUG
-            emit progressMessage(QString("Computing gradient descent: %1 %").arg(QString::number(100.0f * static_cast<float>(iter) / static_cast<float>(_iterations), 'f', 1)));
-#endif
+//#ifdef NDEBUG
+//            emit progressMessage(QString("Computing gradient descent: %1 %").arg(QString::number(100.0f * static_cast<float>(iter) / static_cast<float>(_iterations), 'f', 1)));
+//#endif
         }
         glfwDestroyWindow(_offscreen_context);
         glfwTerminate();

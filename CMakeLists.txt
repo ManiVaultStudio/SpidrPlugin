@@ -25,6 +25,9 @@ set(PLUGIN
     src/SpidrAnalysisQtWrapper.cpp
     src/TsneComputationQtWrapper.h
     src/TsneComputationQtWrapper.cpp
+    src/SpidrData.h
+    src/SpidrOptions.h
+
 )
 
 set(DIMENSIONSELECTIONHOLDER
@@ -38,14 +41,29 @@ set(DIMENSIONSELECTIONHOLDER
     src/DimensionSelectionProxyModel.cpp
 )
 
+set(ACTIONS
+    src/GeneralSpidrSettingsAction.h
+    src/GeneralSpidrSettingsAction.cpp
+    src/SpidrSettingsAction.h
+    src/SpidrSettingsAction.cpp
+    src/TsneComputationAction.h
+    src/TsneComputationAction.cpp
+    src/AdvancedTsneSettingsAction.h
+    src/AdvancedTsneSettingsAction.cpp
+    src/DimensionSelectionAction.h
+    src/DimensionSelectionAction.cpp
+)
+
+
 file(GLOB WIDGETS src/*Widget.*)
 file(GLOB UIS ui/*.ui)
 file(GLOB JSON src/*.json)
 
-set(SOURCES ${PLUGIN} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
+set(SOURCES ${PLUGIN} ${ACTIONS} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
 set(AUX ${JSON})
 
 source_group(Plugin FILES ${PLUGIN})
+source_group(Actions FILES ${ACTIONS})
 source_group(Spidrlib FILES ${SPIDRLIB})
 source_group(Widgets FILES ${WIDGETS})
 source_group(DimensionSelectionHolder FILES ${DIMENSIONSELECTIONHOLDER})

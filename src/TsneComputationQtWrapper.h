@@ -76,6 +76,8 @@ signals:
     void finishedEmbedding();
     void newEmbedding();
     void progressMessage(const QString& message);
+    void progressPercentage(const float& percentage);
+    void progressSection(const QString& section);
 
 private:
     void computeGradientDescent();

@@ -27,6 +27,10 @@ public:
         const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, \
         bool publishFeaturesToCore, bool forceBackgroundFeatures);
 
+    void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
+        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+        const SpidrParameters& spidrParameters);
+
 
     // Getter
     const size_t getNumForegroundPoints();
@@ -67,10 +71,11 @@ public slots:
 
 signals:
     void finishedKnn();
-    void finishedEmbedding();
 
     void publishFeatures(const unsigned int dataFeatsSize);
-    void progressMessage(const QString& message);
+    void progressMessage(const QString& message);    
+    void progressSection(const QString& section);
+
 
 private:
 

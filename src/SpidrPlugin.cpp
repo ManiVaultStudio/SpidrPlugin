@@ -8,8 +8,8 @@
 #include <utility>      // std::as_const
 #include <vector>       // std::vector
 
-//#include <windows.h>
 Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
+
 #include <set>
 
 // =============================================================================
@@ -17,9 +17,12 @@ Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 // =============================================================================
 
 using namespace hdps;
-SpidrPlugin::SpidrPlugin()
-    :
-    AnalysisPlugin("Spidr")
+SpidrPlugin::SpidrPlugin(const PluginFactory* factory) :
+    AnalysisPlugin(factory),
+    _spidrSettingsAction(this),
+    _dimensionSelectionAction(this), 
+    _spidrAnalysisWrapper(),
+    _tnseWrapper()
 {
 }
 
@@ -30,126 +33,208 @@ SpidrPlugin::~SpidrPlugin(void)
 
 void SpidrPlugin::init()
 {
-    _settings = std::make_unique<SpidrSettingsWidget>(*this);
-    _spidrAnalysisWrapper = NULL;
-    _tnseWrapper = NULL;
+    setOutputDatasetName(_core->createDerivedData("sp-tsne_embedding", getInputDatasetName()));
 
-    // Connet settings
-    connect(_settings.get(), &SpidrSettingsWidget::dataSetPicked, this, &SpidrPlugin::dataSetPicked);
+    // Get input/output datasets
+    auto& inputDataset = getInputDataset<Points>();
+    auto& outputDataset = getOutputDataset<Points>();
+
+    // Set up output data
+    std::vector<float> initialData;
+    const auto numEmbeddingDimensions = 2;
+    initialData.resize(inputDataset.getNumPoints() * numEmbeddingDimensions);
+    outputDataset.setData(initialData.data(), inputDataset.getNumPoints(), numEmbeddingDimensions);
+    _core->getDataHierarchyItem(outputDataset.getName())->select();
+
+    // Set up action connections
+    outputDataset.addAction(_spidrSettingsAction.getGeneralSpidrSettingsAction());
+
+    auto& computationAction = _spidrSettingsAction.getComputationAction();
+
+    // 
+    const auto updateComputationAction = [this, &computationAction]() {
+        const auto isRunning = computationAction.getRunningAction().isChecked();
+
+        computationAction.getStartComputationAction().setEnabled(!isRunning);
+        computationAction.getStopComputationAction().setEnabled(isRunning);
+    };
+
+
+    // Update task description in GUI
+    connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::progressSection, this, [this](const QString& section) {
+        if (getTaskStatus() == DataHierarchyItem::TaskStatus::Aborted)
+            return;
+
+        setTaskDescription(section);
+        });
+
+    connect(&_tnseWrapper, &TsneComputationQtWrapper::progressPercentage, this, [this](const float& percentage) {
+        if (getTaskStatus() == DataHierarchyItem::TaskStatus::Aborted)
+            return;
+
+        setTaskProgress(percentage);
+        });
+
+    connect(&_tnseWrapper, &TsneComputationQtWrapper::progressSection, this, [this](const QString& section) {
+        if (getTaskStatus() == DataHierarchyItem::TaskStatus::Aborted)
+            return;
+
+        setTaskDescription(section);
+        });
+
+    connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::progressSection, this, [this](const QString& section) {
+        if (getTaskStatus() == DataHierarchyItem::TaskStatus::Aborted)
+            return;
+
+        setTaskDescription(section);
+        });
+
+    // Embedding finished
+    connect(&_tnseWrapper, &TsneComputationQtWrapper::finishedEmbedding, this, [this, &computationAction]() {
+        onFinishedEmbedding();
+
+        setTaskFinished();
+
+        computationAction.getRunningAction().setChecked(false);
+
+        _spidrSettingsAction.getGeneralSpidrSettingsAction().setReadOnly(false);
+        _spidrSettingsAction.getAdvancedTsneSettingsAction().setReadOnly(false);
+        });
+
+    // start computation
+    connect(&computationAction.getStartComputationAction(), &TriggerAction::triggered, this, [this, &computationAction]() {
+        _spidrSettingsAction.getGeneralSpidrSettingsAction().setReadOnly(true);
+        _spidrSettingsAction.getAdvancedTsneSettingsAction().setReadOnly(true);
+
+        startComputation();
+        });
+
+    // abort t-SNE
+    connect(&computationAction.getStopComputationAction(), &TriggerAction::triggered, this, [this]() {
+        setTaskDescription("Aborting TSNE");
+
+        qApp->processEvents();
+
+        stopComputation();
+        });
+
+    // embedding changed
+    connect(&_tnseWrapper, &TsneComputationQtWrapper::newEmbedding, this, [this]() {
+        Points& embedding = getOutputDataset<Points>();
+
+        // TODO: check if the interactive selection actually works before a background is inserted
+        const std::vector<float>& outputData = _tnseWrapper.output();
+
+        embedding.setData(outputData.data(), _spidrAnalysisWrapper.getNumForegroundPoints(), 2);
+        _core->notifyDataChanged(getOutputDatasetName());
+        });
+
+
+    _dimensionSelectionAction.dataChanged(inputDataset);
+
+    connect(&computationAction.getRunningAction(), &ToggleAction::toggled, this, [this, &computationAction, updateComputationAction](bool toggled) {
+        _dimensionSelectionAction.setEnabled(!toggled);
+
+        updateComputationAction();
+        });
+
+
+    updateComputationAction();
 
     registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
+
+    setTaskName("Spidr");
+
+    //_spidrAnalysisWrapper = NULL;
+    //_tnseWrapper = NULL;
+
 
 }
 
 void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
 {
-    if (dataEvent->getType() == EventType::DataAdded)
-        _settings->addDataItem(static_cast<DataAddedEvent*>(dataEvent)->dataSetName);
-
-    if (dataEvent->getType() == EventType::DataRemoved)
-        _settings->removeDataItem(static_cast<DataRemovedEvent*>(dataEvent)->dataSetName);
 
     if (dataEvent->getType() == EventType::DataChanged) {
         auto dataChangedEvent = static_cast<DataChangedEvent*>(dataEvent);
 
         // If we are not looking at the changed dataset, ignore it
-        if (dataChangedEvent->dataSetName != _settings->getCurrentDataItem())
+        if (dataChangedEvent->dataSetName != getInputDatasetName())
             return;
 
         // Passes changes to the current dataset to the dimension selection widget
         Points& points = _core->requestData<Points>(dataChangedEvent->dataSetName);
 
-        // Only handle underived data?
-        //        if (points.isDerivedData())
-        //            return;
-
-        _settings->getDimensionSelectionWidget().dataChanged(points);
+        _dimensionSelectionAction.dataChanged(_core->requestData<Points>(dataChangedEvent->dataSetName));
     }
 }
 
-hdps::gui::SettingsWidget* const SpidrPlugin::getSettings()
-{
-    return _settings.get();
-}
-
-void SpidrPlugin::dataSetPicked(const QString& name)
-{
-    Points& points = _core->requestData<Points>(name);
-    _settings->dataChanged(points);
-
-    _settings->setTitle(QString("%1: %2").arg(getGuiName(), name));
-}
 
 void SpidrPlugin::startComputation()
 {
+    setTaskRunning();
+    setTaskProgress(0.0f);
+    setTaskDescription("Preparing data");
+
     // Get the data
     qDebug() << "SpidrPlugin: Read data ";
+    const auto& inputPoints = getInputDataset<Points>();
 
     std::vector<unsigned int> pointIDsGlobal; // Global ID of each point in the image
     std::vector<float> attribute_data;        // Actual channel valures, only consider enabled dimensions
     std::vector<unsigned int> backgroundIDsGlobal;  // ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
     ImgSize imgSize;
-    unsigned int numDims;
-    QString dataName = _settings->getCurrentDataItem();
-    retrieveData(dataName, pointIDsGlobal, attribute_data, numDims, imgSize, backgroundIDsGlobal);
 
-    // Create a new data set and hand it to the hdps core
-    qDebug() << "SpidrPlugin: Create new data set for embedding";
-    _embeddingName = _core->createDerivedData(_settings->getEmbName(), dataName);
-    Points& embedding = _core->requestData<Points>(_embeddingName);
-    embedding.setData(nullptr, 0, 2);
-    _core->notifyDataAdded(_embeddingName);
+    // Extract the enabled dimensions from the data
+    std::vector<bool> enabledDimensions = _dimensionSelectionAction.getEnabledDimensions();
+    const auto numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
+
+    // Populate selected data attributes
+    attribute_data.resize((inputPoints.isFull() ? inputPoints.getNumPoints() : inputPoints.indices.size()) * numEnabledDimensions);
+
+    for (int i = 0; i < inputPoints.getNumDimensions(); i++)
+        if (enabledDimensions[i])
+            pointIDsGlobal.push_back(i);
+
+    inputPoints.populateDataForDimensions<std::vector<float>, std::vector<unsigned int>>(attribute_data, pointIDsGlobal);
+
+    // Image size
+    QSize qtImgSize = inputPoints.getProperty("ImageSize", QSize()).toSize();
+    imgSize.width = qtImgSize.width();
+    imgSize.height = qtImgSize.height();
 
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
 
     // deleted in stopComputation(), which is also called by the destructor
-    _spidrAnalysisWrapper = new SpidrAnalysisQtWrapper();
-    _tnseWrapper = new TsneComputationQtWrapper();
-
+    // TODO: remove pointer references
+    //_spidrAnalysisWrapper = new SpidrAnalysisQtWrapper();
+    //_tnseWrapper = new TsneComputationQtWrapper();
+    
     // set the data and all the parameters
-    _spidrAnalysisWrapper->setup(attribute_data, pointIDsGlobal, numDims, imgSize, _embeddingName, backgroundIDsGlobal,
-        _settings->distanceMetric.currentData().toPoint().y(),  // aknnMetric
-        _settings->distanceMetric.currentData().toPoint().x(),  // featType
-        _settings->kernelWeight.currentData().value<unsigned int>(),   // kernelType
-        _settings->kernelSize.text().toInt(),       // numLocNeighbors
-        _settings->histBinSize.text().toInt(), 
-        _settings->knnOptions.currentData().value<unsigned int>(),   // aknnAlgType
-        _settings->numIterations.text().toInt(),
-        _settings->perplexity.text().toInt(), 
-        _settings->exaggeration.text().toInt(), 
-        _settings->expDecay.text().toInt(), \
-        _settings->publishFeaturesToCore.isChecked(),
-        _settings->forceBackgroundFeatures.isChecked()
-    );
+    _spidrAnalysisWrapper.setup(attribute_data, pointIDsGlobal, numEnabledDimensions, imgSize, QString("sp-emb_hdps"), backgroundIDsGlobal, _spidrSettingsAction.getSpidrParameters());
 
     // Start spatial analysis in worker thread
     _workerThreadSpidr = new QThread();
     _workerThreadtSNE = new QThread();
 
-    _spidrAnalysisWrapper->moveToThread(_workerThreadSpidr);
-    _tnseWrapper->moveToThread(_workerThreadtSNE);
+    _spidrAnalysisWrapper.moveToThread(_workerThreadSpidr);
+    _tnseWrapper.moveToThread(_workerThreadtSNE);
 
     // delete threads after work is done
     connect(_workerThreadSpidr, &QThread::finished, _workerThreadSpidr, &QObject::deleteLater);
     connect(_workerThreadtSNE, &QThread::finished, _workerThreadtSNE, &QObject::deleteLater);
 
     // connect wrappers
-    connect(this, &SpidrPlugin::startAnalysis, _spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::spatialAnalysis);
-    connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedKnn, this, &SpidrPlugin::tsneComputation);
-    connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
-    connect(_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::progressMessage, [this](const QString& message) {_settings->setSubtitle(message); });
-    connect(this, &SpidrPlugin::starttSNE, _tnseWrapper, &TsneComputationQtWrapper::compute);
+    //connect(this, &SpidrPlugin::startAnalysis, &_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::spatialAnalysis);
+    connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedKnn, this, &SpidrPlugin::tsneComputation);
+    connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
+    connect(this, &SpidrPlugin::starttSNE, &_tnseWrapper, &TsneComputationQtWrapper::compute);
 
-    // Connect embedding
-    connect(_tnseWrapper, &TsneComputationQtWrapper::newEmbedding, this, &SpidrPlugin::onNewEmbedding);
-    connect(_tnseWrapper, &TsneComputationQtWrapper::finishedEmbedding, this, &SpidrPlugin::onFinishedEmbedding);
-    connect(_tnseWrapper, &TsneComputationQtWrapper::progressMessage, [this](const QString& message) {_settings->setSubtitle(message); });
 
     qDebug() << "SpidrPlugin: Start Analysis";
+    _spidrSettingsAction.getComputationAction().getRunningAction().setChecked(true);
     _workerThreadSpidr->start();
-    emit startAnalysis();
-
+    _spidrAnalysisWrapper.spatialAnalysis();
 }
 
 void SpidrPlugin::tsneComputation()
@@ -157,113 +242,110 @@ void SpidrPlugin::tsneComputation()
     // is called once knn computation is finished in _spidrAnalysisWrapper
     std::vector<int> _knnIds;
     std::vector<float> _knnDists;
-    std::tie(_knnIds, _knnDists) = _spidrAnalysisWrapper->getKnn();
-    _tnseWrapper->setup(_knnIds, _knnDists, _spidrAnalysisWrapper->getParameters()); // maybe I have to do this differently by sending a signal and getting hte values as a return...
+    std::tie(_knnIds, _knnDists) = _spidrAnalysisWrapper.getKnn();
+    _tnseWrapper.setup(_knnIds, _knnDists, _spidrAnalysisWrapper.getParameters()); // maybe I have to do this differently by sending a signal and getting hte values as a return...
     _workerThreadtSNE->start();
     emit starttSNE();
 }
 
-void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal) {
-    Points& points = _core->requestData<Points>(dataName);
-    QSize qtImgSize = points.getProperty("ImageSize", QSize()).toSize();
-    imgSize.width = qtImgSize.width();
-    imgSize.height = qtImgSize.height();
+//void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal) {
+//    Points& points = _core->requestData<Points>(dataName);
+//    QSize qtImgSize = points.getProperty("ImageSize", QSize()).toSize();
+//    imgSize.width = qtImgSize.width();
+//    imgSize.height = qtImgSize.height();
+//
+//    std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
+//
+//    // Get number of enabled dimensions
+//    unsigned int numDimensions = points.getNumDimensions();
+//    numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
+//
+//    // Get indices of selected points
+//    pointIDsGlobal = points.indices;
+//    // If points represent all data set, select them all
+//    if (points.isFull()) {
+//        std::vector<unsigned int> all(points.getNumPoints());
+//        std::iota(std::begin(all), std::end(all), 0);
+//
+//        pointIDsGlobal = all;
+//    }
+//
+//    // For all selected points, retrieve values from each dimension
+//    attribute_data.reserve(pointIDsGlobal.size() * numEnabledDimensions);
+//
+//    points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, &numDimensions](auto beginOfData, auto endOfData)
+//    {
+//        for (const auto& pointId : pointIDsGlobal)
+//        {
+//            for (unsigned int dimensionId = 0; dimensionId < numDimensions; dimensionId++)
+//            {
+//                if (enabledDimensions[dimensionId]) {
+//                    const auto index = pointId * numDimensions + dimensionId;
+//                    attribute_data.push_back(beginOfData[index]);
+//                }
+//            }
+//        }
+//    });
+//
+//    // If a background data set is given, store the background indices
+//    QString backgroundName = _settings->backgroundNameLine->currentText();
+//
+//    if (!backgroundName.isEmpty()) {
+//        Points& backgroundPoints = _core->requestData<Points>(backgroundName);
+//
+//        if (_settings->backgroundFromData.isChecked())
+//        {
+//            qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set values)";
+//            auto totalNumPoints = backgroundPoints.getNumPoints();
+//            backgroundIDsGlobal.clear();
+//            backgroundIDsGlobal.resize(totalNumPoints);
+//            backgroundPoints.visitFromBeginToEnd([&backgroundIDsGlobal, totalNumPoints](auto beginOfData, auto endOfData)
+//            {
+//#ifdef NDEBUG
+//#pragma omp parallel for
+//#endif
+//                for (int i = 0; i < totalNumPoints; i++)
+//                {
+//                    backgroundIDsGlobal[i] = beginOfData[i];
+//                }
+//            });
+//        }
+//        else
+//        {
+//            qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set indices)";
+//            backgroundIDsGlobal = backgroundPoints.indices;
+//        }
+//    }
+//
+//}
 
-    std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
 
-    // Get number of enabled dimensions
-    unsigned int numDimensions = points.getNumDimensions();
-    numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
-
-    // Get indices of selected points
-    pointIDsGlobal = points.indices;
-    // If points represent all data set, select them all
-    if (points.isFull()) {
-        std::vector<unsigned int> all(points.getNumPoints());
-        std::iota(std::begin(all), std::end(all), 0);
-
-        pointIDsGlobal = all;
-    }
-
-    // For all selected points, retrieve values from each dimension
-    attribute_data.reserve(pointIDsGlobal.size() * numEnabledDimensions);
-
-    points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, &numDimensions](auto beginOfData, auto endOfData)
-    {
-        for (const auto& pointId : pointIDsGlobal)
-        {
-            for (unsigned int dimensionId = 0; dimensionId < numDimensions; dimensionId++)
-            {
-                if (enabledDimensions[dimensionId]) {
-                    const auto index = pointId * numDimensions + dimensionId;
-                    attribute_data.push_back(beginOfData[index]);
-                }
-            }
-        }
-    });
-
-    // If a background data set is given, store the background indices
-    QString backgroundName = _settings->backgroundNameLine->currentText();
-
-    if (!backgroundName.isEmpty()) {
-        Points& backgroundPoints = _core->requestData<Points>(backgroundName);
-
-        if (_settings->backgroundFromData.isChecked())
-        {
-            qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set values)";
-            auto totalNumPoints = backgroundPoints.getNumPoints();
-            backgroundIDsGlobal.clear();
-            backgroundIDsGlobal.resize(totalNumPoints);
-            backgroundPoints.visitFromBeginToEnd([&backgroundIDsGlobal, totalNumPoints](auto beginOfData, auto endOfData)
-            {
-#ifdef NDEBUG
-#pragma omp parallel for
-#endif
-                for (int i = 0; i < totalNumPoints; i++)
-                {
-                    backgroundIDsGlobal[i] = beginOfData[i];
-                }
-            });
-        }
-        else
-        {
-            qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set indices)";
-            backgroundIDsGlobal = backgroundPoints.indices;
-        }
-    }
-
-}
-
-
-void SpidrPlugin::onNewEmbedding() {
-    // TODO: check if the interactive selection actually works before a background is inserted
-    const std::vector<float>& outputData = _tnseWrapper->output();
-    Points& embedding = _core->requestData<Points>(_embeddingName);
-
-    embedding.setData(outputData.data(), _spidrAnalysisWrapper->getNumForegroundPoints(), 2);
-
-    _core->notifyDataChanged(_embeddingName);
-}
+//void SpidrPlugin::onNewEmbedding() {
+//    // TODO: check if the interactive selection actually works before a background is inserted
+//    const std::vector<float>& outputData = _tnseWrapper.output();
+//    Points& embedding = _core->requestData<Points>(_embeddingName);
+//
+//    embedding.setData(outputData.data(), _spidrAnalysisWrapper.getNumForegroundPoints(), 2);
+//
+//    _core->notifyDataChanged(_embeddingName);
+//}
 
 void SpidrPlugin::onFinishedEmbedding() {
-    std::vector<float> outputData = _tnseWrapper->output();
+    Points& embedding = getOutputDataset<Points>();
+
+    std::vector<float> outputData = _tnseWrapper.output();
     std::vector<float> embWithBg;
-    _spidrAnalysisWrapper->addBackgroundToEmbedding(embWithBg, outputData);
+    _spidrAnalysisWrapper.addBackgroundToEmbedding(embWithBg, outputData);
 
     assert(embWithBg.size() % 2 == 0);
-    assert(embWithBg.size() == _spidrAnalysisWrapper->getNumImagePoints() * 2);
+    assert(embWithBg.size() == _spidrAnalysisWrapper.getNumImagePoints() * 2);
 
     qDebug() << "SpidrPlugin: Publishing final embedding";
 
-    Points& embedding = _core->requestData<Points>(_embeddingName);
-    embedding.setData(embWithBg.data(), _spidrAnalysisWrapper->getNumImagePoints(), 2);
-    _core->notifyDataChanged(_embeddingName);
-
-    _settings.get()->computationStopped();
+    embedding.setData(embWithBg.data(), _spidrAnalysisWrapper.getNumImagePoints(), 2);
+    _core->notifyDataChanged(getOutputDatasetName());
 
     qDebug() << "SpidrPlugin: Done.";
-    _settings->setSubtitle("");
-
 }
 
 void SpidrPlugin::onPublishFeatures(const unsigned int dataFeatsSize) {
@@ -307,7 +389,7 @@ void SpidrPlugin::stopComputation() {
     if (_workerThreadtSNE->isRunning())
     {
         // release openGL context 
-        _tnseWrapper->stopGradientDescent();
+        _tnseWrapper.stopGradientDescent();
         _workerThreadtSNE->exit();
 
         // Wait until the thread has terminated (max. 3 seconds)
@@ -322,8 +404,8 @@ void SpidrPlugin::stopComputation() {
 
     qDebug() << "SpidrPlugin: Spatial t-SNE Analysis computation stopped.";
 
-    delete _spidrAnalysisWrapper; _spidrAnalysisWrapper = NULL;
-    delete _tnseWrapper; _tnseWrapper = NULL;
+    //delete _spidrAnalysisWrapper; _spidrAnalysisWrapper = NULL;
+    //delete _tnseWrapper; _tnseWrapper = NULL;
 
 }
 
@@ -333,5 +415,5 @@ void SpidrPlugin::stopComputation() {
 
 AnalysisPlugin* SpidrPluginFactory::produce()
 {
-    return new SpidrPlugin();
+    return new SpidrPlugin(this);
 }

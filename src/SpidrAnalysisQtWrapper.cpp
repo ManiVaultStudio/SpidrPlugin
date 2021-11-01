@@ -43,6 +43,33 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _forceBackgroundFeatures = forceBackgroundFeatures;
 }
 
+void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
+    const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+    const SpidrParameters& spidrParameters) {
+    _attribute_data = attribute_data;
+    _pointIDsGlobal = pointIDsGlobal;
+    _backgroundIDsGlobal = backgroundIDsGlobal;
+    _numDimensions = numDimensions;
+    _imgSize = imgSize;
+    _embeddingName = embeddingName;
+    // TODO this is a bit point less and should be done: useless back and forth
+    _aknnMetric = static_cast<unsigned int> (spidrParameters._aknn_metric);
+    _featType = static_cast<unsigned int> (spidrParameters._featureType);
+    _kernelType = static_cast<unsigned int> (spidrParameters._neighWeighting);
+    _numNeighborsInEachDirection = spidrParameters.get_numNeighborsInEachDirection();
+    _numHistBins = spidrParameters._numHistBins;
+    _aknnAlgType = static_cast<unsigned int> (spidrParameters._aknn_algorithm);
+    _numIterations = spidrParameters._numIterations;
+    _perplexity = spidrParameters.get_perplexity();
+    _exaggeration = spidrParameters._exaggeration;
+    _expDecay = spidrParameters._expDecay;
+    _publishFeaturesToCore = false;     // TODO not really used as all
+    _forceBackgroundFeatures = spidrParameters._forceCalcBackgroundFeatures;
+
+}
+
+
+
 void SpidrAnalysisQtWrapper::spatialAnalysis() {
 
     _SpidrAnalysis = std::make_unique<SpidrAnalysis>();
@@ -61,7 +88,7 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
 
     // Compute data features
 #ifdef NDEBUG
-    emit progressMessage("Calculate features");
+    emit progressSection("Calculate features");
 #endif
     _SpidrAnalysis->computeFeatures();
     _dataFeats = _SpidrAnalysis->getDataFeatures();
@@ -76,7 +103,7 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     
     // Compute knn dists and inds
 #ifdef NDEBUG
-    emit progressMessage("Calculate distances and kNN");
+    emit progressSection("Calculate distances and kNN");
 #endif
     _SpidrAnalysis->computekNN();
     //std::tie(_knnIds, _knnDists) = _SpidrAnalysis->getKnn();
@@ -84,7 +111,6 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     // We don't do the following but instead transform in TsneComputationQtWrapper so that we can easily update the embedding view live
     //_SpidrAnalysis->computeEmbedding();
     //_emd_with_backgound = _SpidrAnalysis->outputWithBackground();
-    //emit finishedEmbedding();
 }
 
 const std::tuple<std::vector<int>, std::vector<float>> SpidrAnalysisQtWrapper::getKnn() {
