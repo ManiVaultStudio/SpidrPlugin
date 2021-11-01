@@ -48,7 +48,7 @@ public:
 
 
 public slots:
-    void dataSetPicked(const QString& name);
+    //void dataSetPicked(const QString& name);
     //void onNewEmbedding();
     void onFinishedEmbedding();
 
@@ -105,5 +105,11 @@ public:
     SpidrPluginFactory(void) {}
     ~SpidrPluginFactory(void) override {}
 
+    /** Returns the plugin icon */
+    QIcon getIcon() const override;
+
     AnalysisPlugin* produce() override;
+
+    hdps::DataTypes supportedDataTypes() const override;
+
 };
