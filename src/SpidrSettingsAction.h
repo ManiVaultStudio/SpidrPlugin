@@ -12,11 +12,11 @@ class QMenu;
 class SpidrComputationAction;
 
 /**
- * TSNE settings class
+ * Spidr settings class
  *
  * Settings actions class for general/advanced HSNE/TSNE settings
  *
- * @author Thomas Kroes
+ * @author Thomas Kroes (based on TSNE settings class)
  */
 class SpidrSettingsAction : public GroupAction
 {

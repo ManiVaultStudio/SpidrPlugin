@@ -49,6 +49,9 @@ void SpidrPlugin::init()
 
     // Set up action connections
     outputDataset.addAction(_spidrSettingsAction.getGeneralSpidrSettingsAction());
+    outputDataset.addAction(_spidrSettingsAction.getAdvancedTsneSettingsAction());
+    outputDataset.addAction(_dimensionSelectionAction);
+    outputDataset.addAction(_spidrSettingsAction.getComputationAction());
 
     auto& computationAction = _spidrSettingsAction.getComputationAction();
 
