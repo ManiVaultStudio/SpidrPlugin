@@ -29,7 +29,7 @@ QMenu* SpidrSettingsAction::getContextMenu(QWidget* parent /*= nullptr*/)
     auto& computationAction = _generalSpidrSettingsAction.getComputationAction();
 
     menu->addAction(&computationAction.getStartComputationAction());
-    menu->addAction(&computationAction.getContinueComputationAction());
+    //menu->addAction(&computationAction.getContinueComputationAction());
     menu->addAction(&computationAction.getStopComputationAction());
 
     return menu;

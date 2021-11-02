@@ -46,8 +46,10 @@ set(ACTIONS
     src/GeneralSpidrSettingsAction.cpp
     src/SpidrSettingsAction.h
     src/SpidrSettingsAction.cpp
-    src/TsneComputationAction.h
-    src/TsneComputationAction.cpp
+    src/SpidrComputationAction.h
+    src/SpidrComputationAction.cpp
+    src/HistBinAction.h
+    src/HistBinAction.cpp
     src/AdvancedTsneSettingsAction.h
     src/AdvancedTsneSettingsAction.cpp
     src/DimensionSelectionAction.h

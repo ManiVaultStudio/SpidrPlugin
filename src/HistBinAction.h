@@ -8,13 +8,10 @@ class SpidrSettingsAction;
 class QMenu;
 
 /**
- * Spidr computation action class
+ * Hist bin size selecion action class
  *
- * Actions class for starting/continuing/stopping the TSNE computation
- *
- * @author Thomas Kroes (based on TsnepidrComputationAction
  */
-class SpidrComputationAction : public WidgetAction
+class HistBinAction : public WidgetAction
 {
 protected:
 
@@ -27,7 +24,7 @@ protected:
          * @param parent Pointer to parent widget
          * @param tsneComputationAction Pointer to TSNE computation action
          */
-        Widget(QWidget* parent, SpidrComputationAction* tsneComputationAction);
+        Widget(QWidget* parent, HistBinAction* tsneComputationAction);
     };
 
     /**
@@ -45,7 +42,7 @@ public:
      * Constructor
      * @param parent Pointer to parent object
      */
-    SpidrComputationAction(QObject* parent);
+    HistBinAction(QObject* parent);
 
     /**
      * Get the context menu for the action
@@ -54,18 +51,17 @@ public:
      */
     QMenu* getContextMenu(QWidget* parent = nullptr) override;
 
+private slots:
+    void onHistBinNumHeurChanged();
+
 public: // Action getters
 
-    TriggerAction& getStartComputationAction() { return _startComputationAction; }
-    TriggerAction& getContinueComputationAction() { return _continueComputationAction; }
-    TriggerAction& getStopComputationAction() { return _stopComputationAction; }
-    ToggleAction& getRunningAction() { return _runningAction; }
+    OptionAction& getHistBinSizeHeur() { return _histBinNumHeur; }
+    IntegralAction& getNumHistBinsAction() { return _numHistBins; }
 
 protected:
-    TriggerAction           _startComputationAction;        /** Start computation action */
-    TriggerAction           _continueComputationAction;     /** Continue computation action */
-    TriggerAction           _stopComputationAction;         /** Stop computation action */
-    ToggleAction            _runningAction;                 /** Running action */
+    OptionAction            _histBinNumHeur;
+    IntegralAction          _numHistBins;
 
     friend class Widget;
 };
