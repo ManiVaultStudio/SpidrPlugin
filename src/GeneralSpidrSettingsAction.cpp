@@ -140,9 +140,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
             break;
         }
 
-        //_histBinSizeAction.getNumHistBinsAction().setEnabled(true);
         _histBinSizeAction.getNumHistBinsAction().setValue(num_bins);
-        //_histBinSizeAction.getNumHistBinsAction().setDisabled(true);
 
     };
 
@@ -166,6 +164,15 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
             return true;
 
         if (_numIterationsAction.isResettable())
+            return true;
+
+        if (_histBinSizeAction.isResettable())
+            return true;
+
+        if (_kernelSize.isResettable())
+            return true;
+
+        if (_kernelWeight.isResettable())
             return true;
 
         if (_perplexityAction.isResettable())
@@ -236,6 +243,9 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _distanceMetricAction.reset();
         _numIterationsAction.reset();
         _perplexityAction.reset();
+        _histBinSizeAction.reset();
+        _kernelSize.reset();
+        _kernelWeight.reset();
     });
 
     connect(this, &GroupAction::readOnlyChanged, this, [this, updateReadOnly](const bool& readOnly) {

@@ -62,3 +62,11 @@ void HistBinAction::onHistBinNumHeurChanged()
     }
 
 }
+
+bool HistBinAction::isResettable() const {
+    return _histBinNumHeur.getCurrentIndex() != _histBinNumHeur.getDefaultIndex();
+}
+
+void HistBinAction::reset() {
+    _histBinNumHeur.reset();
+}

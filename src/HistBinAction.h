@@ -51,6 +51,10 @@ public:
      */
     QMenu* getContextMenu(QWidget* parent = nullptr) override;
 
+    bool isResettable() const override;
+
+    void reset() override;
+
 private slots:
     void onHistBinNumHeurChanged();
 
