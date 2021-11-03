@@ -28,7 +28,7 @@ public:
         bool publishFeaturesToCore, bool forceBackgroundFeatures);
 
     void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
-        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+        const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
         const SpidrParameters& spidrParameters);
 
 

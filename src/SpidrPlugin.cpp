@@ -1,6 +1,8 @@
 #include "SpidrPlugin.h"
 #include "SpidrSettingsWidget.h"
 
+#include "ImageData/Images.h"
+
 #include <QtCore>
 #include <QSize>
 #include <QtDebug>
@@ -13,6 +15,11 @@ Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 
 #include <set>
 
+using namespace hdps;
+using namespace hdps::util;
+
+
+
 // =============================================================================
 // View
 // =============================================================================
@@ -21,10 +28,11 @@ using namespace hdps;
 SpidrPlugin::SpidrPlugin(const PluginFactory* factory) :
     AnalysisPlugin(factory),
     _spidrSettingsAction(this),
-    _dimensionSelectionAction(this), 
+    _dimensionSelectionAction(this),
     _spidrAnalysisWrapper(),
     _tnseWrapper()
 {
+
 }
 
 SpidrPlugin::~SpidrPlugin(void)
@@ -34,11 +42,22 @@ SpidrPlugin::~SpidrPlugin(void)
 
 void SpidrPlugin::init()
 {
-    setOutputDatasetName(_core->createDerivedData("sp-tsne_embedding", getInputDatasetName()));
+    //setOutputDatasetName(_core->createDerivedData("sp-tsne_embedding", getInputDatasetName()));
+
+    DatasetRef<Images> imagesDataset = DatasetRef<Images>(getInputDatasetName());
+    DatasetRef<hdps::DataSet> sourceDataset = DatasetRef<hdps::DataSet>(imagesDataset->getHierarchyItem().getParent()->getDatasetName());
+
+    auto& inputDataset = dynamic_cast<Points&>(*(sourceDataset.get()));
+    _inputSourceName = sourceDataset.getDatasetName();
+    _outputDataName = _core->createDerivedData("sp-tsne_embedding", _inputSourceName); // creates the custon output data.
+    setOutputDatasetName(_outputDataName);
+    auto& outputDataset = _core->requestData<Points>(_outputDataName);
 
     // Get input/output datasets
-    auto& inputDataset = getInputDataset<Points>();
-    auto& outputDataset = getOutputDataset<Points>();
+    //auto& inputDataset = getInputDataset<Images>();
+    //auto& inputDataset = getInputDataset<Points>();
+    //auto& outputDataset = getOutputDataset<Points>();
+
 
     // Set up output data
     std::vector<float> initialData;
@@ -157,7 +176,7 @@ void SpidrPlugin::init()
 
 void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
 {
-
+    // cover the cases that the image and it's parent (source) data name changed and
     if (dataEvent->getType() == EventType::DataChanged) {
         auto dataChangedEvent = static_cast<DataChangedEvent*>(dataEvent);
 
@@ -169,6 +188,7 @@ void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
         Points& points = _core->requestData<Points>(dataChangedEvent->dataSetName);
 
         _dimensionSelectionAction.dataChanged(_core->requestData<Points>(dataChangedEvent->dataSetName));
+
     }
 }
 
@@ -180,16 +200,19 @@ void SpidrPlugin::startComputation()
     setTaskDescription("Preparing data");
 
     // Get the data
+    // Use the source data to get the points 
+    // Use the image data to get the image size
     qDebug() << "SpidrPlugin: Read data ";
-    const auto& inputPoints = getInputDataset<Points>();
+    const auto& inputPoints = _core->requestData<Points>(_inputSourceName);
+    const auto& inputImages = getInputDataset<Images>();
 
-    std::vector<unsigned int> pointIDsGlobal; // Global ID of each point in the image
-    std::vector<float> attribute_data;        // Actual channel valures, only consider enabled dimensions
+    std::vector<float> attribute_data;              // Actual channel valures, only consider enabled dimensions
+    std::vector<unsigned int> pointIDsGlobal;       // Global ID of each point in the image
     std::vector<unsigned int> backgroundIDsGlobal;  // ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
-    ImgSize imgSize;
 
     // Extract the enabled dimensions from the data
     std::vector<bool> enabledDimensions = _dimensionSelectionAction.getEnabledDimensions();
+    std::vector<unsigned int> enabledDimensionsIndices;
     const auto numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
     // Populate selected data attributes
@@ -197,14 +220,21 @@ void SpidrPlugin::startComputation()
 
     for (int i = 0; i < inputPoints.getNumDimensions(); i++)
         if (enabledDimensions[i])
-            pointIDsGlobal.push_back(i);
+            enabledDimensionsIndices.push_back(i);
 
-    inputPoints.populateDataForDimensions<std::vector<float>, std::vector<unsigned int>>(attribute_data, pointIDsGlobal);
+    inputPoints.populateDataForDimensions<std::vector<float>, std::vector<unsigned int>>(attribute_data, enabledDimensionsIndices);
+    inputPoints.getGlobalIndices(pointIDsGlobal);
 
     // Image size
-    QSize qtImgSize = inputPoints.getProperty("ImageSize", QSize()).toSize();
-    imgSize.width = qtImgSize.width();
-    imgSize.height = qtImgSize.height();
+    ImgSize imgSize;
+    imgSize.width = inputImages.getImageSize().width();
+    imgSize.height = inputImages.getImageSize().height();
+
+    // complete Spidr parameters
+    _spidrSettingsAction.getSpidrParameters()._numPoints = pointIDsGlobal.size();
+    _spidrSettingsAction.getSpidrParameters()._numForegroundPoints = pointIDsGlobal.size(); // TODO: change when enabling background selection
+    _spidrSettingsAction.getSpidrParameters()._numDims = numEnabledDimensions;
+    _spidrSettingsAction.getSpidrParameters()._imgSize = imgSize;
 
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
@@ -215,7 +245,7 @@ void SpidrPlugin::startComputation()
     //_tnseWrapper = new TsneComputationQtWrapper();
     
     // set the data and all the parameters
-    _spidrAnalysisWrapper.setup(attribute_data, pointIDsGlobal, numEnabledDimensions, imgSize, QString("sp-emb_hdps"), backgroundIDsGlobal, _spidrSettingsAction.getSpidrParameters());
+    _spidrAnalysisWrapper.setup(attribute_data, pointIDsGlobal, QString("sp-emb_hdps"), backgroundIDsGlobal, _spidrSettingsAction.getSpidrParameters());
 
     // Start spatial analysis in worker thread
     _workerThreadSpidr = new QThread();
@@ -426,6 +456,7 @@ hdps::DataTypes SpidrPluginFactory::supportedDataTypes() const
 {
     DataTypes supportedTypes;
     supportedTypes.append(PointType);
+    supportedTypes.append(ImageType);
     return supportedTypes;
 }
 

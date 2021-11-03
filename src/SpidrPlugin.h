@@ -6,19 +6,20 @@
 
 #include <memory>
 
-#include <QtCore>
-#include <QSize>
-
 #include "SpidrAnalysisQtWrapper.h"
 #include "TsneComputationQtWrapper.h"
 #include "PointData.h"
 
 #include "Application.h"  // form hdps
 
+#include "util/DatasetRef.h"
+#include "ImageData/Images.h"
+
+
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
-// using namespace hdps::gui;
+using namespace hdps::util;
 
 
 // =============================================================================
@@ -88,6 +89,9 @@ private:
     QThread* _workerThreadtSNE;                         /*!<> */
 
     //std::unique_ptr<SpidrSettingsWidget> _settings;
+
+    QString _inputSourceName;    // the input image name is available with getInputDatasetName()
+    QString _outputDataName;
 };
 
 // =============================================================================

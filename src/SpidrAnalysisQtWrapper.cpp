@@ -44,13 +44,13 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
 }
 
 void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
-    const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+    const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
     const SpidrParameters& spidrParameters) {
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
     _backgroundIDsGlobal = backgroundIDsGlobal;
-    _numDimensions = numDimensions;
-    _imgSize = imgSize;
+    _numDimensions = spidrParameters._numDims;
+    _imgSize = spidrParameters._imgSize;
     _embeddingName = embeddingName;
     // TODO this is a bit point less and should be done: useless back and forth
     _aknnMetric = static_cast<unsigned int> (spidrParameters._aknn_metric);

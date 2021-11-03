@@ -87,6 +87,7 @@ target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt5::Widgets)
 target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt5::WebEngineWidgets)
 target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/PointData.lib")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/ImageData.lib")
 
 add_subdirectory("external/Spidr")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)

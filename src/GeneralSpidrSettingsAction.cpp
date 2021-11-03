@@ -42,6 +42,10 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _numIterationsAction.initialize(1, 10000, 1000, 1000);
     _perplexityAction.initialize(2, 100, 30, 30);
 
+    // set default values
+    _spidrSettingsAction.getSpidrParameters().set_numNeighborsInEachDirection(_kernelSize.getValue());
+    _spidrSettingsAction.getSpidrParameters()._numHistBins = _histBinSizeAction.getNumHistBinsAction().getValue();
+
     const auto updateKnnAlgorithm = [this]() -> void {
         knn_library knn_lib = knn_library::KNN_HNSW;
 
