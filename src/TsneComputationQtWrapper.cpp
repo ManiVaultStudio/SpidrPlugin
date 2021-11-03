@@ -66,9 +66,7 @@ void TsneComputationQtWrapper::setup(const std::vector<int> knn_indices, const s
 
 void TsneComputationQtWrapper::initTSNE()
 {
-#ifdef NDEBUG
     emit progressSection("Initializing A-tSNE");
-#endif
 
     // Computation of the high dimensional similarities
     {
@@ -80,9 +78,7 @@ void TsneComputationQtWrapper::initTSNE()
 
         spdlog::info("tSNE initialized.");
 
-#ifdef NDEBUG
         emit progressSection("Calculate probability distributions");
-#endif
 
         _probabilityDistribution.clear();
         _probabilityDistribution.resize(_numForegroundPoints);
@@ -100,18 +96,14 @@ void TsneComputationQtWrapper::initTSNE()
         spdlog::info("--------------------------------------------------------------------------------");
     }
 
-#ifdef NDEBUG
     emit progressSection("Probability distributions calculated");
-#endif
 
 }
 
 void TsneComputationQtWrapper::initGradientDescent()
 {
 
-#ifdef NDEBUG
     emit progressSection("Initializing gradient descent");
-#endif
 
     _continueFromIteration = 0;
     _isTsneRunning = true;
@@ -156,9 +148,7 @@ void TsneComputationQtWrapper::initGradientDescent()
 // Computing gradient descent
 void TsneComputationQtWrapper::embed()
 {
-#ifdef NDEBUG
     emit progressSection("Embedding");
-#endif
     
     const auto emitEmbeddingUpdate = [this](const std::uint32_t& numProcessed, const std::uint32_t& numTotal) -> void {
         emit progressSection(QString("Embedding (step %1 of %2)").arg(QString::number(numProcessed), QString::number(numTotal)));
@@ -188,9 +178,7 @@ void TsneComputationQtWrapper::embed()
             {
                 copyFloatOutput();
                 emit newEmbedding();
-#ifdef NDEBUG
                 emitEmbeddingUpdate(iter, _iterations);
-#endif
             }
 
             if (t > 1000)
@@ -198,9 +186,6 @@ void TsneComputationQtWrapper::embed()
 
             elapsed += t;
 
-//#ifdef NDEBUG
-//            emit progressMessage(QString("Computing gradient descent: %1 %").arg(QString::number(100.0f * static_cast<float>(iter) / static_cast<float>(_iterations), 'f', 1)));
-//#endif
         }
         glfwDestroyWindow(_offscreen_context);
         glfwTerminate();

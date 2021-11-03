@@ -87,9 +87,7 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
         static_cast<knn_library> (_aknnAlgType), static_cast<distance_metric> (_aknnMetric), _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
 
     // Compute data features
-#ifdef NDEBUG
     emit progressSection("Calculate features");
-#endif
     _SpidrAnalysis->computeFeatures();
     _dataFeats = _SpidrAnalysis->getDataFeatures();
 
@@ -102,9 +100,7 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     }
     
     // Compute knn dists and inds
-#ifdef NDEBUG
     emit progressSection("Calculate distances and kNN");
-#endif
     _SpidrAnalysis->computekNN();
     //std::tie(_knnIds, _knnDists) = _SpidrAnalysis->getKnn();
     emit finishedKnn(); // this connects to SpidrPlugin::tsneComputation, which triggers the t-SNE computation in TsneComputationQtWrapper

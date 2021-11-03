@@ -73,11 +73,7 @@ signals:
     void finishedKnn();
 
     void publishFeatures(const unsigned int dataFeatsSize);
-    void progressMessage(const QString& message);    
     void progressSection(const QString& section);
-
-
-private:
 
 
 private:
