@@ -240,13 +240,14 @@ void SpidrPlugin::startComputation()
     // connect wrappers
     connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedKnn, this, &SpidrPlugin::tsneComputation);
     connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
+    connect(this, &SpidrPlugin::startAnalysis, &_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::spatialAnalysis);
     connect(this, &SpidrPlugin::starttSNE, &_tnseWrapper, &TsneComputationQtWrapper::compute);
 
 
     qDebug() << "SpidrPlugin: Start Analysis";
     _spidrSettingsAction.getComputationAction().getRunningAction().setChecked(true);
     _workerThreadSpidr->start();
-    _spidrAnalysisWrapper.spatialAnalysis();
+    emit startAnalysis();   // trigger computation in other thread
 }
 
 void SpidrPlugin::tsneComputation()

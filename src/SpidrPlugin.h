@@ -52,6 +52,7 @@ private slots:
 
 signals:
     void embeddingComputationStopped();
+    void startAnalysis();
     void starttSNE();
 
 private:
