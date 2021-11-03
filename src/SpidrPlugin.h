@@ -8,7 +8,6 @@
 
 #include "SpidrAnalysisQtWrapper.h"
 #include "TsneComputationQtWrapper.h"
-#include "PointData.h"
 
 #include "Application.h"  // form hdps
 

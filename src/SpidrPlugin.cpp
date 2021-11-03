@@ -1,7 +1,7 @@
 #include "SpidrPlugin.h"
-#include "SpidrSettingsWidget.h"
 
 #include "ImageData/Images.h"
+#include "PointData.h"
 
 #include <QtCore>
 #include <QSize>
