@@ -25,9 +25,6 @@ set(PLUGIN
     src/SpidrAnalysisQtWrapper.cpp
     src/TsneComputationQtWrapper.h
     src/TsneComputationQtWrapper.cpp
-    src/SpidrData.h
-    src/SpidrOptions.h
-
 )
 
 set(DIMENSIONSELECTIONHOLDER
