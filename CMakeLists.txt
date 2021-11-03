@@ -57,17 +57,15 @@ set(ACTIONS
 )
 
 
-file(GLOB WIDGETS src/*Widget.*)
 file(GLOB UIS ui/*.ui)
 file(GLOB JSON src/*.json)
 
-set(SOURCES ${PLUGIN} ${ACTIONS} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
+set(SOURCES ${PLUGIN} ${ACTIONS} ${DIMENSIONSELECTIONHOLDER})
 set(AUX ${JSON})
 
 source_group(Plugin FILES ${PLUGIN})
 source_group(Actions FILES ${ACTIONS})
 source_group(Spidrlib FILES ${SPIDRLIB})
-source_group(Widgets FILES ${WIDGETS})
 source_group(DimensionSelectionHolder FILES ${DIMENSIONSELECTIONHOLDER})
 source_group(UI FILES ${UIS})
 source_group(Aux FILES ${AUX})
