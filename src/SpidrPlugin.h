@@ -12,15 +12,9 @@
 
 #include "Application.h"  // form hdps
 
-#include "util/DatasetRef.h"
-#include "ImageData/Images.h"
-
-
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
-using namespace hdps::util;
-
 
 // =============================================================================
 // Analysis Plugin
@@ -49,8 +43,6 @@ public:
 
 
 public slots:
-    //void dataSetPicked(const QString& name);
-    //void onNewEmbedding();
     void onFinishedEmbedding();
 
     void onPublishFeatures(const unsigned int dataFeatsSize);
@@ -60,24 +52,10 @@ private slots:
 
 signals:
     void embeddingComputationStopped();
-    //void startAnalysis();
     void starttSNE();
 
 private:
 
-    /**
-    * Takes a set of selected points and retrieves the corresponding attributes in all enabled dimensions
-    * @param dataName Name of data set as defined in hdps core
-    * @param pointIDsGlobal  Will contain IDs of selected points in the data set
-    * @param attribute_data  Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
-    * @param numDims Will contain the number of dimensions
-    * @param imgSize Will contain the size of the image (width and height)
-    * @param backgroundIDsGlobal Will contain the global pixel IDs of a background that is ignored during t-SNE computation but taken into account for feature extraction
-    */
-    //void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
-
-    //SpidrAnalysisQtWrapper* _spidrAnalysisWrapper;      /*!< TODO: use QScopedPointer > */
-    //TsneComputationQtWrapper* _tnseWrapper;             /*!< TODO: use QScopedPointer, for consistence > */
     SpidrAnalysisQtWrapper _spidrAnalysisWrapper;
     TsneComputationQtWrapper _tnseWrapper;
 
@@ -88,10 +66,8 @@ private:
     QThread* _workerThreadSpidr;                        /*!<> */
     QThread* _workerThreadtSNE;                         /*!<> */
 
-    //std::unique_ptr<SpidrSettingsWidget> _settings;
-
     QString _inputSourceName;    // the input image name is available with getInputDatasetName()
-    QString _outputDataName;
+    QString _outputDataName;     // since the output has a different data type than the input (Points intead of Images) we have to create it separately 
 };
 
 // =============================================================================

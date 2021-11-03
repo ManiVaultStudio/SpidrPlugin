@@ -16,12 +16,9 @@ Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 #include <set>
 
 using namespace hdps;
-using namespace hdps::util;
-
-
 
 // =============================================================================
-// View
+// Analysis Plugin
 // =============================================================================
 
 using namespace hdps;
@@ -32,7 +29,6 @@ SpidrPlugin::SpidrPlugin(const PluginFactory* factory) :
     _spidrAnalysisWrapper(),
     _tnseWrapper()
 {
-
 }
 
 SpidrPlugin::~SpidrPlugin(void)
@@ -42,22 +38,15 @@ SpidrPlugin::~SpidrPlugin(void)
 
 void SpidrPlugin::init()
 {
-    //setOutputDatasetName(_core->createDerivedData("sp-tsne_embedding", getInputDatasetName()));
+    // Get both image data and its parent data set
+    auto& imagesDataset = _core->requestData<Images>(getInputDatasetName());
+    auto& inputDataset = _core->requestData<Points>(imagesDataset.getHierarchyItem().getParent()->getDatasetName());
 
-    DatasetRef<Images> imagesDataset = DatasetRef<Images>(getInputDatasetName());
-    DatasetRef<hdps::DataSet> sourceDataset = DatasetRef<hdps::DataSet>(imagesDataset->getHierarchyItem().getParent()->getDatasetName());
-
-    auto& inputDataset = dynamic_cast<Points&>(*(sourceDataset.get()));
-    _inputSourceName = sourceDataset.getDatasetName();
+    // set the output data as derived from the parent data set (since the type differs from the input data set)
+    _inputSourceName = inputDataset.getName();
     _outputDataName = _core->createDerivedData("sp-tsne_embedding", _inputSourceName); // creates the custon output data.
     setOutputDatasetName(_outputDataName);
     auto& outputDataset = _core->requestData<Points>(_outputDataName);
-
-    // Get input/output datasets
-    //auto& inputDataset = getInputDataset<Images>();
-    //auto& inputDataset = getInputDataset<Points>();
-    //auto& outputDataset = getOutputDataset<Points>();
-
 
     // Set up output data
     std::vector<float> initialData;
@@ -167,11 +156,6 @@ void SpidrPlugin::init()
     registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
 
     setTaskName("Spidr");
-
-    //_spidrAnalysisWrapper = NULL;
-    //_tnseWrapper = NULL;
-
-
 }
 
 void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
@@ -238,11 +222,6 @@ void SpidrPlugin::startComputation()
 
     // Setup worker classes with data and parameters
     qDebug() << "SpidrPlugin: Initialize settings";
-
-    // deleted in stopComputation(), which is also called by the destructor
-    // TODO: remove pointer references
-    //_spidrAnalysisWrapper = new SpidrAnalysisQtWrapper();
-    //_tnseWrapper = new TsneComputationQtWrapper();
     
     // set the data and all the parameters
     _spidrAnalysisWrapper.setup(attribute_data, pointIDsGlobal, QString("sp-emb_hdps"), backgroundIDsGlobal, _spidrSettingsAction.getSpidrParameters());
@@ -259,7 +238,6 @@ void SpidrPlugin::startComputation()
     connect(_workerThreadtSNE, &QThread::finished, _workerThreadtSNE, &QObject::deleteLater);
 
     // connect wrappers
-    //connect(this, &SpidrPlugin::startAnalysis, &_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::spatialAnalysis);
     connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedKnn, this, &SpidrPlugin::tsneComputation);
     connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
     connect(this, &SpidrPlugin::starttSNE, &_tnseWrapper, &TsneComputationQtWrapper::compute);
@@ -281,88 +259,6 @@ void SpidrPlugin::tsneComputation()
     _workerThreadtSNE->start();
     emit starttSNE();
 }
-
-//void SpidrPlugin::retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numEnabledDimensions, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal) {
-//    Points& points = _core->requestData<Points>(dataName);
-//    QSize qtImgSize = points.getProperty("ImageSize", QSize()).toSize();
-//    imgSize.width = qtImgSize.width();
-//    imgSize.height = qtImgSize.height();
-//
-//    std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
-//
-//    // Get number of enabled dimensions
-//    unsigned int numDimensions = points.getNumDimensions();
-//    numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
-//
-//    // Get indices of selected points
-//    pointIDsGlobal = points.indices;
-//    // If points represent all data set, select them all
-//    if (points.isFull()) {
-//        std::vector<unsigned int> all(points.getNumPoints());
-//        std::iota(std::begin(all), std::end(all), 0);
-//
-//        pointIDsGlobal = all;
-//    }
-//
-//    // For all selected points, retrieve values from each dimension
-//    attribute_data.reserve(pointIDsGlobal.size() * numEnabledDimensions);
-//
-//    points.visitFromBeginToEnd([&attribute_data, &pointIDsGlobal, &enabledDimensions, &numDimensions](auto beginOfData, auto endOfData)
-//    {
-//        for (const auto& pointId : pointIDsGlobal)
-//        {
-//            for (unsigned int dimensionId = 0; dimensionId < numDimensions; dimensionId++)
-//            {
-//                if (enabledDimensions[dimensionId]) {
-//                    const auto index = pointId * numDimensions + dimensionId;
-//                    attribute_data.push_back(beginOfData[index]);
-//                }
-//            }
-//        }
-//    });
-//
-//    // If a background data set is given, store the background indices
-//    QString backgroundName = _settings->backgroundNameLine->currentText();
-//
-//    if (!backgroundName.isEmpty()) {
-//        Points& backgroundPoints = _core->requestData<Points>(backgroundName);
-//
-//        if (_settings->backgroundFromData.isChecked())
-//        {
-//            qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set values)";
-//            auto totalNumPoints = backgroundPoints.getNumPoints();
-//            backgroundIDsGlobal.clear();
-//            backgroundIDsGlobal.resize(totalNumPoints);
-//            backgroundPoints.visitFromBeginToEnd([&backgroundIDsGlobal, totalNumPoints](auto beginOfData, auto endOfData)
-//            {
-//#ifdef NDEBUG
-//#pragma omp parallel for
-//#endif
-//                for (int i = 0; i < totalNumPoints; i++)
-//                {
-//                    backgroundIDsGlobal[i] = beginOfData[i];
-//                }
-//            });
-//        }
-//        else
-//        {
-//            qDebug() << "SpidrPlugin: Read background from data set " << backgroundName << " (using the data set indices)";
-//            backgroundIDsGlobal = backgroundPoints.indices;
-//        }
-//    }
-//
-//}
-
-
-//void SpidrPlugin::onNewEmbedding() {
-//    // TODO: check if the interactive selection actually works before a background is inserted
-//    const std::vector<float>& outputData = _tnseWrapper.output();
-//    Points& embedding = _core->requestData<Points>(_embeddingName);
-//
-//    embedding.setData(outputData.data(), _spidrAnalysisWrapper.getNumForegroundPoints(), 2);
-//
-//    _core->notifyDataChanged(_embeddingName);
-//}
 
 void SpidrPlugin::onFinishedEmbedding() {
     Points& embedding = getOutputDataset<Points>();
@@ -437,9 +333,6 @@ void SpidrPlugin::stopComputation() {
     }
 
     qDebug() << "SpidrPlugin: Spatial t-SNE Analysis computation stopped.";
-
-    //delete _spidrAnalysisWrapper; _spidrAnalysisWrapper = NULL;
-    //delete _tnseWrapper; _tnseWrapper = NULL;
 
 }
 
