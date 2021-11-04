@@ -349,7 +349,6 @@ AnalysisPlugin* SpidrPluginFactory::produce()
 hdps::DataTypes SpidrPluginFactory::supportedDataTypes() const
 {
     DataTypes supportedTypes;
-    supportedTypes.append(PointType);
     supportedTypes.append(ImageType);
     return supportedTypes;
 }
