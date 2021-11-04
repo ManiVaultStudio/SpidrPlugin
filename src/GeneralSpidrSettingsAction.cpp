@@ -196,6 +196,9 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _distanceMetricAction.setEnabled(enable);
         _numIterationsAction.setEnabled(enable);
         _perplexityAction.setEnabled(enable);
+        _kernelSize.setEnabled(enable);
+        _kernelWeight.setEnabled(enable);
+        _histBinSizeAction.setEnabled(enable);
         _resetAction.setEnabled(enable);
     };
 
