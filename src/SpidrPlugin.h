@@ -1,23 +1,19 @@
 #pragma once
 
 #include <AnalysisPlugin.h>
+#include "SpidrSettingsAction.h"
+#include "DimensionSelectionAction.h"
 
 #include <memory>
 
-#include <QtCore>
-#include <QSize>
-
 #include "SpidrAnalysisQtWrapper.h"
 #include "TsneComputationQtWrapper.h"
-#include "PointData.h"
 
 #include "Application.h"  // form hdps
 
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
-// using namespace hdps::gui;
-
 
 // =============================================================================
 // Analysis Plugin
@@ -31,26 +27,21 @@ class SpidrPlugin : public QObject, public AnalysisPlugin
 {
     Q_OBJECT
 public:
-    SpidrPlugin();
+    SpidrPlugin(const PluginFactory* factory);
     ~SpidrPlugin(void) override;
 
     void init() override;
 
-    /** Returns the icon of this plugin */
-    QIcon getIcon() const override {
-        return hdps::Application::getIconFont("FontAwesome").getIcon("table");
-    }
-
     void onDataEvent(hdps::DataEvent* dataEvent);
-
-    hdps::gui::SettingsWidget* const getSettings() override;
 
     void startComputation();
     void stopComputation();
 
+    SpidrSettingsAction& getGeneralSpidrSettingsAction() { return _spidrSettingsAction; }
+    DimensionSelectionAction& getDimensionSelectionAction() { return _dimensionSelectionAction; }
+
+
 public slots:
-    void dataSetPicked(const QString& name);
-    void onNewEmbedding();
     void onFinishedEmbedding();
 
     void onPublishFeatures(const unsigned int dataFeatsSize);
@@ -65,23 +56,18 @@ signals:
 
 private:
 
-    /**
-    * Takes a set of selected points and retrieves teh corresponding attributes in all enabled dimensions
-    * @param dataName Name of data set as defined in hdps core
-    * @param pointIDsGlobal  Will contain IDs of selected points in the data set
-    * @param attribute_data  Will contain the attributes for all points, size: pointIDsGlobal.size() * numDimensions
-    * @param numDims Will contain the number of dimensions
-    * @param imgSize Will contain the size of the image (width and height)
-    * @param backgroundIDsGlobal Will contain the global pixel IDs of a background that is ignored during t-SNE computation but taken into account for feature extraction
-    */
-    void retrieveData(QString dataName, std::vector<unsigned int>& pointIDsGlobal, std::vector<float>& attribute_data, unsigned int& numDims, ImgSize& imgSize, std::vector<unsigned int>& backgroundIDsGlobal);
+    SpidrAnalysisQtWrapper _spidrAnalysisWrapper;
+    TsneComputationQtWrapper _tnseWrapper;
 
-    SpidrAnalysisQtWrapper* _spidrAnalysisWrapper;       /*!<> */
-    TsneComputationQtWrapper* _tnseWrapper;                     /*!<> */
-    std::unique_ptr<SpidrSettingsWidget> _settings;     /*!<> */
+    SpidrSettingsAction         _spidrSettingsAction;           /** Spidr settings action */
+    DimensionSelectionAction    _dimensionSelectionAction;      /** Dimension selection settings action */
+
     QString _embeddingName;                             /*!<> */
-    QThread workerThreadSpidr;                               /*!<> */
-    QThread workerThreadtSNE;                               /*!<> */
+    QThread* _workerThreadSpidr;                        /*!<> */
+    QThread* _workerThreadtSNE;                         /*!<> */
+
+    QString _inputSourceName;    // the input image name is available with getInputDatasetName()
+    QString _outputDataName;     // since the output has a different data type than the input (Points intead of Images) we have to create it separately 
 };
 
 // =============================================================================
@@ -99,5 +85,11 @@ public:
     SpidrPluginFactory(void) {}
     ~SpidrPluginFactory(void) override {}
 
+    /** Returns the plugin icon */
+    QIcon getIcon() const override;
+
     AnalysisPlugin* produce() override;
+
+    hdps::DataTypes supportedDataTypes() const override;
+
 };

@@ -38,16 +38,31 @@ set(DIMENSIONSELECTIONHOLDER
     src/DimensionSelectionProxyModel.cpp
 )
 
-file(GLOB WIDGETS src/*Widget.*)
+set(ACTIONS
+    src/GeneralSpidrSettingsAction.h
+    src/GeneralSpidrSettingsAction.cpp
+    src/SpidrSettingsAction.h
+    src/SpidrSettingsAction.cpp
+    src/SpidrComputationAction.h
+    src/SpidrComputationAction.cpp
+    src/HistBinAction.h
+    src/HistBinAction.cpp
+    src/AdvancedTsneSettingsAction.h
+    src/AdvancedTsneSettingsAction.cpp
+    src/DimensionSelectionAction.h
+    src/DimensionSelectionAction.cpp
+)
+
+
 file(GLOB UIS ui/*.ui)
 file(GLOB JSON src/*.json)
 
-set(SOURCES ${PLUGIN} ${DIMENSIONSELECTIONHOLDER} ${WIDGETS})
+set(SOURCES ${PLUGIN} ${ACTIONS} ${DIMENSIONSELECTIONHOLDER})
 set(AUX ${JSON})
 
 source_group(Plugin FILES ${PLUGIN})
+source_group(Actions FILES ${ACTIONS})
 source_group(Spidrlib FILES ${SPIDRLIB})
-source_group(Widgets FILES ${WIDGETS})
 source_group(DimensionSelectionHolder FILES ${DIMENSIONSELECTIONHOLDER})
 source_group(UI FILES ${UIS})
 source_group(Aux FILES ${AUX})
@@ -67,6 +82,7 @@ target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt5::Widgets)
 target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt5::WebEngineWidgets)
 target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/PointData.lib")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/ImageData.lib")
 
 add_subdirectory("external/Spidr")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)

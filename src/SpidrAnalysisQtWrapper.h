@@ -24,8 +24,12 @@ public:
     void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
         const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
         const unsigned int aknnMetric, const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors,  const size_t numHistBins, \
-        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, const float MVNweight, \
+        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, \
         bool publishFeaturesToCore, bool forceBackgroundFeatures);
+
+    void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
+        const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+        const SpidrParameters& spidrParameters);
 
 
     // Getter
@@ -35,7 +39,7 @@ public:
 
     const size_t getNumFeatureValsPerPoint();
 
-    const std::vector<float>* getFeatures();
+    const Feature getFeatures();
 
     bool embeddingIsRunning();
     
@@ -50,8 +54,8 @@ public:
 
     const SpidrParameters getParameters();
 
-    /* Returns _knn_indices, _knn_distances_squared, use with std::tie(_knnIds, _knnDists) = getKNN(); */
-    const std::tuple<std::vector<int>, std::vector<float>> getKNN();
+    /* Returns _knn_indices, _knn_distances, use with std::tie(_knnIds, _knnDists) = getKnn(); */
+    const std::tuple<std::vector<int>, std::vector<float>> getKnn();
 
     /* Add bg points to emb */
     void addBackgroundToEmbedding(std::vector<float>& emb, std::vector<float>& emb_wo_bg);
@@ -67,12 +71,9 @@ public slots:
 
 signals:
     void finishedKnn();
-    void finishedEmbedding();
 
     void publishFeatures(const unsigned int dataFeatsSize);
-    void progressMessage(const QString& message);
-
-private:
+    void progressSection(const QString& section);
 
 
 private:
@@ -92,19 +93,18 @@ private:
     unsigned int _featType;
     unsigned int _kernelType;
     unsigned int _aknnAlgType;
-    size_t _numLocNeighbors;
+    size_t _numNeighborsInEachDirection;
     size_t _numHistBins;
     int _numIterations;
     int _perplexity;
     int _exaggeration;
     int _expDecay;
-    float _MVNweight;
     bool _publishFeaturesToCore;
     bool _forceBackgroundFeatures;
 
     // output
     std::vector<float> _emd_with_backgound;
-    std::vector<float> _dataFeats;
+    Feature _dataFeats;
     std::vector<int> _knnIds;
     std::vector<float> _knnDists;
 

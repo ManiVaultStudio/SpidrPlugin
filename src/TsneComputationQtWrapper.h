@@ -1,9 +1,11 @@
 #pragma once
+#include "SpidrAnalysisParameters.h"
 
 #ifdef __APPLE__
 #include "glad/glad_3_3.h"
 #define __gl3_h_
 #endif
+
 #include <GLFW/glfw3.h>
 
 #include "hdi/dimensionality_reduction/hd_joint_probability_generator.h"
@@ -72,9 +74,9 @@ public:
 
 signals:
     void finishedEmbedding();
-    void computationStopped();
     void newEmbedding();
-    void progressMessage(const QString& message);
+    void progressPercentage(const float& percentage);
+    void progressSection(const QString& section);
 
 private:
     void computeGradientDescent();
