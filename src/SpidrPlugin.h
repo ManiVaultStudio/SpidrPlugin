@@ -66,8 +66,8 @@ private:
     QThread* _workerThreadSpidr;                        /*!<> */
     QThread* _workerThreadtSNE;                         /*!<> */
 
-    QString _inputSourceName;    // the input image name is available with getInputDatasetName()
-    QString _outputDataName;     // since the output has a different data type than the input (Points intead of Images) we have to create it separately 
+    //QString _inputSourceName;    // the input image name is available with getInputDatasetName()
+    //QString _outputDataName;     // since the output has a different data type than the input (Points intead of Images) we have to create it separately 
 };
 
 // =============================================================================

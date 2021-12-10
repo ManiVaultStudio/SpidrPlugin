@@ -67,9 +67,9 @@ public:
 
     /**
      * Sets data changed
-     * @param points Points dataset
+     * @param points Smart pointer to points dataset
      */
-    void dataChanged(Points& points);
+    void dataChanged(const Dataset<Points>& points);
 
     /** Get selection proxy model */
     hdps::DimensionSelectionProxyModel* getProxyModel();
@@ -149,7 +149,7 @@ protected:
     }
 
 protected:
-    Points*                                         _pointData;                             /** Pointer to points set */
+    Dataset<Points>                                 _points;                                /** Smart pointer to points set */
     DimensionSelectionHolder                        _selectionHolder;                       /** Selection holder */
     std::unique_ptr<DimensionSelectionItemModel>    _selectionItemModel;                    /** Selection item model */
     std::unique_ptr<DimensionSelectionProxyModel>   _selectionProxyModel;                   /** Selection proxy model for filtering etc. */

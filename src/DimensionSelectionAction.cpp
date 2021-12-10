@@ -24,7 +24,7 @@ using namespace hdps::gui;
 
 DimensionSelectionAction::DimensionSelectionAction(QObject* parent) :
     GroupAction(parent),
-    _pointData(nullptr),
+    _points(nullptr),
     _selectionHolder(),
     _selectionItemModel(new DimensionSelectionItemModel(_selectionHolder)),
     _selectionProxyModel(new DimensionSelectionProxyModel(_selectionHolder)),
@@ -177,11 +177,11 @@ std::vector<bool> DimensionSelectionAction::getEnabledDimensions() const
     return _selectionHolder.getEnabledDimensions();
 }
 
-void DimensionSelectionAction::dataChanged(Points& points)
+void DimensionSelectionAction::dataChanged(const Dataset<Points>& points)
 {
-    _pointData = &points;
+    _points = points;
 
-    setDimensions(points.getNumDimensions(), points.getDimensionNames());
+    setDimensions(_points->getNumDimensions(), _points->getDimensionNames());
 
     _computeStatisticsAction.setEnabled(true);
 }
@@ -317,12 +317,12 @@ void DimensionSelectionAction::computeStatistics()
     auto& statistics = _selectionHolder._statistics;
     statistics.clear();
 
-    if (_pointData != nullptr)
+    if (_points.isValid())
     {
         QTime time;
 
         time.start();
-        const auto& pointData = *_pointData;
+        const auto& pointData = *_points;
 
         pointData.visitFromBeginToEnd([&statistics, &pointData](auto beginOfData, auto endOfData)
         {

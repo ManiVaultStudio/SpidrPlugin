@@ -39,27 +39,26 @@ SpidrPlugin::~SpidrPlugin(void)
 void SpidrPlugin::init()
 {
     // Get both image data and its parent data set
-    auto& imagesDataset = _core->requestData<Images>(getInputDatasetName());
-    auto& inputDataset = _core->requestData<Points>(imagesDataset.getHierarchyItem().getParent()->getDatasetName());
-
+    auto imagesDataset = getInputDataset<Images>();
+    auto inputDataset = static_cast<hdps::Dataset<Points>>(imagesDataset->getParent());
+    
     // set the output data as derived from the parent data set (since the type differs from the input data set)
-    _inputSourceName = inputDataset.getName();
-    _outputDataName = _core->createDerivedData("sp-tsne_embedding", _inputSourceName); // creates the custon output data.
-    setOutputDatasetName(_outputDataName);
-    auto& outputDataset = _core->requestData<Points>(_outputDataName);
+    setOutputDataset(_core->createDerivedData("sp-tsne_embedding", inputDataset, inputDataset));
+    auto& outputDataset = getOutputDataset<Points>();
+    outputDataset->setGuiName("sp-tsne_embedding");
 
     // Set up output data
     std::vector<float> initialData;
     const auto numEmbeddingDimensions = 2;
-    initialData.resize(inputDataset.getNumPoints() * numEmbeddingDimensions);
-    outputDataset.setData(initialData.data(), inputDataset.getNumPoints(), numEmbeddingDimensions);
-    _core->getDataHierarchyItem(outputDataset.getName())->select();
+    initialData.resize(inputDataset->getNumPoints() * numEmbeddingDimensions);
+    outputDataset->setData(initialData.data(), inputDataset->getNumPoints(), numEmbeddingDimensions);
+    outputDataset->getDataHierarchyItem().select();
 
     // Set up action connections
-    outputDataset.addAction(_spidrSettingsAction.getGeneralSpidrSettingsAction());
-    outputDataset.addAction(_spidrSettingsAction.getAdvancedTsneSettingsAction());
-    outputDataset.addAction(_dimensionSelectionAction);
-    outputDataset.addAction(_spidrSettingsAction.getComputationAction());
+    outputDataset->addAction(_spidrSettingsAction.getGeneralSpidrSettingsAction());
+    outputDataset->addAction(_spidrSettingsAction.getAdvancedTsneSettingsAction());
+    outputDataset->addAction(_dimensionSelectionAction);
+    outputDataset->addAction(_spidrSettingsAction.getComputationAction());
 
     auto& computationAction = _spidrSettingsAction.getComputationAction();
 
@@ -132,13 +131,13 @@ void SpidrPlugin::init()
 
     // embedding changed
     connect(&_tnseWrapper, &TsneComputationQtWrapper::newEmbedding, this, [this]() {
-        Points& embedding = getOutputDataset<Points>();
-
-        // TODO: check if the interactive selection actually works before a background is inserted
         const std::vector<float>& outputData = _tnseWrapper.output();
 
-        embedding.setData(outputData.data(), _spidrAnalysisWrapper.getNumForegroundPoints(), 2);
-        _core->notifyDataChanged(getOutputDatasetName());
+        // Update the output points dataset with new data from the TSNE analysis
+        getOutputDataset<Points>()->setData(outputData.data(), _spidrAnalysisWrapper.getNumForegroundPoints(), 2);
+
+        // Notify others that the embedding data changed
+        _core->notifyDataChanged(getOutputDataset());
         });
 
 
@@ -160,20 +159,10 @@ void SpidrPlugin::init()
 
 void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
 {
-    // cover the cases that the image and it's parent (source) data name changed and
-    if (dataEvent->getType() == EventType::DataChanged) {
-        auto dataChangedEvent = static_cast<DataChangedEvent*>(dataEvent);
 
-        // If we are not looking at the changed dataset, ignore it
-        if (dataChangedEvent->dataSetName != getInputDatasetName())
-            return;
+    if (dataEvent->getDataset() == getInputDataset())
+        _dimensionSelectionAction.dataChanged(dataEvent->getDataset<Points>());
 
-        // Passes changes to the current dataset to the dimension selection widget
-        Points& points = _core->requestData<Points>(dataChangedEvent->dataSetName);
-
-        _dimensionSelectionAction.dataChanged(_core->requestData<Points>(dataChangedEvent->dataSetName));
-
-    }
 }
 
 
@@ -187,8 +176,8 @@ void SpidrPlugin::startComputation()
     // Use the source data to get the points 
     // Use the image data to get the image size
     qDebug() << "SpidrPlugin: Read data ";
-    const auto& inputPoints = _core->requestData<Points>(_inputSourceName);
-    const auto& inputImages = getInputDataset<Images>();
+    const auto inputImages = getInputDataset<Images>();
+    const auto inputPoints = static_cast<hdps::Dataset<Points>>(inputImages->getParent());
 
     std::vector<float> attribute_data;              // Actual channel valures, only consider enabled dimensions
     std::vector<unsigned int> pointIDsGlobal;       // Global ID of each point in the image
@@ -200,19 +189,19 @@ void SpidrPlugin::startComputation()
     const auto numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
     // Populate selected data attributes
-    attribute_data.resize((inputPoints.isFull() ? inputPoints.getNumPoints() : inputPoints.indices.size()) * numEnabledDimensions);
+    attribute_data.resize((inputPoints->isFull() ? inputPoints->getNumPoints() : inputPoints->indices.size()) * numEnabledDimensions);
 
-    for (int i = 0; i < inputPoints.getNumDimensions(); i++)
+    for (int i = 0; i < inputPoints->getNumDimensions(); i++)
         if (enabledDimensions[i])
             enabledDimensionsIndices.push_back(i);
 
-    inputPoints.populateDataForDimensions<std::vector<float>, std::vector<unsigned int>>(attribute_data, enabledDimensionsIndices);
-    inputPoints.getGlobalIndices(pointIDsGlobal);
+    inputPoints->populateDataForDimensions<std::vector<float>, std::vector<unsigned int>>(attribute_data, enabledDimensionsIndices);
+    inputPoints->getGlobalIndices(pointIDsGlobal);
 
     // Image size
     ImgSize imgSize;
-    imgSize.width = inputImages.getImageSize().width();
-    imgSize.height = inputImages.getImageSize().height();
+    imgSize.width = inputImages->getImageSize().width();
+    imgSize.height = inputImages->getImageSize().height();
 
     // complete Spidr parameters
     _spidrSettingsAction.getSpidrParameters()._numPoints = pointIDsGlobal.size();
@@ -262,7 +251,7 @@ void SpidrPlugin::tsneComputation()
 }
 
 void SpidrPlugin::onFinishedEmbedding() {
-    Points& embedding = getOutputDataset<Points>();
+    auto& embedding = getOutputDataset<Points>();
 
     std::vector<float> outputData = _tnseWrapper.output();
     std::vector<float> embWithBg;
@@ -273,8 +262,8 @@ void SpidrPlugin::onFinishedEmbedding() {
 
     qDebug() << "SpidrPlugin: Publishing final embedding";
 
-    embedding.setData(embWithBg.data(), _spidrAnalysisWrapper.getNumImagePoints(), 2);
-    _core->notifyDataChanged(getOutputDatasetName());
+    embedding->setData(embWithBg.data(), _spidrAnalysisWrapper.getNumImagePoints(), 2);
+    _core->notifyDataChanged(getOutputDataset());
 
     qDebug() << "SpidrPlugin: Done.";
 }
