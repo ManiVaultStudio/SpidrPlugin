@@ -7,6 +7,8 @@
 
 #include "FeatureUtils.h"
 
+#include "SpidrAnalysisParameters.h"  // get_feat_and_dist
+
 
 using namespace hdps::gui;
 
@@ -35,8 +37,20 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _perplexityAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
 
     _knnTypeAction.initialize(QStringList({ "HNSW", "Exact kNN"}), "HNSW", "HNSW");
-    _distanceMetricAction.initialize(QStringList({ "Texture Hist. (QF)", "Texture Hist. (Hel)", "Covmat & Means (Bat)", "Covmat & Means (Fro)", "Local Moran's I (L2)",
-                                                    "Local Geary's C (L2)", "Point Clound (Chamfer)", "Point Clound(Hausdorff)"}), "Texture Hist. (QF)", "Texture Hist. (QF)");
+    // TODO: there must be a nice way to add the feat_dist here and later use it directly without a switch or if statement
+    _distanceMetricAction.initialize(QStringList({ 
+        "Texture Hist. (QF)",       // case 0
+        "Texture Hist. (Hel)",      // case 1
+        "Covmat & Means (Bat)",     // case 2
+        "Covmat & Means (Fro)",     // case 3
+        "Local Moran's I (L2)",     // case 4
+        "Local Geary's C (L2)",     // case 5
+        "Point Clound (Chamfer)",   // case 6
+        "Point Clound (Hausdorff)", // case 7
+        "Add XY Pos",               // case 9 
+        "Add XY Pos (normed)"}),    // case 9 
+        "Texture Hist. (QF)", "Texture Hist. (QF)");    // default
+
     _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
     _kernelSize.initialize(1, 50, 1, 1);
     _numIterationsAction.initialize(1, 10000, 1000, 1000);
@@ -67,36 +81,34 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
 
         switch (_distanceMetricAction.getCurrentIndex()) {
         case 0: // Texture Hist. (QF)
-            feat = feature_type::TEXTURE_HIST_1D;
-            dist = distance_metric::METRIC_QF;
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::HIST_QF);
             break;
         case 1: // Texture Hist. (Hel)
-            feat = feature_type::TEXTURE_HIST_1D;
-            dist = distance_metric::METRIC_HEL;
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::HIST_HEL);
             break;
         case 2: // Covmat & Means (Bat)
-            feat = feature_type::MULTIVAR_NORM;
-            dist = distance_metric::METRIC_BHATTACHARYYA;
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::MVN_BHAT);
             break;
         case 3: // Covmat & Means (Fro)
-            feat = feature_type::MULTIVAR_NORM;
-            dist = distance_metric::METRIC_FROBENIUS_CovMat;
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::MVN_FRO);
             break;
         case 4: // Local Moran's I (L2)
-            feat = feature_type::LOCALMORANSI;
-            dist = distance_metric::METRIC_EUC;
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::LMI_EUC);
             break;
         case 5: // Local Geary's C (L2)
-            feat = feature_type::LOCALGEARYC;
-            dist = distance_metric::METRIC_EUC;
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::LGC_EUC);
             break;
         case 6: // Point Clound (Chamfer)
-            feat = feature_type::PCLOUD;
-            dist = distance_metric::METRIC_CHA;
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_CHA);
             break;
         case 7: // Point Clound(Hausdorff)
-            feat = feature_type::PCLOUD;
-            dist = distance_metric::METRIC_HAU;
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_HAU);
+            break;
+        case 8: // Add XY Pos (normed)
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION);
+            break;
+        case 9: // Add XY Pos (normed)
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_NORM);
             break;
         }
 
