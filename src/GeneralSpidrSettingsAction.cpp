@@ -47,8 +47,9 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         "Local Geary's C (L2)",     // case 5
         "Point Clound (Chamfer)",   // case 6
         "Point Clound (Hausdorff)", // case 7
-        "Add XY Pos",               // case 9 
-        "Add XY Pos (normed)"}),    // case 9 
+        "Add XY Pos",               // case 8 
+        "Add XY Pos (normed)",      // case 9
+        "Add XY Pos (cosine)"}),    // case 10 
         "Texture Hist. (QF)", "Texture Hist. (QF)");    // default
 
     _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
@@ -110,6 +111,12 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         case 9: // Add XY Pos (normed)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_NORM);
             break;
+        case 10: // Add XY Pos (normed)
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS);
+            break;
+        default:
+            // something went wrong
+            qDebug() << "GeneralSpidrSettingsAction::GeneralSpidrSettingsAction: Unknown setting";
         }
 
         _spidrSettingsAction.getSpidrParameters()._featureType = feat;
