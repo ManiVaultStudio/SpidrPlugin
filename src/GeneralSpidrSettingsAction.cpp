@@ -50,9 +50,10 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         "Add XY Pos",               // case 8 
         "Add XY Pos (normed)",      // case 9
         "Add XY Pos (cosine)",      // case 10
-        "Point Clound (Hausdorff Median)",      // case 11
-        "Point Clound (SSD)"}),    // case 12 
-        "Texture Hist. (QF)", "Texture Hist. (QF)");    // default
+        "Add XY Pos (cosine sep)",  // case 11
+        "Point Clound (Hausdorff Median)",// case 12
+        "Point Clound (SSD)",       // case 13 
+        }), "Texture Hist. (QF)", "Texture Hist. (QF)");    // default
 
     _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
     _kernelSize.initialize(1, 50, 1, 1);
@@ -116,12 +117,14 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         case 10: // Add XY Pos (cosine)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS);
             break;
-        case 11: // Point Clound(Hausdorff Median)
+        case 11: // Add XY Pos (cosine seperate)
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS_sep);
+            break;
+        case 12: // Point Clound(Hausdorff Median)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_HAU_MED);
             break;
-        case 12: // Point Clound(SSD)
+        case 13: // Point Clound(SSD)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_SSD);
-            break;
         default:
             // something went wrong
             qDebug() << "GeneralSpidrSettingsAction::GeneralSpidrSettingsAction: Unknown setting";
