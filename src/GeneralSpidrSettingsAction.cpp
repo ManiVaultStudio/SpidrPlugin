@@ -49,7 +49,8 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         "Point Clound (Hausdorff)", // case 7
         "Add XY Pos",               // case 8 
         "Add XY Pos (normed)",      // case 9
-        "Add XY Pos (cosine)"}),    // case 10 
+        "Add XY Pos (cosine)",      // case 10
+        "Add XY Pos (cosine sep)"}),// case 11 
         "Texture Hist. (QF)", "Texture Hist. (QF)");    // default
 
     _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
@@ -105,14 +106,17 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         case 7: // Point Clound(Hausdorff)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_HAU);
             break;
-        case 8: // Add XY Pos (normed)
+        case 8: // Add XY Pos
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION);
             break;
         case 9: // Add XY Pos (normed)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_NORM);
             break;
-        case 10: // Add XY Pos (normed)
+        case 10: // Add XY Pos (cosine)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS);
+            break;
+        case 11: // Add XY Pos (cosine seperate)
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS_sep);
             break;
         default:
             // something went wrong
