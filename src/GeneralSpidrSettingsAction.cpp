@@ -22,6 +22,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _histBinSizeAction(this),
     _numIterationsAction(this, "Number of iterations"),
     _perplexityAction(this, "Perplexity"),
+    _pixelWeightAction(this, "Pixel Weight"),
     _computationAction(this),
     _resetAction(this, "Reset all")
 {
@@ -35,6 +36,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _kernelWeight.setDefaultWidgetFlags(OptionAction::ComboBox);
     _numIterationsAction.setDefaultWidgetFlags(IntegralAction::SpinBox);
     _perplexityAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
+    _pixelWeightAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
 
     _knnTypeAction.initialize(QStringList({ "HNSW", "Exact kNN"}), "HNSW", "HNSW");
     // TODO: there must be a nice way to add the feat_dist here and later use it directly without a switch or if statement
@@ -51,14 +53,16 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         "Add XY Pos (normed)",      // case 9
         "Add XY Pos (cosine)",      // case 10
         "Add XY Pos (cosine sep)",  // case 11
-        "Point Clound (Hausdorff Median)",// case 12
-        "Point Clound (SSD)",       // case 13 
+        "Add XY Pos (euclid sep)",  // case 12
+        "Point Clound (Hausdorff Median)",// case 13
+        "Point Clound (SSD)",       // case 14
         }), "Texture Hist. (QF)", "Texture Hist. (QF)");    // default
 
     _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
     _kernelSize.initialize(1, 50, 1, 1);
     _numIterationsAction.initialize(1, 10000, 1000, 1000);
     _perplexityAction.initialize(2, 100, 30, 30);
+    _pixelWeightAction.initialize(0, 100, 50, 50);
 
     // set default values
     _spidrSettingsAction.getSpidrParameters().set_numNeighborsInEachDirection(_kernelSize.getValue());
@@ -120,11 +124,15 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         case 11: // Add XY Pos (cosine seperate)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS_sep);
             break;
-        case 12: // Point Clound(Hausdorff Median)
+        case 12: // "dd XY Pos (euclid sep)
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_sep);
+            break;
+        case 13: // Point Clound(Hausdorff Median)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_HAU_MED);
             break;
-        case 13: // Point Clound(SSD)
+        case 14: // Point Clound(SSD)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_SSD);
+            break;
         default:
             // something went wrong
             qDebug() << "GeneralSpidrSettingsAction::GeneralSpidrSettingsAction: Unknown setting";
@@ -190,6 +198,11 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _spidrSettingsAction.getSpidrParameters().set_perplexity(_perplexityAction.getValue());
     };
 
+    const auto updatePixelWeight = [this]() -> void {
+        _spidrSettingsAction.getSpidrParameters()._pixelWeight = static_cast<float>(_pixelWeightAction.getValue()) / 100.0f;    // UI is range [0,100] but weight should be [0,1]
+    };
+
+
     const auto isResettable = [this]() -> bool {
         if (_knnTypeAction.isResettable())
             return true;
@@ -212,6 +225,9 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         if (_perplexityAction.isResettable())
             return true;
 
+        if (_pixelWeightAction.isResettable())
+            return true;
+
         return false;
     };
 
@@ -226,6 +242,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _distanceMetricAction.setEnabled(enable);
         _numIterationsAction.setEnabled(enable);
         _perplexityAction.setEnabled(enable);
+        _pixelWeightAction.setEnabled(enable);
         _kernelSize.setEnabled(enable);
         _kernelWeight.setEnabled(enable);
         _histBinSizeAction.setEnabled(enable);
@@ -275,11 +292,17 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         updateReset();
     });
 
+    connect(&_pixelWeightAction, &IntegralAction::valueChanged, this, [this, updatePixelWeight, updateReset](const std::int32_t& value) {
+        updatePixelWeight();
+        updateReset();
+    });
+
     connect(&_resetAction, &TriggerAction::triggered, this, [this](const std::int32_t& value) {
         _knnTypeAction.reset();
         _distanceMetricAction.reset();
         _numIterationsAction.reset();
         _perplexityAction.reset();
+        _pixelWeightAction.reset();
         _histBinSizeAction.reset();
         _kernelSize.reset();
         _kernelWeight.reset();
@@ -293,6 +316,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     updateDistanceMetric();
     updateNumIterations();
     updatePerplexity();
+    updatePixelWeight();
     updateReset();
     updateReadOnly();
 }
