@@ -49,13 +49,14 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         "Local Geary's C (L2)",     // case 5
         "Point Clound (Chamfer)",   // case 6
         "Point Clound (Hausdorff)", // case 7
-        "Add XY Pos",               // case 8 
-        "Add XY Pos (normed)",      // case 9
-        "Add XY Pos (cosine)",      // case 10
-        "Add XY Pos (cosine sep)",  // case 11
-        "Add XY Pos (euclid sep)",  // case 12
-        "Point Clound (Hausdorff Median)",// case 13
-        "Point Clound (SSD)",       // case 14
+        "XY Pos",                   // case 8 
+        "XY Pos (normed)",          // case 9
+        "XY Pos (cosine)",          // case 10
+        "XY Pos (cosine sep)",      // case 11
+        "XY Pos (euclid sep)",      // case 12
+        "XY Pos (norm, euclid sep)",// case 13
+        "Point Clound (Hausdorff Median)",// case 14
+        "Point Clound (SSD)",       // case 15
         }), "Texture Hist. (QF)", "Texture Hist. (QF)");    // default
 
     _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
@@ -116,7 +117,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION);
             break;
         case 9: // Add XY Pos (normed)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_NORM);
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_NORM_range);
             break;
         case 10: // Add XY Pos (cosine)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS);
@@ -124,13 +125,16 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         case 11: // Add XY Pos (cosine seperate)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS_sep);
             break;
-        case 12: // "dd XY Pos (euclid sep)
+        case 12: // Add XY Pos (euclid sep)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_sep);
             break;
-        case 13: // Point Clound(Hausdorff Median)
+        case 13: // Add XY Pos (norm both, euclid sep)
+            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_NORM_sep);
+            break;
+        case 14: // Point Clound(Hausdorff Median)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_HAU_MED);
             break;
-        case 14: // Point Clound(SSD)
+        case 15: // Point Clound(SSD)
             std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_SSD);
             break;
         default:
