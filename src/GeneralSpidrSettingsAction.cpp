@@ -63,7 +63,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _kernelSize.initialize(1, 50, 1, 1);
     _numIterationsAction.initialize(1, 10000, 1000, 1000);
     _perplexityAction.initialize(2, 100, 30, 30);
-    _pixelWeightAction.initialize(0, 100, 50, 50);
+    _pixelWeightAction.initialize(0, 10000000, 5000000, 5000000);
 
     // set default values
     _spidrSettingsAction.getSpidrParameters().set_numNeighborsInEachDirection(_kernelSize.getValue());
@@ -203,7 +203,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     };
 
     const auto updatePixelWeight = [this]() -> void {
-        _spidrSettingsAction.getSpidrParameters()._pixelWeight = static_cast<float>(_pixelWeightAction.getValue()) / 100.0f;    // UI is range [0,100] but weight should be [0,1]
+        _spidrSettingsAction.getSpidrParameters()._pixelWeight = static_cast<float>(_pixelWeightAction.getValue()) / 10000000.0f;    // UI is range [0,100] but weight should be [0,1]
     };
 
 
