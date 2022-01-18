@@ -33,7 +33,7 @@ public:
     void setNumDimensionsOutput(int numDimensionsOutput);
 
     inline bool verbose() { return _verbose; }
-    inline int iterations() { return _iterations; }
+    inline size_t iterations() { return _iterations; }
     inline int exaggerationIter() { return _exaggerationIter; }
     inline int perplexity() { return _perplexity; }
     inline int numDimensionsOutput() { return _numDimensionsOutput; }
@@ -98,7 +98,7 @@ private:
     std::vector<float> _outputData;                     /*!<> */
 
     // Options
-    int _iterations;                                    /*!<> */
+    size_t _iterations;                                    /*!<> */
     int _numTrees;
     int _numChecks;
     int _exaggerationIter;
@@ -118,6 +118,6 @@ private:
     bool _isTsneRunning;
     bool _isMarkedForDeletion;
 
-    int _continueFromIteration;
+    size_t _continueFromIteration;
     GLFWwindow* _offscreen_context;
 };

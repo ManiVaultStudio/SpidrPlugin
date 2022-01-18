@@ -191,7 +191,7 @@ void SpidrPlugin::startComputation()
     // Populate selected data attributes
     attribute_data.resize((inputPoints->isFull() ? inputPoints->getNumPoints() : inputPoints->indices.size()) * numEnabledDimensions);
 
-    for (int i = 0; i < inputPoints->getNumDimensions(); i++)
+    for (unsigned int i = 0; i < inputPoints->getNumDimensions(); i++)
         if (enabledDimensions[i])
             enabledDimensionsIndices.push_back(i);
 
