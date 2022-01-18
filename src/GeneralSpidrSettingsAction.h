@@ -5,6 +5,12 @@
 #include "SpidrComputationAction.h"
 #include "HistBinAction.h"
 
+#include <QStandardItemModel> 
+#include <QStandardItem> 
+#include <QList> 
+
+#include <memory> 
+
 using namespace hdps::gui;
 
 class QMenu;
@@ -53,4 +59,9 @@ protected:
     TriggerAction           _resetAction;                   /** Reset all input to defaults */
 
     friend class Widget;
+
+private:
+    std::shared_ptr<QStandardItemModel> _distanceItemModel;
+    QList<std::shared_ptr<QStandardItem>> _distanceItemList;
+
 };

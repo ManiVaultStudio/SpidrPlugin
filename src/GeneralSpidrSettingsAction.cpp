@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QVariant> 
 
 #include "FeatureUtils.h"
 
@@ -11,6 +12,8 @@
 
 
 using namespace hdps::gui;
+
+Q_DECLARE_METATYPE(feat_dist);      // in order to use QVariant::fromValue with custom type feat_dist
 
 GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spidrSettingsAction) :
     GroupAction(&spidrSettingsAction, true),
@@ -39,25 +42,39 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _pixelWeightAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
 
     _knnTypeAction.initialize(QStringList({ "HNSW", "Exact kNN"}), "HNSW", "HNSW");
-    // TODO: there must be a nice way to add the feat_dist here and later use it directly without a switch or if statement
-    _distanceMetricAction.initialize(QStringList({ 
-        "Texture Hist. (QF)",       // case 0
-        "Texture Hist. (Hel)",      // case 1
-        "Covmat & Means (Bat)",     // case 2
-        "Covmat & Means (Fro)",     // case 3
-        "Local Moran's I (L2)",     // case 4
-        "Local Geary's C (L2)",     // case 5
-        "Point Clound (Chamfer)",   // case 6
-        "Point Clound (Hausdorff)", // case 7
-        "XY Pos",                   // case 8 
-        "XY Pos (normed)",          // case 9
-        "XY Pos (cosine)",          // case 10
-        "XY Pos (cosine sep)",      // case 11
-        "XY Pos (euclid sep)",      // case 12
-        "XY Pos (norm, euclid sep)",// case 13
-        "Point Clound (Hausdorff Median)",// case 14
-        "Point Clound (SSD)",       // case 15
-        }), "Texture Hist. (QF)", "Texture Hist. (QF)");    // default
+
+    // Use an item model to add feat_dist enums to each drop down menu entry
+    _distanceItemModel = std::make_shared<QStandardItemModel>(0, 1);
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Texture Hist. (QF)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::HIST_QF));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Point Clound (Chamfer)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PC_CHA));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Covmat & Means (Bat)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::MVN_BHAT));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Local Moran's I (L2)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::LMI_EUC));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("XY Pos (euclid weighted)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PIXEL_LOCATION_sep));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Point Clound (Hausdorff)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PC_HAU));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Texture Hist. (Hel)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::HIST_HEL));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("XY Pos (normed)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PIXEL_LOCATION_NORM_range));
+
+    // add all feat_dist entries
+    for (auto& item : _distanceItemList)
+        _distanceItemModel->appendRow(item.get());
+
+    _distanceMetricAction.initialize(*_distanceItemModel, "Texture Hist. (QF)", "Texture Hist. (QF)");
 
     _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
     _kernelSize.initialize(1, 50, 1, 1);
@@ -83,64 +100,19 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
 
         _spidrSettingsAction.getSpidrParameters()._aknn_algorithm = knn_lib;
     };
-
+    
     const auto updateDistanceMetric = [this]() -> void {
         feature_type feat = feature_type::TEXTURE_HIST_1D;
         distance_metric dist = distance_metric::METRIC_QF;
 
-        switch (_distanceMetricAction.getCurrentIndex()) {
-        case 0: // Texture Hist. (QF)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::HIST_QF);
-            break;
-        case 1: // Texture Hist. (Hel)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::HIST_HEL);
-            break;
-        case 2: // Covmat & Means (Bat)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::MVN_BHAT);
-            break;
-        case 3: // Covmat & Means (Fro)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::MVN_FRO);
-            break;
-        case 4: // Local Moran's I (L2)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::LMI_EUC);
-            break;
-        case 5: // Local Geary's C (L2)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::LGC_EUC);
-            break;
-        case 6: // Point Clound (Chamfer)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_CHA);
-            break;
-        case 7: // Point Clound(Hausdorff)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_HAU);
-            break;
-        case 8: // Add XY Pos
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION);
-            break;
-        case 9: // Add XY Pos (normed)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_NORM_range);
-            break;
-        case 10: // Add XY Pos (cosine)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS);
-            break;
-        case 11: // Add XY Pos (cosine seperate)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_COS_sep);
-            break;
-        case 12: // Add XY Pos (euclid sep)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_sep);
-            break;
-        case 13: // Add XY Pos (norm both, euclid sep)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PIXEL_LOCATION_NORM_sep);
-            break;
-        case 14: // Point Clound(Hausdorff Median)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_HAU_MED);
-            break;
-        case 15: // Point Clound(SSD)
-            std::tie(feat, dist) = get_feat_and_dist(feat_dist::PC_SSD);
-            break;
-        default:
-            // something went wrong
-            qDebug() << "GeneralSpidrSettingsAction::GeneralSpidrSettingsAction: Unknown setting";
-        }
+        // Get data (feat_dist) from the itemModel attached to the drop down menu
+        auto index = _distanceMetricAction.getCurrentIndex();
+        auto model = dynamic_cast<const QStandardItemModel*>(_distanceMetricAction.getModel());
+        auto data = model->item(index, 0)->data();
+
+        // Set feature attribute and distance metric
+        feat_dist seleted_feat_dist = data.value<feat_dist>();
+        std::tie(feat, dist) = get_feat_and_dist(seleted_feat_dist);
 
         _spidrSettingsAction.getSpidrParameters()._featureType = feat;
         _spidrSettingsAction.getSpidrParameters()._aknn_metric = dist;
@@ -324,3 +296,4 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     updateReset();
     updateReadOnly();
 }
+
