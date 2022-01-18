@@ -211,6 +211,24 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _resetAction.setEnabled(isResettable());
     };
 
+    // call this after updateDistanceMetric
+    const auto updateEnabledSettings = [this]() -> void {
+
+        // only change histograms bin for appropriate feature
+        if (_spidrSettingsAction.getSpidrParameters()._featureType == feature_type::TEXTURE_HIST_1D)
+            _histBinSizeAction.setEnabled(true);
+        else
+            _histBinSizeAction.setEnabled(false);
+
+
+        // only pixel-attribute weight for appropriate feature 
+        if (_spidrSettingsAction.getSpidrParameters()._featureType == feature_type::PIXEL_LOCATION)
+            _pixelWeightAction.setEnabled(true);
+        else
+            _pixelWeightAction.setEnabled(false);
+    };
+
+
     const auto updateReadOnly = [this]() -> void {
         const auto enable = !isReadOnly();
 
@@ -230,9 +248,10 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         updateReset();
     });
 
-    connect(&_distanceMetricAction, &OptionAction::currentIndexChanged, this, [this, updateDistanceMetric, updateReset](const std::int32_t& currentIndex) {
+    connect(&_distanceMetricAction, &OptionAction::currentIndexChanged, this, [this, updateDistanceMetric, updateReset, updateEnabledSettings](const std::int32_t& currentIndex) {
         updateDistanceMetric();
         updateReset();
+        updateEnabledSettings();
     });
 
     connect(&_kernelSize, &IntegralAction::valueChanged, this, [this, updateKerneSize, adjustHistBinNum, updateHistBinNum, updateReset](const std::int32_t& value) {
@@ -284,9 +303,10 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _kernelWeight.reset();
     });
 
-    connect(this, &GroupAction::readOnlyChanged, this, [this, updateReadOnly](const bool& readOnly) {
+    connect(this, &GroupAction::readOnlyChanged, this, [this, updateReadOnly, updateEnabledSettings](const bool& readOnly) {
         updateReadOnly();
-    });
+        updateEnabledSettings();
+        });
 
     updateKnnAlgorithm();
     updateDistanceMetric();
@@ -295,5 +315,6 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     updatePixelWeight();
     updateReset();
     updateReadOnly();
+    updateEnabledSettings();
 }
 
