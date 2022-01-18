@@ -80,7 +80,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _kernelSize.initialize(1, 50, 1, 1);
     _numIterationsAction.initialize(1, 10000, 1000, 1000);
     _perplexityAction.initialize(2, 100, 30, 30);
-    _pixelWeightAction.initialize(0, 10000000, 5000000, 5000000);
+    _pixelWeightAction.initialize(0, 1, 0.5, 0.5, 3);
 
     // set default values
     _spidrSettingsAction.getSpidrParameters().set_numNeighborsInEachDirection(_kernelSize.getValue());
@@ -268,7 +268,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         updateReset();
     });
 
-    connect(&_pixelWeightAction, &IntegralAction::valueChanged, this, [this, updatePixelWeight, updateReset](const std::int32_t& value) {
+    connect(&_pixelWeightAction, &DecimalAction::valueChanged, this, [this, updatePixelWeight, updateReset](const std::int32_t& value) {
         updatePixelWeight();
         updateReset();
     });

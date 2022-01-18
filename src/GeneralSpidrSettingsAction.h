@@ -40,7 +40,7 @@ public: // Action getters
     OptionAction& getDistanceMetricAction() { return _distanceMetricAction; };
     IntegralAction& getNumIterationsAction() { return _numIterationsAction; };
     IntegralAction& getPerplexityAction() { return _perplexityAction; };
-    IntegralAction& getPixelWeightAction() { return _pixelWeightAction; };
+    DecimalAction& getPixelWeightAction() { return _pixelWeightAction; };
     HistBinAction& getHistBinAction() { return _histBinSizeAction; }
     SpidrComputationAction& getComputationAction() { return _computationAction; }
     TriggerAction& getResetAction() { return _resetAction; };
@@ -54,7 +54,7 @@ protected:
     IntegralAction          _kernelSize;
     IntegralAction          _numIterationsAction;           /** Number of iterations action */
     IntegralAction          _perplexityAction;              /** Perplexity action */
-    IntegralAction          _pixelWeightAction;              /** Pixel weight action */
+    DecimalAction           _pixelWeightAction;              /** Pixel weight action */
     SpidrComputationAction   _computationAction;             /** Computation action */
     TriggerAction           _resetAction;                   /** Reset all input to defaults */
 
