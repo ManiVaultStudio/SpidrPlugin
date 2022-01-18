@@ -59,7 +59,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::LMI_EUC));
 
     _distanceItemList.append(std::make_shared<QStandardItem>("XY Pos (euclid weighted)"));
-    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PIXEL_LOCATION_sep));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::XY_EUCW));
 
     _distanceItemList.append(std::make_shared<QStandardItem>("Point Clound (Hausdorff)"));
     _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PC_HAU));
@@ -68,7 +68,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::HIST_HEL));
 
     _distanceItemList.append(std::make_shared<QStandardItem>("XY Pos (normed)"));
-    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PIXEL_LOCATION_NORM_range));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::XYRNORM_EUC));
 
     // add all feat_dist entries
     for (auto& item : _distanceItemList)
@@ -175,7 +175,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     };
 
     const auto updatePixelWeight = [this]() -> void {
-        _spidrSettingsAction.getSpidrParameters()._pixelWeight = static_cast<float>(_pixelWeightAction.getValue()) / 10000000.0f;    // UI is range [0,100] but weight should be [0,1]
+        _spidrSettingsAction.getSpidrParameters()._pixelWeight = _pixelWeightAction.getValue();
     };
 
 
