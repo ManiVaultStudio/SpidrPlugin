@@ -141,7 +141,7 @@ void SpidrPlugin::init()
         });
 
 
-    _dimensionSelectionAction.dataChanged(inputDataset);
+    _dimensionSelectionAction.getPickerAction().setPointsDataset(inputDataset);
 
     connect(&computationAction.getRunningAction(), &ToggleAction::toggled, this, [this, &computationAction, updateComputationAction](bool toggled) {
         _dimensionSelectionAction.setEnabled(!toggled);
@@ -161,7 +161,7 @@ void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
 {
 
     if (dataEvent->getDataset() == getInputDataset())
-        _dimensionSelectionAction.dataChanged(dataEvent->getDataset<Points>());
+        _dimensionSelectionAction.getPickerAction().setPointsDataset(dataEvent->getDataset<Points>());
 
 }
 
@@ -184,7 +184,7 @@ void SpidrPlugin::startComputation()
     std::vector<unsigned int> backgroundIDsGlobal;  // ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
 
     // Extract the enabled dimensions from the data
-    std::vector<bool> enabledDimensions = _dimensionSelectionAction.getEnabledDimensions();
+    std::vector<bool> enabledDimensions = _dimensionSelectionAction.getPickerAction().getEnabledDimensions();
     std::vector<unsigned int> enabledDimensionsIndices;
     const auto numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
