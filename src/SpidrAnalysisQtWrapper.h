@@ -23,8 +23,8 @@ public:
      */
     void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
         const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
-        const unsigned int aknnMetric, const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors,  const size_t numHistBins, \
-        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, \
+        const distance_metric distMetric, const feature_type featType, const loc_Neigh_Weighting kernelType, const size_t numLocNeighbors,  const size_t numHistBins, \
+        const knn_library aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, float pixelWeight,\
         bool publishFeaturesToCore, bool forceBackgroundFeatures);
 
     void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
@@ -89,16 +89,17 @@ private:
     QString _embeddingName;
 
     // parameters
-    unsigned int _aknnMetric;
-    unsigned int _featType;
-    unsigned int _kernelType;
-    unsigned int _aknnAlgType;
+    distance_metric _distMetric;
+    feature_type _featType;
+    loc_Neigh_Weighting _kernelType;
+    knn_library _aknnAlgType;
     size_t _numNeighborsInEachDirection;
     size_t _numHistBins;
-    int _numIterations;
-    int _perplexity;
-    int _exaggeration;
-    int _expDecay;
+    size_t _numIterations;
+    size_t _perplexity;
+    size_t _exaggeration;
+    size_t _expDecay;
+    float _pixelWeight;
     bool _publishFeaturesToCore;
     bool _forceBackgroundFeatures;
 

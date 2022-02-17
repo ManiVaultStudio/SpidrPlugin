@@ -43,12 +43,12 @@ void TsneComputationQtWrapper::computeGradientDescent()
 void TsneComputationQtWrapper::setup(const std::vector<int> knn_indices, const std::vector<float> knn_distances, const SpidrParameters params) {
     // SpidrParameters
     _iterations = params._numIterations;
-    _perplexity = params.get_perplexity();
-    _exaggerationIter = params._exaggeration;
-    _exponentialDecay = params._expDecay;
-    _nn = params.get_nn();                       // same as in constructor = _perplexity * 3 + 1;
-    _numForegroundPoints = params._numForegroundPoints;
-    _perplexity_multiplier = params.get_perplexity_multiplier();
+    _perplexity = static_cast<float> (params.get_perplexity());
+    _exaggerationIter = static_cast<unsigned int> (params._exaggeration);
+    _exponentialDecay = static_cast<unsigned int> (params._expDecay);
+    _nn = static_cast<int> (params.get_nn());                       // same as in constructor = _perplexity * 3 + 1;
+    _numForegroundPoints = params._numForegroundPoints;         // if no background IDs are given, _numForegroundPoints = _numPoints
+    _perplexity_multiplier = static_cast<int> (params.get_perplexity_multiplier());
 
     // Evaluation (for determining the filename when saving the embedding to disk)
     _embeddingName = params._embeddingName;
@@ -162,7 +162,7 @@ void TsneComputationQtWrapper::embed()
         _isGradientDescentRunning = true;
 
         // Performs gradient descent for every iteration
-        for (int iter = 0; iter < _iterations; ++iter)
+        for (size_t iter = 0; iter < _iterations; ++iter)
         {
             hdi::utils::ScopedTimer<double> timer(t);
             if (!_isGradientDescentRunning)

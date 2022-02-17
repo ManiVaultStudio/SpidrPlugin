@@ -7,7 +7,7 @@
 #include <tuple>
 
 
-SpidrAnalysisQtWrapper::SpidrAnalysisQtWrapper() 
+SpidrAnalysisQtWrapper::SpidrAnalysisQtWrapper()
 {
 
 }
@@ -19,8 +19,8 @@ SpidrAnalysisQtWrapper::~SpidrAnalysisQtWrapper()
 
 void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
         const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
-        const unsigned int aknnMetric, const unsigned int featType, const unsigned int kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
-        const unsigned int aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, \
+        const distance_metric distMetric, const feature_type featType, const loc_Neigh_Weighting kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
+        const knn_library aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, float pixelWeight, \
         bool publishFeaturesToCore, bool forceBackgroundFeatures)
 {
     _attribute_data = attribute_data;
@@ -29,7 +29,7 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _numDimensions = numDimensions;
     _imgSize = imgSize;
     _embeddingName = embeddingName;
-    _aknnMetric = aknnMetric;
+    _distMetric = distMetric;
     _featType = featType;
     _kernelType = kernelType;
     _numNeighborsInEachDirection = numLocNeighbors;
@@ -39,6 +39,7 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _perplexity = perplexity;
     _exaggeration = exaggeration;
     _expDecay = expDecay;
+    _pixelWeight = pixelWeight;
     _publishFeaturesToCore = publishFeaturesToCore;
     _forceBackgroundFeatures = forceBackgroundFeatures;
 }
@@ -52,17 +53,17 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _numDimensions = spidrParameters._numDims;
     _imgSize = spidrParameters._imgSize;
     _embeddingName = embeddingName;
-    // TODO this is a bit point less and should be done: useless back and forth
-    _aknnMetric = static_cast<unsigned int> (spidrParameters._aknn_metric);
-    _featType = static_cast<unsigned int> (spidrParameters._featureType);
-    _kernelType = static_cast<unsigned int> (spidrParameters._neighWeighting);
+    _distMetric = spidrParameters._aknn_metric;
+    _featType = spidrParameters._featureType;
+    _kernelType = spidrParameters._neighWeighting;
     _numNeighborsInEachDirection = spidrParameters.get_numNeighborsInEachDirection();
     _numHistBins = spidrParameters._numHistBins;
-    _aknnAlgType = static_cast<unsigned int> (spidrParameters._aknn_algorithm);
+    _aknnAlgType = spidrParameters._aknn_algorithm;
     _numIterations = spidrParameters._numIterations;
     _perplexity = spidrParameters.get_perplexity();
     _exaggeration = spidrParameters._exaggeration;
     _expDecay = spidrParameters._expDecay;
+    _pixelWeight = spidrParameters._pixelWeight;
     _publishFeaturesToCore = false;     // TODO not really used as all
     _forceBackgroundFeatures = spidrParameters._forceCalcBackgroundFeatures;
 
@@ -83,8 +84,8 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     }
 
     // Init all settings (setupData must have been called before initing the settings.)
-    _SpidrAnalysis->initializeAnalysisSettings(static_cast<feature_type> (_featType), static_cast<loc_Neigh_Weighting> (_kernelType), _numNeighborsInEachDirection, _numHistBins, 
-        static_cast<knn_library> (_aknnAlgType), static_cast<distance_metric> (_aknnMetric), _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
+    _SpidrAnalysis->initializeAnalysisSettings(_featType, _kernelType, _numNeighborsInEachDirection, _numHistBins, _pixelWeight,
+        _aknnAlgType, _distMetric, _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
 
     // Compute data features
     emit progressSection("Calculate features");
@@ -120,7 +121,7 @@ void SpidrAnalysisQtWrapper::addBackgroundToEmbedding(std::vector<float>& emb, s
     }
     else
     {
-        _SpidrAnalysis->addBackgroundToEmbedding(emb, emb_wo_bg);
+        emb = _SpidrAnalysis->outputWithBackground(emb_wo_bg);
     }
 
 }

@@ -37,6 +37,9 @@ public:
     void startComputation();
     void stopComputation();
 
+
+public: // Action getters
+
     SpidrSettingsAction& getGeneralSpidrSettingsAction() { return _spidrSettingsAction; }
     DimensionSelectionAction& getDimensionSelectionAction() { return _dimensionSelectionAction; }
 

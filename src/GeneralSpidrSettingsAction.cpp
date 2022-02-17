@@ -4,11 +4,16 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QVariant> 
 
 #include "FeatureUtils.h"
 
+#include "SpidrAnalysisParameters.h"  // get_feat_and_dist
+
 
 using namespace hdps::gui;
+
+Q_DECLARE_METATYPE(feat_dist);      // in order to use QVariant::fromValue with custom type feat_dist
 
 GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spidrSettingsAction) :
     GroupAction(&spidrSettingsAction, true),
@@ -20,6 +25,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _histBinSizeAction(this),
     _numIterationsAction(this, "Number of iterations"),
     _perplexityAction(this, "Perplexity"),
+    _pixelWeightAction(this, "Pixel Weight"),
     _computationAction(this),
     _resetAction(this, "Reset all")
 {
@@ -33,14 +39,48 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _kernelWeight.setDefaultWidgetFlags(OptionAction::ComboBox);
     _numIterationsAction.setDefaultWidgetFlags(IntegralAction::SpinBox);
     _perplexityAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
+    _pixelWeightAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
 
     _knnTypeAction.initialize(QStringList({ "HNSW", "Exact kNN"}), "HNSW", "HNSW");
-    _distanceMetricAction.initialize(QStringList({ "Texture Hist. (QF)", "Texture Hist. (Hel)", "Covmat & Means (Bat)", "Covmat & Means (Fro)", "Local Moran's I (L2)",
-                                                    "Local Geary's C (L2)", "Point Clound (Chamfer)", "Point Clound(Hausdorff)"}), "Texture Hist. (QF)", "Texture Hist. (QF)");
+
+    // Use an item model to add feat_dist enums to each drop down menu entry
+    _distanceItemModel = std::make_shared<QStandardItemModel>(0, 1);
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Texture Hist. (QF)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::HIST_QF));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Point Clound (Chamfer)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PC_CHA));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Covmat & Means (Bat)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::MVN_BHAT));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Local Moran's I (L2)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::LMI_EUC));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("XY Pos (euclid weighted)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::XY_EUCW));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Point Clound (Hausdorff)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::PC_HAU));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("Texture Hist. (Hel)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::HIST_HEL));
+
+    _distanceItemList.append(std::make_shared<QStandardItem>("XY Pos (normed)"));
+    _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::XYRNORM_EUC));
+
+    // add all feat_dist entries
+    for (auto& item : _distanceItemList)
+        _distanceItemModel->appendRow(item.get());
+
+    _distanceMetricAction.initialize(*_distanceItemModel, "Texture Hist. (QF)", "Texture Hist. (QF)");
+
     _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
     _kernelSize.initialize(1, 50, 1, 1);
     _numIterationsAction.initialize(1, 10000, 1000, 1000);
     _perplexityAction.initialize(2, 100, 30, 30);
+    _pixelWeightAction.initialize(0, 1, 0.5, 0.5, 3);
 
     // set default values
     _spidrSettingsAction.getSpidrParameters().set_numNeighborsInEachDirection(_kernelSize.getValue());
@@ -60,45 +100,19 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
 
         _spidrSettingsAction.getSpidrParameters()._aknn_algorithm = knn_lib;
     };
-
+    
     const auto updateDistanceMetric = [this]() -> void {
         feature_type feat = feature_type::TEXTURE_HIST_1D;
         distance_metric dist = distance_metric::METRIC_QF;
 
-        switch (_distanceMetricAction.getCurrentIndex()) {
-        case 0: // Texture Hist. (QF)
-            feat = feature_type::TEXTURE_HIST_1D;
-            dist = distance_metric::METRIC_QF;
-            break;
-        case 1: // Texture Hist. (Hel)
-            feat = feature_type::TEXTURE_HIST_1D;
-            dist = distance_metric::METRIC_HEL;
-            break;
-        case 2: // Covmat & Means (Bat)
-            feat = feature_type::MULTIVAR_NORM;
-            dist = distance_metric::METRIC_BHATTACHARYYA;
-            break;
-        case 3: // Covmat & Means (Fro)
-            feat = feature_type::MULTIVAR_NORM;
-            dist = distance_metric::METRIC_FROBENIUS_CovMat;
-            break;
-        case 4: // Local Moran's I (L2)
-            feat = feature_type::LOCALMORANSI;
-            dist = distance_metric::METRIC_EUC;
-            break;
-        case 5: // Local Geary's C (L2)
-            feat = feature_type::LOCALGEARYC;
-            dist = distance_metric::METRIC_EUC;
-            break;
-        case 6: // Point Clound (Chamfer)
-            feat = feature_type::PCLOUD;
-            dist = distance_metric::METRIC_CHA;
-            break;
-        case 7: // Point Clound(Hausdorff)
-            feat = feature_type::PCLOUD;
-            dist = distance_metric::METRIC_HAU;
-            break;
-        }
+        // Get data (feat_dist) from the itemModel attached to the drop down menu
+        auto index = _distanceMetricAction.getCurrentIndex();
+        auto model = dynamic_cast<const QStandardItemModel*>(_distanceMetricAction.getModel());
+        auto data = model->item(index, 0)->data();
+
+        // Set feature attribute and distance metric
+        feat_dist seleted_feat_dist = data.value<feat_dist>();
+        std::tie(feat, dist) = get_feat_and_dist(seleted_feat_dist);
 
         _spidrSettingsAction.getSpidrParameters()._featureType = feat;
         _spidrSettingsAction.getSpidrParameters()._aknn_metric = dist;
@@ -160,6 +174,11 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _spidrSettingsAction.getSpidrParameters().set_perplexity(_perplexityAction.getValue());
     };
 
+    const auto updatePixelWeight = [this]() -> void {
+        _spidrSettingsAction.getSpidrParameters()._pixelWeight = _pixelWeightAction.getValue();
+    };
+
+
     const auto isResettable = [this]() -> bool {
         if (_knnTypeAction.isResettable())
             return true;
@@ -182,12 +201,33 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         if (_perplexityAction.isResettable())
             return true;
 
+        if (_pixelWeightAction.isResettable())
+            return true;
+
         return false;
     };
 
     const auto updateReset = [this, isResettable]() -> void {
         _resetAction.setEnabled(isResettable());
     };
+
+    // call this after updateDistanceMetric
+    const auto updateEnabledSettings = [this]() -> void {
+
+        // only change histograms bin for appropriate feature
+        if (_spidrSettingsAction.getSpidrParameters()._featureType == feature_type::TEXTURE_HIST_1D)
+            _histBinSizeAction.setEnabled(true);
+        else
+            _histBinSizeAction.setEnabled(false);
+
+
+        // only pixel-attribute weight for appropriate feature 
+        if (_spidrSettingsAction.getSpidrParameters()._featureType == feature_type::PIXEL_LOCATION)
+            _pixelWeightAction.setEnabled(true);
+        else
+            _pixelWeightAction.setEnabled(false);
+    };
+
 
     const auto updateReadOnly = [this]() -> void {
         const auto enable = !isReadOnly();
@@ -196,6 +236,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _distanceMetricAction.setEnabled(enable);
         _numIterationsAction.setEnabled(enable);
         _perplexityAction.setEnabled(enable);
+        _pixelWeightAction.setEnabled(enable);
         _kernelSize.setEnabled(enable);
         _kernelWeight.setEnabled(enable);
         _histBinSizeAction.setEnabled(enable);
@@ -207,9 +248,10 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         updateReset();
     });
 
-    connect(&_distanceMetricAction, &OptionAction::currentIndexChanged, this, [this, updateDistanceMetric, updateReset](const std::int32_t& currentIndex) {
+    connect(&_distanceMetricAction, &OptionAction::currentIndexChanged, this, [this, updateDistanceMetric, updateReset, updateEnabledSettings](const std::int32_t& currentIndex) {
         updateDistanceMetric();
         updateReset();
+        updateEnabledSettings();
     });
 
     connect(&_kernelSize, &IntegralAction::valueChanged, this, [this, updateKerneSize, adjustHistBinNum, updateHistBinNum, updateReset](const std::int32_t& value) {
@@ -245,24 +287,34 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         updateReset();
     });
 
+    connect(&_pixelWeightAction, &DecimalAction::valueChanged, this, [this, updatePixelWeight, updateReset](const std::int32_t& value) {
+        updatePixelWeight();
+        updateReset();
+    });
+
     connect(&_resetAction, &TriggerAction::triggered, this, [this](const std::int32_t& value) {
         _knnTypeAction.reset();
         _distanceMetricAction.reset();
         _numIterationsAction.reset();
         _perplexityAction.reset();
+        _pixelWeightAction.reset();
         _histBinSizeAction.reset();
         _kernelSize.reset();
         _kernelWeight.reset();
     });
 
-    connect(this, &GroupAction::readOnlyChanged, this, [this, updateReadOnly](const bool& readOnly) {
+    connect(this, &GroupAction::readOnlyChanged, this, [this, updateReadOnly, updateEnabledSettings](const bool& readOnly) {
         updateReadOnly();
-    });
+        updateEnabledSettings();
+        });
 
     updateKnnAlgorithm();
     updateDistanceMetric();
     updateNumIterations();
     updatePerplexity();
+    updatePixelWeight();
     updateReset();
     updateReadOnly();
+    updateEnabledSettings();
 }
+

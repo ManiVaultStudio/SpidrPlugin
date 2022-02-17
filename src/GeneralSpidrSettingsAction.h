@@ -5,6 +5,12 @@
 #include "SpidrComputationAction.h"
 #include "HistBinAction.h"
 
+#include <QStandardItemModel> 
+#include <QStandardItem> 
+#include <QList> 
+
+#include <memory> 
+
 using namespace hdps::gui;
 
 class QMenu;
@@ -34,6 +40,7 @@ public: // Action getters
     OptionAction& getDistanceMetricAction() { return _distanceMetricAction; };
     IntegralAction& getNumIterationsAction() { return _numIterationsAction; };
     IntegralAction& getPerplexityAction() { return _perplexityAction; };
+    DecimalAction& getPixelWeightAction() { return _pixelWeightAction; };
     HistBinAction& getHistBinAction() { return _histBinSizeAction; }
     SpidrComputationAction& getComputationAction() { return _computationAction; }
     TriggerAction& getResetAction() { return _resetAction; };
@@ -47,8 +54,14 @@ protected:
     IntegralAction          _kernelSize;
     IntegralAction          _numIterationsAction;           /** Number of iterations action */
     IntegralAction          _perplexityAction;              /** Perplexity action */
+    DecimalAction           _pixelWeightAction;              /** Pixel weight action */
     SpidrComputationAction   _computationAction;             /** Computation action */
     TriggerAction           _resetAction;                   /** Reset all input to defaults */
 
     friend class Widget;
+
+private:
+    std::shared_ptr<QStandardItemModel> _distanceItemModel;
+    QList<std::shared_ptr<QStandardItem>> _distanceItemList;
+
 };
