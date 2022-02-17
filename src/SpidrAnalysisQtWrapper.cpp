@@ -121,7 +121,7 @@ void SpidrAnalysisQtWrapper::addBackgroundToEmbedding(std::vector<float>& emb, s
     }
     else
     {
-        _SpidrAnalysis->addBackgroundToEmbedding(emb, emb_wo_bg);
+        emb = _SpidrAnalysis->outputWithBackground(emb_wo_bg);
     }
 
 }
