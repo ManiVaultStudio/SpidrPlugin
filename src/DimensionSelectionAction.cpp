@@ -4,5 +4,5 @@ DimensionSelectionAction::DimensionSelectionAction(QObject* parent) :
     GroupAction(parent),
     _pickerAction(this)
 {
-    setText("Dimension selection");
+    setText("Dimensions");
 }

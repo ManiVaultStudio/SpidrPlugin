@@ -15,6 +15,7 @@
 #endif
 
 TsneComputationQtWrapper::TsneComputationQtWrapper() :
+    _currentIteration(0),
     _iterations(1000),
     _numTrees(4),
     _numChecks(1024),
@@ -161,24 +162,26 @@ void TsneComputationQtWrapper::embed()
         spdlog::info("A-tSNE: Computing gradient descent..\n");
         _isGradientDescentRunning = true;
 
+        const auto beginIteration = _currentIteration;
+
         // Performs gradient descent for every iteration
-        for (size_t iter = 0; iter < _iterations; ++iter)
+        for (_currentIteration = beginIteration; _currentIteration < _iterations; ++_currentIteration)
         {
             hdi::utils::ScopedTimer<double> timer(t);
             if (!_isGradientDescentRunning)
             {
-                _continueFromIteration = iter;
+                _continueFromIteration = _currentIteration;
                 break;
             }
 
             // Perform a GPGPU-SNE iteration
             _GPGPU_tSNE.doAnIteration();
 
-            if (iter > 0 && iter % 10 == 0)
+            if (_currentIteration > 0 && _currentIteration % 10 == 0)
             {
                 copyFloatOutput();
                 emit newEmbedding();
-                emitEmbeddingUpdate(iter, _iterations);
+                emitEmbeddingUpdate(_currentIteration, _iterations);
             }
 
             if (t > 1000)
@@ -262,3 +265,4 @@ void TsneComputationQtWrapper::markForDeletion()
 
     stopGradientDescent();
 }
+

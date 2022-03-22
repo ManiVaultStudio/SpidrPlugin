@@ -32,11 +32,12 @@ public:
     void setPerplexity(int perplexity);
     void setNumDimensionsOutput(int numDimensionsOutput);
 
-    inline bool verbose() { return _verbose; }
-    inline size_t iterations() { return _iterations; }
-    inline int exaggerationIter() { return _exaggerationIter; }
-    inline int perplexity() { return _perplexity; }
-    inline int numDimensionsOutput() { return _numDimensionsOutput; }
+    inline bool verbose() const { return _verbose; }
+    inline size_t iterations() const { return _iterations; }
+    inline int exaggerationIter() const { return _exaggerationIter; }
+    inline int perplexity() const { return _perplexity; }
+    inline int numDimensionsOutput() const { return _numDimensionsOutput; }
+    inline int getNumCurrentIterations() const { return _currentIteration + 1; }
 
     /*!
      *
@@ -107,6 +108,8 @@ private:
     int _perplexity_multiplier;
     int _numDimensionsOutput;
     int _nn;                                            /*!<> */
+
+    int _currentIteration;         /** Current iteration in the embedding / gradient descent process */
 
     // Evaluation (for determining the filename when saving the embedding to disk)
     std::string _embeddingName;                     /*!< Name of the embedding */

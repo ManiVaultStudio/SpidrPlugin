@@ -1,12 +1,15 @@
 #include "SpidrSettingsAction.h"
 
+#include <QMenu>
+
 using namespace hdps::gui;
 
 SpidrSettingsAction::SpidrSettingsAction(QObject* parent) :
-    GroupAction(parent),
+    GroupAction(parent, false),
     _spidrParameters(),
     _generalSpidrSettingsAction(*this),
-    _advancedTsneSettingsAction(*this)
+    _advancedTsneSettingsAction(*this),
+    _dimensionSelectionAction(this)
 {
     setText("Spidr");
 

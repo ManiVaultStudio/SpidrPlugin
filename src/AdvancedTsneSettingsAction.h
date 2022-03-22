@@ -31,7 +31,6 @@ public: // Action getters
     IntegralAction& getExponentialDecayAction() { return _exponentialDecayAction; };
     IntegralAction& getNumTreesAction() { return _numTreesAction; };
     IntegralAction& getNumChecksAction() { return _numChecksAction; };
-    TriggerAction& getResetAction() { return _resetAction; };
 
 protected:
     SpidrSettingsAction&     _spidrSettingsAction;        /** Pointer to parent tSNE settings action */
@@ -39,7 +38,6 @@ protected:
     IntegralAction          _exponentialDecayAction;    /** Exponential decay action */
     IntegralAction          _numTreesAction;            /** Exponential decay action */
     IntegralAction          _numChecksAction;           /** Exponential decay action */
-    TriggerAction           _resetAction;               /** Reset all input to defaults */
 
     friend class Widget;
 };

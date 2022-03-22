@@ -24,20 +24,24 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _kernelWeight(this, "Neighborhood weighting"), 
     _histBinSizeAction(this),
     _numIterationsAction(this, "Number of iterations"),
+    _numberOfComputatedIterationsAction(this, "Number of computed iterations", 0, 1000000000, 0, 0),
     _perplexityAction(this, "Perplexity"),
     _pixelWeightAction(this, "Pixel Weight"),
-    _computationAction(this),
-    _resetAction(this, "Reset all")
+    _computationAction(this)
 {
     setText("Spidr");
+    setObjectName("Spidr");
 
     const auto& spidrParameters = _spidrSettingsAction.getSpidrParameters();
+
+    _numberOfComputatedIterationsAction.setEnabled(false);
 
     _knnTypeAction.setDefaultWidgetFlags(OptionAction::ComboBox);
     _distanceMetricAction.setDefaultWidgetFlags(OptionAction::ComboBox);
     _kernelSize.setDefaultWidgetFlags(IntegralAction::SpinBox);
     _kernelWeight.setDefaultWidgetFlags(OptionAction::ComboBox);
     _numIterationsAction.setDefaultWidgetFlags(IntegralAction::SpinBox);
+    _numberOfComputatedIterationsAction.setDefaultWidgetFlags(IntegralAction::LineEdit);
     _perplexityAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
     _pixelWeightAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
 
@@ -207,10 +211,6 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         return false;
     };
 
-    const auto updateReset = [this, isResettable]() -> void {
-        _resetAction.setEnabled(isResettable());
-    };
-
     // call this after updateDistanceMetric
     const auto updateEnabledSettings = [this]() -> void {
 
@@ -240,67 +240,46 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         _kernelSize.setEnabled(enable);
         _kernelWeight.setEnabled(enable);
         _histBinSizeAction.setEnabled(enable);
-        _resetAction.setEnabled(enable);
     };
 
-    connect(&_knnTypeAction, &OptionAction::currentIndexChanged, this, [this, updateDistanceMetric, updateReset](const std::int32_t& currentIndex) {
+    connect(&_knnTypeAction, &OptionAction::currentIndexChanged, this, [this, updateDistanceMetric](const std::int32_t& currentIndex) {
         updateDistanceMetric();
-        updateReset();
     });
 
-    connect(&_distanceMetricAction, &OptionAction::currentIndexChanged, this, [this, updateDistanceMetric, updateReset, updateEnabledSettings](const std::int32_t& currentIndex) {
+    connect(&_distanceMetricAction, &OptionAction::currentIndexChanged, this, [this, updateDistanceMetric, updateEnabledSettings](const std::int32_t& currentIndex) {
         updateDistanceMetric();
-        updateReset();
         updateEnabledSettings();
     });
 
-    connect(&_kernelSize, &IntegralAction::valueChanged, this, [this, updateKerneSize, adjustHistBinNum, updateHistBinNum, updateReset](const std::int32_t& value) {
+    connect(&_kernelSize, &IntegralAction::valueChanged, this, [this, updateKerneSize, adjustHistBinNum, updateHistBinNum](const std::int32_t& value) {
         updateKerneSize();
         adjustHistBinNum();
         updateHistBinNum();
-        updateReset();
     });
 
-    connect(&(_histBinSizeAction.getHistBinSizeHeur()), &OptionAction::currentIndexChanged, this, [this, adjustHistBinNum, updateHistBinNum, updateReset](const std::int32_t& currentIndex) {
+    connect(&(_histBinSizeAction.getHistBinSizeHeur()), &OptionAction::currentIndexChanged, this, [this, adjustHistBinNum, updateHistBinNum](const std::int32_t& currentIndex) {
         adjustHistBinNum();
         updateHistBinNum();
-        updateReset();
         });
 
-    connect(&(_histBinSizeAction.getNumHistBinsAction()), &IntegralAction::valueChanged, this, [this, updateHistBinNum, updateReset](const std::int32_t& value){
+    connect(&(_histBinSizeAction.getNumHistBinsAction()), &IntegralAction::valueChanged, this, [this, updateHistBinNum](const std::int32_t& value){
         updateHistBinNum();
-        updateReset();
      });
 
-    connect(&_kernelWeight, &OptionAction::currentIndexChanged, this, [this, updateKernelWeight, updateReset](const std::int32_t& value) {
+    connect(&_kernelWeight, &OptionAction::currentIndexChanged, this, [this, updateKernelWeight](const std::int32_t& value) {
         updateKernelWeight();
-        updateReset();
         });
 
-    connect(&_numIterationsAction, &IntegralAction::valueChanged, this, [this, updateNumIterations, updateReset](const std::int32_t& value) {
+    connect(&_numIterationsAction, &IntegralAction::valueChanged, this, [this, updateNumIterations](const std::int32_t& value) {
         updateNumIterations();
-        updateReset();
         });
 
-    connect(&_perplexityAction, &IntegralAction::valueChanged, this, [this, updatePerplexity, updateReset](const std::int32_t& value) {
+    connect(&_perplexityAction, &IntegralAction::valueChanged, this, [this, updatePerplexity](const std::int32_t& value) {
         updatePerplexity();
-        updateReset();
     });
 
-    connect(&_pixelWeightAction, &DecimalAction::valueChanged, this, [this, updatePixelWeight, updateReset](const std::int32_t& value) {
+    connect(&_pixelWeightAction, &DecimalAction::valueChanged, this, [this, updatePixelWeight](const std::int32_t& value) {
         updatePixelWeight();
-        updateReset();
-    });
-
-    connect(&_resetAction, &TriggerAction::triggered, this, [this](const std::int32_t& value) {
-        _knnTypeAction.reset();
-        _distanceMetricAction.reset();
-        _numIterationsAction.reset();
-        _perplexityAction.reset();
-        _pixelWeightAction.reset();
-        _histBinSizeAction.reset();
-        _kernelSize.reset();
-        _kernelWeight.reset();
     });
 
     connect(this, &GroupAction::readOnlyChanged, this, [this, updateReadOnly, updateEnabledSettings](const bool& readOnly) {
@@ -313,7 +292,6 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     updateNumIterations();
     updatePerplexity();
     updatePixelWeight();
-    updateReset();
     updateReadOnly();
     updateEnabledSettings();
 }

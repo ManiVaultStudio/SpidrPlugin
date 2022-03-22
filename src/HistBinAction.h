@@ -51,7 +51,7 @@ public:
      */
     QMenu* getContextMenu(QWidget* parent = nullptr) override;
 
-    bool isResettable() const override;
+//    bool isResettable() const override;
 
     void reset() override;
 

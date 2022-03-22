@@ -16,19 +16,19 @@ Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 #include <set>
 
 using namespace hdps;
+using namespace hdps::gui;
 
 // =============================================================================
 // Analysis Plugin
 // =============================================================================
 
-using namespace hdps;
 SpidrPlugin::SpidrPlugin(const PluginFactory* factory) :
     AnalysisPlugin(factory),
     _spidrSettingsAction(this),
-    _dimensionSelectionAction(this),
     _spidrAnalysisWrapper(),
     _tnseWrapper()
 {
+    setObjectName("Spidr");
 }
 
 SpidrPlugin::~SpidrPlugin(void)
@@ -43,9 +43,8 @@ void SpidrPlugin::init()
     auto inputDataset = static_cast<hdps::Dataset<Points>>(imagesDataset->getParent());
     
     // set the output data as derived from the parent data set (since the type differs from the input data set)
-    setOutputDataset(_core->createDerivedData("sp-tsne_embedding", inputDataset, inputDataset));
+    setOutputDataset(_core->createDerivedDataset("sp-tsne_embedding", inputDataset, inputDataset));
     auto& outputDataset = getOutputDataset<Points>();
-    outputDataset->setGuiName("sp-tsne_embedding");
 
     // Set up output data
     std::vector<float> initialData;
@@ -57,8 +56,9 @@ void SpidrPlugin::init()
     // Set up action connections
     outputDataset->addAction(_spidrSettingsAction.getGeneralSpidrSettingsAction());
     outputDataset->addAction(_spidrSettingsAction.getAdvancedTsneSettingsAction());
-    outputDataset->addAction(_dimensionSelectionAction);
-    outputDataset->addAction(_spidrSettingsAction.getComputationAction());
+    outputDataset->addAction(_spidrSettingsAction.getDimensionSelectionAction());
+
+    outputDataset->getDataHierarchyItem().select();
 
     auto& computationAction = _spidrSettingsAction.getComputationAction();
 
@@ -136,15 +136,19 @@ void SpidrPlugin::init()
         // Update the output points dataset with new data from the TSNE analysis
         getOutputDataset<Points>()->setData(outputData.data(), _spidrAnalysisWrapper.getNumForegroundPoints(), 2);
 
+        _spidrSettingsAction.getGeneralSpidrSettingsAction().getNumberOfComputatedIterationsAction().setValue(_tnseWrapper.getNumCurrentIterations() - 1);
+
+        QCoreApplication::processEvents();
+
         // Notify others that the embedding data changed
-        _core->notifyDataChanged(getOutputDataset());
+        _core->notifyDatasetChanged(getOutputDataset());
         });
 
 
-    _dimensionSelectionAction.getPickerAction().setPointsDataset(inputDataset);
+    _spidrSettingsAction.getDimensionSelectionAction().getPickerAction().setPointsDataset(inputDataset);
 
     connect(&computationAction.getRunningAction(), &ToggleAction::toggled, this, [this, &computationAction, updateComputationAction](bool toggled) {
-        _dimensionSelectionAction.setEnabled(!toggled);
+        _spidrSettingsAction.getDimensionSelectionAction().setEnabled(!toggled);
 
         updateComputationAction();
         });
@@ -155,13 +159,15 @@ void SpidrPlugin::init()
     registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
 
     setTaskName("Spidr");
+
+    //_spidrSettingsAction.loadDefault();
 }
 
 void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
 {
 
     if (dataEvent->getDataset() == getInputDataset())
-        _dimensionSelectionAction.getPickerAction().setPointsDataset(dataEvent->getDataset<Points>());
+        _spidrSettingsAction.getDimensionSelectionAction().getPickerAction().setPointsDataset(dataEvent->getDataset<Points>());
 
 }
 
@@ -171,6 +177,8 @@ void SpidrPlugin::startComputation()
     setTaskRunning();
     setTaskProgress(0.0f);
     setTaskDescription("Preparing data");
+
+    _spidrSettingsAction.getGeneralSpidrSettingsAction().getNumberOfComputatedIterationsAction().reset();
 
     // Get the data
     // Use the source data to get the points 
@@ -184,7 +192,7 @@ void SpidrPlugin::startComputation()
     std::vector<unsigned int> backgroundIDsGlobal;  // ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
 
     // Extract the enabled dimensions from the data
-    std::vector<bool> enabledDimensions = _dimensionSelectionAction.getPickerAction().getEnabledDimensions();
+    std::vector<bool> enabledDimensions = _spidrSettingsAction.getDimensionSelectionAction().getPickerAction().getEnabledDimensions();
     std::vector<unsigned int> enabledDimensionsIndices;
     const auto numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
@@ -263,7 +271,7 @@ void SpidrPlugin::onFinishedEmbedding() {
     qDebug() << "SpidrPlugin: Publishing final embedding";
 
     embedding->setData(embWithBg.data(), _spidrAnalysisWrapper.getNumImagePoints(), 2);
-    _core->notifyDataChanged(getOutputDataset());
+    _core->notifyDatasetChanged(getOutputDataset());
 
     qDebug() << "SpidrPlugin: Done.";
 }
