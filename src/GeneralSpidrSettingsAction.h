@@ -39,24 +39,24 @@ public: // Action getters
     OptionAction& getKnnTypeAction() { return _knnTypeAction; };
     OptionAction& getDistanceMetricAction() { return _distanceMetricAction; };
     IntegralAction& getNumIterationsAction() { return _numIterationsAction; };
+    IntegralAction& getNumberOfComputatedIterationsAction() { return _numberOfComputatedIterationsAction; };
     IntegralAction& getPerplexityAction() { return _perplexityAction; };
     DecimalAction& getPixelWeightAction() { return _pixelWeightAction; };
     HistBinAction& getHistBinAction() { return _histBinSizeAction; }
     SpidrComputationAction& getComputationAction() { return _computationAction; }
-    TriggerAction& getResetAction() { return _resetAction; };
 
 protected:
-    SpidrSettingsAction&     _spidrSettingsAction;            /** Reference to parent tSNE settings action */
-    OptionAction            _knnTypeAction;                 /** KNN action */
-    OptionAction            _distanceMetricAction;          /** Distance metric action */
-    OptionAction            _kernelWeight;
-    HistBinAction           _histBinSizeAction;
-    IntegralAction          _kernelSize;
-    IntegralAction          _numIterationsAction;           /** Number of iterations action */
-    IntegralAction          _perplexityAction;              /** Perplexity action */
-    DecimalAction           _pixelWeightAction;              /** Pixel weight action */
-    SpidrComputationAction   _computationAction;             /** Computation action */
-    TriggerAction           _resetAction;                   /** Reset all input to defaults */
+    SpidrSettingsAction&     _spidrSettingsAction;                  /** Reference to parent tSNE settings action */
+    OptionAction            _knnTypeAction;                         /** KNN action */
+    OptionAction            _distanceMetricAction;                  /** Distance metric action */
+    OptionAction            _kernelWeight;                          /** Local weighting of kernel (neighborhood pixel) */
+    HistBinAction           _histBinSizeAction;                     /** Heuristic to determine number of histogram bins */
+    IntegralAction          _kernelSize;                            /** Number of neighbors in each direction, i.e. kernelSize = 1 => 3x3 neighborhood */
+    IntegralAction          _numIterationsAction;                   /** Number of iterations action */
+    IntegralAction          _numberOfComputatedIterationsAction;    /** Number of computed iterations action */
+    IntegralAction          _perplexityAction;                      /** Perplexity action */
+    DecimalAction           _pixelWeightAction;                     /** Pixel weight action */
+    SpidrComputationAction   _computationAction;                    /** Computation action */
 
     friend class Widget;
 

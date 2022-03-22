@@ -2,6 +2,7 @@
 #include "SpidrSettingsAction.h"
 
 #include <QHBoxLayout>
+#include <QMenu>
 
 using namespace hdps::gui;
 

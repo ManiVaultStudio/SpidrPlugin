@@ -1,6 +1,8 @@
 #pragma once
 
+#include <actions/WidgetAction.h>
 #include <AnalysisPlugin.h>
+
 #include "SpidrSettingsAction.h"
 #include "DimensionSelectionAction.h"
 
@@ -9,11 +11,10 @@
 #include "SpidrAnalysisQtWrapper.h"
 #include "TsneComputationQtWrapper.h"
 
-#include "Application.h"  // form hdps
-
 class SpidrSettingsWidget;
 
 using namespace hdps::plugin;
+using namespace hdps::gui;
 
 // =============================================================================
 // Analysis Plugin
@@ -23,7 +24,7 @@ using namespace hdps::plugin;
  *
  *
  */
-class SpidrPlugin : public QObject, public AnalysisPlugin
+class SpidrPlugin : public AnalysisPlugin
 {
     Q_OBJECT
 public:
@@ -41,7 +42,6 @@ public:
 public: // Action getters
 
     SpidrSettingsAction& getGeneralSpidrSettingsAction() { return _spidrSettingsAction; }
-    DimensionSelectionAction& getDimensionSelectionAction() { return _dimensionSelectionAction; }
 
 
 public slots:
@@ -63,7 +63,6 @@ private:
     TsneComputationQtWrapper _tnseWrapper;
 
     SpidrSettingsAction         _spidrSettingsAction;           /** Spidr settings action */
-    DimensionSelectionAction    _dimensionSelectionAction;      /** Dimension selection settings action */
 
     QString _embeddingName;                             /*!<> */
     QThread* _workerThreadSpidr;                        /*!<> */
@@ -82,7 +81,7 @@ class SpidrPluginFactory : public AnalysisPluginFactory
     Q_INTERFACES(hdps::plugin::AnalysisPluginFactory hdps::plugin::PluginFactory)
         Q_OBJECT
         Q_PLUGIN_METADATA(IID   "nl.tudelft.SpidrPlugin"
-            FILE  "SpidrPlugin.json")
+                          FILE  "SpidrPlugin.json")
 
 public:
     SpidrPluginFactory(void) {}

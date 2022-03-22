@@ -2,6 +2,7 @@
 #include "SpidrSettingsAction.h"
 
 #include <QHBoxLayout>
+#include <QMenu>
 
 using namespace hdps::gui;
 
@@ -63,9 +64,9 @@ void HistBinAction::onHistBinNumHeurChanged()
 
 }
 
-bool HistBinAction::isResettable() const {
-    return _histBinNumHeur.getCurrentIndex() != _histBinNumHeur.getDefaultIndex();
-}
+//bool HistBinAction::isResettable() const {
+//    return _histBinNumHeur.getCurrentIndex() != _histBinNumHeur.getDefaultIndex();
+//}
 
 void HistBinAction::reset() {
     _histBinNumHeur.reset();

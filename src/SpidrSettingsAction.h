@@ -2,6 +2,7 @@
 
 #include "GeneralSpidrSettingsAction.h"
 #include "AdvancedTsneSettingsAction.h"
+#include "DimensionSelectionAction.h"
 
 #include "SpidrAnalysisParameters.h"
 
@@ -41,11 +42,13 @@ public: // Action getters
     GeneralSpidrSettingsAction& getGeneralSpidrSettingsAction() { return _generalSpidrSettingsAction; }
     AdvancedTsneSettingsAction& getAdvancedTsneSettingsAction() { return _advancedTsneSettingsAction; }
     SpidrComputationAction& getComputationAction() { return _generalSpidrSettingsAction.getComputationAction(); }
+    DimensionSelectionAction& getDimensionSelectionAction() { return _dimensionSelectionAction; }
 
 protected:
-    SpidrParameters                  _spidrParameters;                /** TSNE parameters */
-    GeneralSpidrSettingsAction       _generalSpidrSettingsAction;     /** General tSNE settings action */
-    AdvancedTsneSettingsAction       _advancedTsneSettingsAction;    /** Advanced tSNE settings action */
+    SpidrParameters                 _spidrParameters;               /** TSNE parameters */
+    GeneralSpidrSettingsAction      _generalSpidrSettingsAction;    /** General tSNE settings action */
+    AdvancedTsneSettingsAction      _advancedTsneSettingsAction;    /** Advanced tSNE settings action */
+    DimensionSelectionAction        _dimensionSelectionAction;      /** Dimension selection settings action */
 
     friend class Widget;
 };
