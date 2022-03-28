@@ -28,8 +28,11 @@ public: // Action getters
         return _datasetPickerAction.getCurrentDataset();
     }
 
+    bool getIDsInData() { return _idsInDataAction.isChecked();  }
+
 protected:
     DatasetPickerAction     _datasetPickerAction;    /** Dataset picker action */
+    ToggleAction            _idsInDataAction;        /** Tick if data contains IDs for background (useful for loading backgorund IDs), otherwise assume the data is a subset and use the global data IDs */
 
     friend class Widget;
 };

@@ -4,7 +4,8 @@
 
 BackgroundSelectionAction::BackgroundSelectionAction(QObject* parent) :
     GroupAction(parent),
-    _datasetPickerAction(this, "Background dataset")
+    _datasetPickerAction(this, "Background dataset"),
+    _idsInDataAction(this, "IDs in data", false, false)
 {
     setText("Background dataset");
 
