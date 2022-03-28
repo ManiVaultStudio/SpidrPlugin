@@ -40,6 +40,8 @@ set(ACTIONS
     src/AdvancedTsneSettingsAction.cpp
     src/DimensionSelectionAction.h
     src/DimensionSelectionAction.cpp
+    src/BackgroundSelectionAction.h
+    src/BackgroundSelectionAction.cpp
 )
 
 
