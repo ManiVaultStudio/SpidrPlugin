@@ -46,6 +46,9 @@ void SpidrPlugin::init()
     setOutputDataset(_core->createDerivedDataset("sp-tsne_embedding", inputDataset, inputDataset));
     auto& outputDataset = getOutputDataset<Points>();
 
+    // Automaticallt select the output data in the GUI data hierarchy
+    getOutputDataset()->getDataHierarchyItem().select();
+
     // Set up output data
     std::vector<float> initialData;
     const auto numEmbeddingDimensions = 2;
@@ -57,6 +60,7 @@ void SpidrPlugin::init()
     outputDataset->addAction(_spidrSettingsAction.getGeneralSpidrSettingsAction());
     outputDataset->addAction(_spidrSettingsAction.getAdvancedTsneSettingsAction());
     outputDataset->addAction(_spidrSettingsAction.getDimensionSelectionAction());
+    outputDataset->addAction(_spidrSettingsAction.getBackgroundSelectionAction());
 
     outputDataset->getDataHierarchyItem().select();
 
@@ -149,6 +153,7 @@ void SpidrPlugin::init()
 
     connect(&computationAction.getRunningAction(), &ToggleAction::toggled, this, [this, &computationAction, updateComputationAction](bool toggled) {
         _spidrSettingsAction.getDimensionSelectionAction().setEnabled(!toggled);
+        _spidrSettingsAction.getBackgroundSelectionAction().setEnabled(!toggled);
 
         updateComputationAction();
         });
@@ -211,9 +216,33 @@ void SpidrPlugin::startComputation()
     imgSize.width = inputImages->getImageSize().width();
     imgSize.height = inputImages->getImageSize().height();
 
+    // Background IDs
+    hdps::Dataset<Points> backgroundDataset = static_cast<hdps::Dataset<Points>>(_spidrSettingsAction.getBackgroundSelectionAction().getBackgroundDataset());
+    if (backgroundDataset.isValid())
+    {
+        if (!_spidrSettingsAction.getBackgroundSelectionAction().getIDsInData())  // use the global IDs of the background dataset (it is a subset of the inputPoints dataset)
+        {
+            backgroundDataset->getGlobalIndices(backgroundIDsGlobal);
+
+            qDebug() << "SpidrPlugin: Use background IDs from dataset " << backgroundDataset->getGuiName() << " (using its global point IDs)" << backgroundIDsGlobal.size() << " background points";
+        }
+        else   // background dataset contains the background IDs
+        {
+            // Check of the dimensions and number of points make sense
+            if ( backgroundDataset->getNumDimensions() == 1 && backgroundDataset->getNumPoints() < inputPoints->getNumPoints() )
+            {
+                backgroundDataset->visitFromBeginToEnd([&backgroundIDsGlobal](auto beginBackgroundDataset, auto endBackgroundDataset) {
+                    backgroundIDsGlobal.insert(backgroundIDsGlobal.begin(), beginBackgroundDataset, endBackgroundDataset);
+                });
+
+                qDebug() << "SpidrPlugin: Use background IDs from dataset " << backgroundDataset->getGuiName() << " (using its data values): " << backgroundIDsGlobal.size() << " background points";
+            }
+        }
+    }
+
     // complete Spidr parameters
     _spidrSettingsAction.getSpidrParameters()._numPoints = pointIDsGlobal.size();
-    _spidrSettingsAction.getSpidrParameters()._numForegroundPoints = pointIDsGlobal.size(); // TODO: change when enabling background selection
+    _spidrSettingsAction.getSpidrParameters()._numForegroundPoints = pointIDsGlobal.size() - backgroundIDsGlobal.size();
     _spidrSettingsAction.getSpidrParameters()._numDims = numEnabledDimensions;
     _spidrSettingsAction.getSpidrParameters()._imgSize = imgSize;
 

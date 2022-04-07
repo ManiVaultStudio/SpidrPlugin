@@ -4,7 +4,6 @@
 #include <AnalysisPlugin.h>
 
 #include "SpidrSettingsAction.h"
-#include "DimensionSelectionAction.h"
 
 #include <memory>
 
