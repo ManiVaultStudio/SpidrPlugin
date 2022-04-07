@@ -46,6 +46,9 @@ void SpidrPlugin::init()
     setOutputDataset(_core->createDerivedDataset("sp-tsne_embedding", inputDataset, inputDataset));
     auto& outputDataset = getOutputDataset<Points>();
 
+    // Automaticallt select the output data in the GUI data hierarchy
+    getOutputDataset()->getDataHierarchyItem().select();
+
     // Set up output data
     std::vector<float> initialData;
     const auto numEmbeddingDimensions = 2;
