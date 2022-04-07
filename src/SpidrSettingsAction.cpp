@@ -9,7 +9,8 @@ SpidrSettingsAction::SpidrSettingsAction(QObject* parent) :
     _spidrParameters(),
     _generalSpidrSettingsAction(*this),
     _advancedTsneSettingsAction(*this),
-    _dimensionSelectionAction(this)
+    _dimensionSelectionAction(this),
+    _backgroundSelectionAction(this)
 {
     setText("Spidr");
 

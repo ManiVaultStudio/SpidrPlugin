@@ -24,7 +24,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _kernelWeight(this, "Neighborhood weighting"), 
     _histBinSizeAction(this),
     _numIterationsAction(this, "Number of iterations"),
-    _numberOfComputatedIterationsAction(this, "Number of computed iterations", 0, 1000000000, 0, 0),
+    _numberOfComputatedIterationsAction(this, "Computed iterations", 0, 1000000000, 0, 0),
     _perplexityAction(this, "Perplexity"),
     _pixelWeightAction(this, "Pixel Weight"),
     _computationAction(this)
