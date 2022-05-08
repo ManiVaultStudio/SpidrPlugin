@@ -10,10 +10,10 @@
 
 #include <utility>      // std::as_const
 #include <vector>       // std::vector
+#include <algorithm>    // std::set_difference
+#include <iterator>     // std::inserter
 
 Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
-
-#include <set>
 
 using namespace hdps;
 using namespace hdps::gui;
@@ -138,7 +138,7 @@ void SpidrPlugin::init()
         const std::vector<float>& outputData = _tnseWrapper.output();
 
         // Update the output points dataset with new data from the TSNE analysis
-        getOutputDataset<Points>()->setData(outputData.data(), _spidrAnalysisWrapper.getNumForegroundPoints(), 2);
+        getOutputDataset<Points>()->setData(outputData.data(), outputData.size() / 2, 2);
 
         _spidrSettingsAction.getGeneralSpidrSettingsAction().getNumberOfComputatedIterationsAction().setValue(_tnseWrapper.getNumCurrentIterations() - 1);
 
@@ -188,13 +188,28 @@ void SpidrPlugin::startComputation()
     // Get the data
     // Use the source data to get the points 
     // Use the image data to get the image size
+    // if inputPoints is not a subset, inputPointsParent = inputPoints and contextIDsGlobal will remain empty
     qDebug() << "SpidrPlugin: Read data ";
-    const auto inputImages = getInputDataset<Images>();
-    const auto inputPoints = static_cast<hdps::Dataset<Points>>(inputImages->getParent());
+    auto inputImages = getInputDataset<Images>();
+    auto inputPoints = static_cast<hdps::Dataset<Points>>(inputImages->getParent());
+    auto inputPointsParent = static_cast<hdps::Dataset<Points>>(inputImages->getParent());
+
+    // we introduce all there global ID sets so that the user can work on subsets of data and still define background selections in those subsets
 
     std::vector<float> attribute_data;              // Actual channel valures, only consider enabled dimensions
     std::vector<unsigned int> pointIDsGlobal;       // Global ID of each point in the image
+    std::vector<unsigned int> pointIDsFocus;        // Global ID of each point in the image selection
     std::vector<unsigned int> backgroundIDsGlobal;  // ID of points which are not used during the t-SNE embedding - but will inform the feature extraction and distance calculation
+    std::vector<unsigned int> contextIDsGlobal;     // In case the dataset is a subset, these are the IDs of the original data that are NOT in the subset
+
+    auto numPointsFocus = (inputPoints->isFull() ? inputPoints->getNumPoints() : inputPoints->indices.size());
+    inputPoints->getGlobalIndices(pointIDsFocus);
+
+    // traverse up the data hierarchy
+    while (!inputPointsParent->isFull())
+    {
+        inputPointsParent = inputPointsParent->getParent();
+    }
 
     // Extract the enabled dimensions from the data
     std::vector<bool> enabledDimensions = _spidrSettingsAction.getDimensionSelectionAction().getPickerAction().getEnabledDimensions();
@@ -202,19 +217,28 @@ void SpidrPlugin::startComputation()
     const auto numEnabledDimensions = count_if(enabledDimensions.begin(), enabledDimensions.end(), [](bool b) { return b; });
 
     // Populate selected data attributes
-    attribute_data.resize((inputPoints->isFull() ? inputPoints->getNumPoints() : inputPoints->indices.size()) * numEnabledDimensions);
+    auto numPointsGlobal = (inputPointsParent->isFull() ? inputPointsParent->getNumPoints() : inputPointsParent->indices.size());
+    attribute_data.resize(numPointsGlobal * numEnabledDimensions);
 
-    for (unsigned int i = 0; i < inputPoints->getNumDimensions(); i++)
+    for (unsigned int i = 0; i < inputPointsParent->getNumDimensions(); i++)
         if (enabledDimensions[i])
             enabledDimensionsIndices.push_back(i);
 
-    inputPoints->populateDataForDimensions<std::vector<float>, std::vector<unsigned int>>(attribute_data, enabledDimensionsIndices);
-    inputPoints->getGlobalIndices(pointIDsGlobal);
+    inputPointsParent->populateDataForDimensions<std::vector<float>, std::vector<unsigned int>>(attribute_data, enabledDimensionsIndices);
+    inputPointsParent->getGlobalIndices(pointIDsGlobal);
 
     // Image size
     ImgSize imgSize;
     imgSize.width = inputImages->getImageSize().width();
     imgSize.height = inputImages->getImageSize().height();
+
+    // If the data is a subset: pointIDsGlobal != pointIDsFocus
+    if (!inputPoints->isFull())
+    {
+        std::set_difference(pointIDsGlobal.begin(), pointIDsGlobal.end(), 
+                            pointIDsFocus.begin(), pointIDsFocus.end(),
+                            std::inserter(contextIDsGlobal, contextIDsGlobal.end()));
+    }
 
     // Background IDs
     hdps::Dataset<Points> backgroundDataset = static_cast<hdps::Dataset<Points>>(_spidrSettingsAction.getBackgroundSelectionAction().getBackgroundDataset());
@@ -229,7 +253,7 @@ void SpidrPlugin::startComputation()
         else   // background dataset contains the background IDs
         {
             // Check of the dimensions and number of points make sense
-            if ( backgroundDataset->getNumDimensions() == 1 && backgroundDataset->getNumPoints() < inputPoints->getNumPoints() )
+            if ( backgroundDataset->getNumDimensions() == 1 && backgroundDataset->getNumPoints() < inputPointsParent->getNumPoints() )
             {
                 backgroundDataset->visitFromBeginToEnd([&backgroundIDsGlobal](auto beginBackgroundDataset, auto endBackgroundDataset) {
                     backgroundIDsGlobal.insert(backgroundIDsGlobal.begin(), beginBackgroundDataset, endBackgroundDataset);
@@ -250,7 +274,7 @@ void SpidrPlugin::startComputation()
     qDebug() << "SpidrPlugin: Initialize settings";
     
     // set the data and all the parameters
-    _spidrAnalysisWrapper.setup(attribute_data, pointIDsGlobal, QString("sp-emb_hdps"), backgroundIDsGlobal, _spidrSettingsAction.getSpidrParameters());
+    _spidrAnalysisWrapper.setup(attribute_data, pointIDsGlobal, QString("sp-emb_hdps"), backgroundIDsGlobal, contextIDsGlobal, _spidrSettingsAction.getSpidrParameters());
 
     // Start spatial analysis in worker thread
     _workerThreadSpidr = new QThread();
@@ -295,11 +319,11 @@ void SpidrPlugin::onFinishedEmbedding() {
     _spidrAnalysisWrapper.addBackgroundToEmbedding(embWithBg, outputData);
 
     assert(embWithBg.size() % 2 == 0);
-    assert(embWithBg.size() == _spidrAnalysisWrapper.getNumImagePoints() * 2);
+    assert(embWithBg.size() == _spidrAnalysisWrapper.getNumEmbPoints() * 2);
 
     qDebug() << "SpidrPlugin: Publishing final embedding";
 
-    embedding->setData(embWithBg.data(), _spidrAnalysisWrapper.getNumImagePoints(), 2);
+    embedding->setData(embWithBg.data(), embWithBg.size() / 2, 2);
     _core->notifyDatasetChanged(getOutputDataset());
 
     qDebug() << "SpidrPlugin: Done.";

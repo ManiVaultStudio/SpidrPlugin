@@ -18,7 +18,7 @@ SpidrAnalysisQtWrapper::~SpidrAnalysisQtWrapper()
 }
 
 void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
-        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, std::vector<unsigned int>& contextIDsGlobal, \
         const distance_metric distMetric, const feature_type featType, const loc_Neigh_Weighting kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
         const knn_library aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, float pixelWeight, \
         bool publishFeaturesToCore, bool forceBackgroundFeatures)
@@ -26,6 +26,7 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
     _backgroundIDsGlobal = backgroundIDsGlobal;
+    _contextIDsGlobal = contextIDsGlobal;
     _numDimensions = numDimensions;
     _imgSize = imgSize;
     _embeddingName = embeddingName;
@@ -42,14 +43,31 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _pixelWeight = pixelWeight;
     _publishFeaturesToCore = publishFeaturesToCore;
     _forceBackgroundFeatures = forceBackgroundFeatures;
+
+    if (_contextIDsGlobal.size() > 0 || _backgroundIDsGlobal.size() > 0)
+    {
+        // combine contextIDsGlobal and backgroundIDsGlobal
+        std::set_union(_contextIDsGlobal.begin(), _contextIDsGlobal.end(),
+                       _backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end(),
+                       std::back_inserter(_contextAndBackgroundIDsGlobal));
+
+        // sort _contextAndBackgroundIDsGlobal
+        std::sort(_contextAndBackgroundIDsGlobal.begin(), _contextAndBackgroundIDsGlobal.end());
+    }
+
+    std::set_difference(_pointIDsGlobal.begin(), _pointIDsGlobal.end(),
+                        _contextAndBackgroundIDsGlobal.begin(), _contextAndBackgroundIDsGlobal.end(),
+                        std::inserter(_foregroundIDsGlobal, _foregroundIDsGlobal.end()));
+
 }
 
 void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
-    const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+    const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, std::vector<unsigned int>& contextIDsGlobal, \
     const SpidrParameters& spidrParameters) {
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
     _backgroundIDsGlobal = backgroundIDsGlobal;
+    _contextIDsGlobal = contextIDsGlobal;
     _numDimensions = spidrParameters._numDims;
     _imgSize = spidrParameters._imgSize;
     _embeddingName = embeddingName;
@@ -64,8 +82,23 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _exaggeration = spidrParameters._exaggeration;
     _expDecay = spidrParameters._expDecay;
     _pixelWeight = spidrParameters._pixelWeight;
-    _publishFeaturesToCore = false;     // TODO not really used as all
+    _publishFeaturesToCore = false;     // TODO not really used at all
     _forceBackgroundFeatures = spidrParameters._forceCalcBackgroundFeatures;
+
+    if (_contextIDsGlobal.size() > 0 || _backgroundIDsGlobal.size() > 0)
+    {
+        // combine contextIDsGlobal and backgroundIDsGlobal
+        std::set_union(_contextIDsGlobal.begin(), _contextIDsGlobal.end(),
+                       _backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end(),
+                       std::back_inserter(_contextAndBackgroundIDsGlobal));
+
+        // sort _contextAndBackgroundIDsGlobal
+        std::sort(_contextAndBackgroundIDsGlobal.begin(), _contextAndBackgroundIDsGlobal.end());
+    }
+
+    std::set_difference(_pointIDsGlobal.begin(), _pointIDsGlobal.end(),
+                        _contextAndBackgroundIDsGlobal.begin(), _contextAndBackgroundIDsGlobal.end(),
+                        std::inserter(_foregroundIDsGlobal, _foregroundIDsGlobal.end()));
 
 }
 
@@ -76,11 +109,11 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     _SpidrAnalysis = std::make_unique<SpidrAnalysis>();
 
     // Pass data to SpidrLib
-    if (_backgroundIDsGlobal.empty())
+    if (_contextAndBackgroundIDsGlobal.empty())
         _SpidrAnalysis->setupData(_attribute_data, _pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString());
     else
     {
-        _SpidrAnalysis->setupData(_attribute_data, _pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString(), _backgroundIDsGlobal);
+        _SpidrAnalysis->setupData(_attribute_data, _pointIDsGlobal, _numDimensions, _imgSize, _embeddingName.toStdString(), _contextAndBackgroundIDsGlobal);
     }
 
     // Init all settings (setupData must have been called before initing the settings.)
@@ -121,7 +154,61 @@ void SpidrAnalysisQtWrapper::addBackgroundToEmbedding(std::vector<float>& emb, s
     }
     else
     {
-        emb = _SpidrAnalysis->outputWithBackground(emb_wo_bg);
+        qDebug() << "SpidrAnalysisQtWrapper: Add background back to embedding";
+        assert(_foregroundIDsGlobal.size() + _backgroundIDsGlobal.size() == _pointIDsGlobal.size() - _contextIDsGlobal.size());
+        auto numEmbPoints = _foregroundIDsGlobal.size() + _backgroundIDsGlobal.size();
+        emb.resize(numEmbPoints * 2);
+
+        // find min x and min y embedding positions
+        float minx = emb_wo_bg[0];
+        float miny = emb_wo_bg[1];
+
+        for (size_t i = 0; i < emb_wo_bg.size(); i += 2) {
+            if (emb_wo_bg[i] < minx)
+                minx = emb_wo_bg[i];
+
+            if (emb_wo_bg[i + 1] < miny)
+                miny = emb_wo_bg[i + 1];
+        }
+
+        minx -= std::abs(minx) * 0.05f;
+        miny -= std::abs(miny) * 0.05f;
+
+
+        // Iterate over the embedding:
+        // Add the embedding coordinates if the current ID is in the foreground
+        // or place it in the lower left corner if it's a background ID
+        auto fgIt = _foregroundIDsGlobal.begin();
+        auto bgIt = _backgroundIDsGlobal.begin();
+        size_t idInEmbWoBg = 0;
+        for (size_t i = 0; i < numEmbPoints; i++)
+        {
+            auto addFg = [&]() -> void {
+                emb[2 * i] = emb_wo_bg[2 * idInEmbWoBg];
+                emb[2 * i + 1] = emb_wo_bg[2 * idInEmbWoBg + 1];
+
+                fgIt++;
+                idInEmbWoBg++;
+            };
+
+            auto addBg = [&]() {
+                emb[2 * i] = minx;
+                emb[2 * i + 1] = miny;
+
+                bgIt++;
+            };
+
+            if (bgIt == _backgroundIDsGlobal.end())
+                addFg();
+            else if (fgIt == _foregroundIDsGlobal.end())
+                addBg();
+            else if (*fgIt < *bgIt)
+                addFg();
+            else
+                addBg();
+
+       }
+
     }
 
 }
@@ -134,9 +221,9 @@ const size_t SpidrAnalysisQtWrapper::getNumFeatureValsPerPoint() {
     return _SpidrAnalysis->getParameters()._numFeatureValsPerPoint;
 }
 
-const size_t SpidrAnalysisQtWrapper::getNumImagePoints() {
-    assert(_pointIDsGlobal.size() == _SpidrAnalysis->getParameters()._numForegroundPoints + _backgroundIDsGlobal.size());
-    return _SpidrAnalysis->getParameters()._numPoints;
+const size_t SpidrAnalysisQtWrapper::getNumEmbPoints() {
+    assert(_pointIDsGlobal.size() == _SpidrAnalysis->getParameters()._numForegroundPoints + _contextIDsGlobal.size() +  _backgroundIDsGlobal.size());
+    return _foregroundIDsGlobal.size() + _backgroundIDsGlobal.size();
 }
 
 const Feature SpidrAnalysisQtWrapper::getFeatures() {
