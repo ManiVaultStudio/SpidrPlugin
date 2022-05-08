@@ -22,20 +22,20 @@ public:
      *
      */
     void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
-        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+        const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, std::vector<unsigned int>& contextIDsGlobal, \
         const distance_metric distMetric, const feature_type featType, const loc_Neigh_Weighting kernelType, const size_t numLocNeighbors,  const size_t numHistBins, \
         const knn_library aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, float pixelWeight,\
         bool publishFeaturesToCore, bool forceBackgroundFeatures);
 
     void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
-        const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, \
+        const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, std::vector<unsigned int>& contextIDsGlobal, \
         const SpidrParameters& spidrParameters);
 
 
     // Getter
     const size_t getNumForegroundPoints();
 
-    const size_t getNumImagePoints();
+    const size_t getNumEmbPoints();
 
     const size_t getNumFeatureValsPerPoint();
 
@@ -84,6 +84,9 @@ private:
     std::vector<float> _attribute_data;
     std::vector<unsigned int> _pointIDsGlobal;
     std::vector<unsigned int> _backgroundIDsGlobal;
+    std::vector<unsigned int> _contextIDsGlobal;
+    std::vector<unsigned int> _contextAndBackgroundIDsGlobal;
+    std::vector<unsigned int> _foregroundIDsGlobal;
     size_t _numDimensions;
     ImgSize _imgSize;
     QString _embeddingName;
