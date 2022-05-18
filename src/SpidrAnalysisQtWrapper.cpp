@@ -87,14 +87,18 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
 
     if (_contextIDsGlobal.size() > 0 || _backgroundIDsGlobal.size() > 0)
     {
+        // set_union expect sorted ranges
+        std::sort(_contextIDsGlobal.begin(), _contextIDsGlobal.end());
+        std::sort(_backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end());
+
         // combine contextIDsGlobal and backgroundIDsGlobal
         std::set_union(_contextIDsGlobal.begin(), _contextIDsGlobal.end(),
                        _backgroundIDsGlobal.begin(), _backgroundIDsGlobal.end(),
                        std::back_inserter(_contextAndBackgroundIDsGlobal));
-
-        // sort _contextAndBackgroundIDsGlobal
-        std::sort(_contextAndBackgroundIDsGlobal.begin(), _contextAndBackgroundIDsGlobal.end());
     }
+
+    // set_difference expect sorted ranges
+    std::sort(_pointIDsGlobal.begin(), _pointIDsGlobal.end());
 
     std::set_difference(_pointIDsGlobal.begin(), _pointIDsGlobal.end(),
                         _contextAndBackgroundIDsGlobal.begin(), _contextAndBackgroundIDsGlobal.end(),
