@@ -86,3 +86,7 @@ add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
     "$<TARGET_FILE:${SPIDRPLUGIN}>"
     "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/Plugins/$<TARGET_FILE_NAME:${SPIDRPLUGIN}>"
 )
+
+# Automatically set the debug environment (command + working directory) for MSVC in debug mode
+set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<IF:$<CONFIG:DEBUG>,${HDPS_INSTALL_DIR}/Debug,${HDPS_INSTALL_DIR}/Release>)
+set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_COMMAND $<IF:$<CONFIG:DEBUG>,${HDPS_INSTALL_DIR}/Debug/HDPS.exe,${HDPS_INSTALL_DIR}/Release/HDPS.exe>) 
