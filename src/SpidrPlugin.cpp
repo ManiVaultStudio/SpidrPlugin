@@ -161,7 +161,10 @@ void SpidrPlugin::init()
 
     updateComputationAction();
 
-    registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
+    _eventListener.setEventCore(Application::core());
+    _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DataAdded));
+    _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DataChanged));
+    _eventListener.registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
 
     setTaskName("Spidr");
 
@@ -170,7 +173,6 @@ void SpidrPlugin::init()
 
 void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
 {
-
     if (dataEvent->getDataset() == getInputDataset())
         _spidrSettingsAction.getDimensionSelectionAction().getPickerAction().setPointsDataset(dataEvent->getDataset<Points>());
 
