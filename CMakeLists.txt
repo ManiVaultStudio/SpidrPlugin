@@ -15,7 +15,7 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
 endif(MSVC)
 
-find_package(Qt5 COMPONENTS Widgets WebEngineWidgets REQUIRED)
+find_package(Qt6 COMPONENTS Widgets WebEngineWidgets REQUIRED)
 
 set(PLUGIN
     src/SpidrPlugin.h
@@ -57,7 +57,7 @@ source_group(Spidrlib FILES ${SPIDRLIB})
 source_group(UI FILES ${UIS})
 source_group(Aux FILES ${AUX})
 
-QT5_WRAP_UI(UI_HEADERS ${UIS})
+QT6_WRAP_UI(UI_HEADERS ${UIS})
 
 add_library(${SPIDRPLUGIN} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
 
@@ -68,8 +68,8 @@ target_compile_definitions(${SPIDRPLUGIN} PRIVATE QT_MESSAGELOGCONTEXT)
 
 target_compile_features(${SPIDRPLUGIN} PUBLIC cxx_std_17)
 
-target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt5::Widgets)
-target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt5::WebEngineWidgets)
+target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt6::Widgets)
+target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt6::WebEngineWidgets)
 target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/PointData.lib")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/ImageData.lib")
