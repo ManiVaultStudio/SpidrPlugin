@@ -44,7 +44,7 @@ void SpidrPlugin::init()
     
     // set the output data as derived from the parent data set (since the type differs from the input data set)
     setOutputDataset(_core->createDerivedDataset("sp-tsne_embedding", inputDataset, inputDataset));
-    auto& outputDataset = getOutputDataset<Points>();
+    auto outputDataset = getOutputDataset<Points>();
 
     // Automaticallt select the output data in the GUI data hierarchy
     getOutputDataset()->getDataHierarchyItem().select();
@@ -314,7 +314,7 @@ void SpidrPlugin::tsneComputation()
 }
 
 void SpidrPlugin::onFinishedEmbedding() {
-    auto& embedding = getOutputDataset<Points>();
+    auto embedding = getOutputDataset<Points>();
 
     std::vector<float> outputData = _tnseWrapper.output();
     std::vector<float> embWithBg;

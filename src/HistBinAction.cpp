@@ -42,7 +42,7 @@ HistBinAction::Widget::Widget(QWidget* parent, HistBinAction* histBinAction) :
 {
     auto layout = new QHBoxLayout();
 
-    layout->setMargin(0);
+    layout->setContentsMargins(0, 0, 0, 0);
 
     layout->addWidget(histBinAction->getHistBinSizeHeur().createWidget(this));
     layout->addWidget(histBinAction->getNumHistBinsAction().createWidget(this));
