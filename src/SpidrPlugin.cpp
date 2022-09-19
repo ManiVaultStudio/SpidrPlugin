@@ -402,7 +402,7 @@ PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const hdps::Dat
 
     if (PluginFactory::areAllDatasetsOfTheSameType(datasets, ImageType)) {
         if (datasets.count() >= 1) {
-            auto pluginTriggerAction = createPluginTriggerAction("IMG HSNE analysis", "Perform image HSNE analysis on selected datasets", datasets);
+            auto pluginTriggerAction = createPluginTriggerAction("Spidr analysis", "Perform spatially informed t-SNE analysis", datasets);
 
             connect(pluginTriggerAction, &QAction::triggered, [this, getPluginInstance, datasets]() -> void {
                 for (auto dataset : datasets)
