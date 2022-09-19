@@ -3,6 +3,8 @@
 #include "ImageData/Images.h"
 #include "PointData.h"
 
+#include <actions/PluginTriggerAction.h>
+
 #include <QtCore>
 #include <QSize>
 #include <QtDebug>
@@ -51,8 +53,8 @@ void SpidrPlugin::init()
 
     // Set up output data
     std::vector<float> initialData;
-    const auto numEmbeddingDimensions = 2;
-    initialData.resize(inputDataset->getNumPoints() * numEmbeddingDimensions);
+    const size_t numEmbeddingDimensions = 2;
+    initialData.resize(numEmbeddingDimensions * inputDataset->getNumPoints());
     outputDataset->setData(initialData.data(), inputDataset->getNumPoints(), numEmbeddingDimensions);
     outputDataset->getDataHierarchyItem().select();
 
@@ -161,23 +163,15 @@ void SpidrPlugin::init()
 
     updateComputationAction();
 
-    _eventListener.setEventCore(Application::core());
-    _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DataAdded));
-    _eventListener.addSupportedEventType(static_cast<std::uint32_t>(EventType::DataChanged));
-    _eventListener.registerDataEventByType(PointType, std::bind(&SpidrPlugin::onDataEvent, this, std::placeholders::_1));
+    // Update dimension selection with new data
+    connect(&inputDataset, &Dataset<Points>::dataChanged, this, [this, inputDataset]() {
+        _spidrSettingsAction.getDimensionSelectionAction().getPickerAction().setPointsDataset(inputDataset);
+        });
 
     setTaskName("Spidr");
 
     //_spidrSettingsAction.loadDefault();
 }
-
-void SpidrPlugin::onDataEvent(hdps::DataEvent* dataEvent)
-{
-    if (dataEvent->getDataset() == getInputDataset())
-        _spidrSettingsAction.getDimensionSelectionAction().getPickerAction().setPointsDataset(dataEvent->getDataset<Points>());
-
-}
-
 
 void SpidrPlugin::startComputation()
 {
@@ -398,15 +392,32 @@ AnalysisPlugin* SpidrPluginFactory::produce()
     return new SpidrPlugin(this);
 }
 
-hdps::DataTypes SpidrPluginFactory::supportedDataTypes() const
+PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const hdps::Datasets& datasets) const
 {
-    DataTypes supportedTypes;
-    supportedTypes.append(ImageType);
-    return supportedTypes;
+    PluginTriggerActions pluginTriggerActions;
+
+    const auto getPluginInstance = [this](const Dataset<Points>& dataset) -> SpidrPlugin* {
+        return dynamic_cast<SpidrPlugin*>(Application::core()->requestPlugin(getKind(), { dataset }));
+    };
+
+    if (PluginFactory::areAllDatasetsOfTheSameType(datasets, ImageType)) {
+        if (datasets.count() >= 1) {
+            auto pluginTriggerAction = createPluginTriggerAction("IMG HSNE analysis", "Perform image HSNE analysis on selected datasets", datasets);
+
+            connect(pluginTriggerAction, &QAction::triggered, [this, getPluginInstance, datasets]() -> void {
+                for (auto dataset : datasets)
+                    getPluginInstance(dataset);
+                });
+
+            pluginTriggerActions << pluginTriggerAction;
+        }
+    }
+
+    return pluginTriggerActions;
 }
 
 
-QIcon SpidrPluginFactory::getIcon() const
+QIcon SpidrPluginFactory::getIcon(const QColor& color /*= Qt::black*/) const
 {
     const auto margin = 3;
     const auto pixmapSize = QSize(100, 100);
