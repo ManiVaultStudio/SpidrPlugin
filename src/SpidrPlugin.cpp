@@ -4,6 +4,7 @@
 #include "PointData.h"
 
 #include <actions/PluginTriggerAction.h>
+#include "InfoAction.h"
 
 #include <QtCore>
 #include <QSize>
@@ -65,6 +66,9 @@ void SpidrPlugin::init()
     outputDataset->addAction(_spidrSettingsAction.getBackgroundSelectionAction());
 
     outputDataset->getDataHierarchyItem().select();
+
+    // Do not show data info by default to give more space to other settings
+    outputDataset->_infoAction->collapse();
 
     auto& computationAction = _spidrSettingsAction.getComputationAction();
 
@@ -402,7 +406,7 @@ PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const hdps::Dat
 
     if (PluginFactory::areAllDatasetsOfTheSameType(datasets, ImageType)) {
         if (datasets.count() >= 1) {
-            auto pluginTriggerAction = createPluginTriggerAction("IMG HSNE analysis", "Perform image HSNE analysis on selected datasets", datasets);
+            auto pluginTriggerAction = createPluginTriggerAction("Spidr analysis", "Perform spatially informed t-SNE analysis", datasets);
 
             connect(pluginTriggerAction, &QAction::triggered, [this, getPluginInstance, datasets]() -> void {
                 for (auto dataset : datasets)
