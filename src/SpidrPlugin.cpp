@@ -151,7 +151,7 @@ void SpidrPlugin::init()
         QCoreApplication::processEvents();
 
         // Notify others that the embedding data changed
-        _core->notifyDatasetChanged(getOutputDataset());
+        events().notifyDatasetChanged(getOutputDataset());
         });
 
 
@@ -324,7 +324,7 @@ void SpidrPlugin::onFinishedEmbedding() {
     qDebug() << "SpidrPlugin: Publishing final embedding";
 
     embedding->setData(embWithBg.data(), embWithBg.size() / 2, 2);
-    _core->notifyDatasetChanged(getOutputDataset());
+    events().notifyDatasetChanged(getOutputDataset());
 
     qDebug() << "SpidrPlugin: Done.";
 }
@@ -401,17 +401,15 @@ PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const hdps::Dat
     PluginTriggerActions pluginTriggerActions;
 
     const auto getPluginInstance = [this](const Dataset<Points>& dataset) -> SpidrPlugin* {
-        return dynamic_cast<SpidrPlugin*>(Application::core()->requestPlugin(getKind(), { dataset }));
+        return dynamic_cast<SpidrPlugin*>(plugins().requestPlugin(getKind(), { dataset }));
     };
 
     if (PluginFactory::areAllDatasetsOfTheSameType(datasets, ImageType)) {
         if (datasets.count() >= 1) {
-            auto pluginTriggerAction = createPluginTriggerAction("Spidr analysis", "Perform spatially informed t-SNE analysis", datasets);
-
-            connect(pluginTriggerAction, &QAction::triggered, [this, getPluginInstance, datasets]() -> void {
+            auto pluginTriggerAction = new PluginTriggerAction(const_cast<SpidrPluginFactory*>(this), this, "Spidr analysis", "Perform spatially informed t-SNE analysis", getIcon(), [this, getPluginInstance, datasets](PluginTriggerAction& pluginTriggerAction) -> void {
                 for (auto dataset : datasets)
                     getPluginInstance(dataset);
-                });
+            });
 
             pluginTriggerActions << pluginTriggerAction;
         }
