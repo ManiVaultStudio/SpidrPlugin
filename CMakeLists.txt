@@ -46,7 +46,6 @@ add_subdirectory("external/Spidr")
 set(PLUGIN
     src/SpidrPlugin.h
     src/SpidrPlugin.cpp
-    src/SpidrPlugin.json
     src/SpidrAnalysisQtWrapper.h
     src/SpidrAnalysisQtWrapper.cpp
     src/TsneComputationQtWrapper.h
@@ -72,24 +71,20 @@ set(ACTIONS
     src/BackgroundSelectionAction.cpp
 )
 
-file(GLOB UIS ui/*.ui)
-file(GLOB JSON src/*.json)
+set(AUX
+    src/SpidrPlugin.json
+)
 
-set(SOURCES ${PLUGIN} ${ACTIONS})
-set(AUX ${JSON})
+set(SOURCES ${PLUGIN} ${ACTIONS} ${AUX})
 
 source_group(Plugin FILES ${PLUGIN})
 source_group(Actions FILES ${ACTIONS})
-source_group(Spidrlib FILES ${SPIDRLIB})
-source_group(UI FILES ${UIS})
 source_group(Aux FILES ${AUX})
-
-QT6_WRAP_UI(UI_HEADERS ${UIS})
 
 # -----------------------------------------------------------------------------
 # CMake Target
 # -----------------------------------------------------------------------------
-add_library(${SPIDRPLUGIN} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
+add_library(${SPIDRPLUGIN} SHARED ${SOURCES})
 
 # -----------------------------------------------------------------------------
 # Target properties
