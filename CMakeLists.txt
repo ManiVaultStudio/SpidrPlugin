@@ -1,22 +1,48 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.21)
+
+# setup vcpkg cmake toolchain
+set(VCPKG_LIBRARY_LINKAGE static)
+set(VCPKG_CRT_LINKAGE dynamic)
+set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  CACHE STRING "Vcpkg toolchain file")
 
 set(SPIDRPLUGIN "SpidrPlugin")
 
 PROJECT(${SPIDRPLUGIN})
 
+# -----------------------------------------------------------------------------
+# CMake settings
+# -----------------------------------------------------------------------------
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
+set(INSTALL_DIR $ENV{HDPS_INSTALL_DIR})
+message(STATUS "Install to ${INSTALL_DIR}")
+
 if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DWIN32 /EHsc /MP")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DWIN32 /EHsc /MP /permissive- /Zc:__cplusplus")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
 endif(MSVC)
 
+# -----------------------------------------------------------------------------
+# Library dependencies
+# -----------------------------------------------------------------------------
 find_package(Qt6 COMPONENTS Widgets WebEngineWidgets REQUIRED)
 
+if(MSVC)
+	set(USE_HDILIBSLIM ON CACHE BOOL "Use the slim HDILib version")
+endif()
+set(CREATE_EXAMPLE OFF CACHE BOOL "Creates an example executable using the Spidr library")
+set(CREATE_PYTHON_WRAPPER OFF CACHE BOOL "Creates a python wrapper of the Spidr library")
+
+add_subdirectory("external/Spidr")
+
+# -----------------------------------------------------------------------------
+# Source files
+# -----------------------------------------------------------------------------
 set(PLUGIN
     src/SpidrPlugin.h
     src/SpidrPlugin.cpp
@@ -25,6 +51,8 @@ set(PLUGIN
     src/SpidrAnalysisQtWrapper.cpp
     src/TsneComputationQtWrapper.h
     src/TsneComputationQtWrapper.cpp
+    src/OffscreenBuffer.h
+    src/OffscreenBuffer.cpp
 )
 
 set(ACTIONS
@@ -44,7 +72,6 @@ set(ACTIONS
     src/BackgroundSelectionAction.cpp
 )
 
-
 file(GLOB UIS ui/*.ui)
 file(GLOB JSON src/*.json)
 
@@ -59,34 +86,51 @@ source_group(Aux FILES ${AUX})
 
 QT6_WRAP_UI(UI_HEADERS ${UIS})
 
+# -----------------------------------------------------------------------------
+# CMake Target
+# -----------------------------------------------------------------------------
 add_library(${SPIDRPLUGIN} SHARED ${SOURCES} ${SPIDRLIB} ${UIS} ${AUX})
 
-target_include_directories(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/include/")
+# -----------------------------------------------------------------------------
+# Target properties
+# -----------------------------------------------------------------------------
+target_compile_features(${SPIDRPLUGIN} PRIVATE cxx_std_17)
+
+# -----------------------------------------------------------------------------
+# Target include directories
+# -----------------------------------------------------------------------------
+target_include_directories(${SPIDRPLUGIN} PRIVATE "${INSTALL_DIR}/$<CONFIGURATION>/include/")
 target_include_directories(${SPIDRPLUGIN} PRIVATE "external/Spidr/include/")
 
-target_compile_definitions(${SPIDRPLUGIN} PRIVATE QT_MESSAGELOGCONTEXT)
-
-target_compile_features(${SPIDRPLUGIN} PUBLIC cxx_std_17)
+# -----------------------------------------------------------------------------
+# Target library linking
+# -----------------------------------------------------------------------------
+if(MSVC)
+    set(LIB_SUFFIX "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+else()
+    set(LIB_SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+endif()
 
 target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt6::Widgets)
 target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt6::WebEngineWidgets)
-target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/HDPS_Public.lib")
-target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/PointData.lib")
-target_link_libraries(${SPIDRPLUGIN} PRIVATE "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/lib/ImageData.lib")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "${INSTALL_DIR}/$<CONFIGURATION>/lib/${CMAKE_SHARED_LIBRARY_PREFIX}HDPS_Public${LIB_SUFFIX}")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "${INSTALL_DIR}/$<CONFIGURATION>/lib/${CMAKE_SHARED_LIBRARY_PREFIX}PointData${LIB_SUFFIX}")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "${INSTALL_DIR}/$<CONFIGURATION>/lib/${CMAKE_SHARED_LIBRARY_PREFIX}ImageData${LIB_SUFFIX}")
 
-add_subdirectory("external/Spidr")
 target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)
 
-# Prevent glfw including the OpenGL headers
-# On Windows and Linux these come from glad in the HDILib, which is part of the SpidrLib
-add_definitions(-DGLFW_INCLUDE_NONE)
-
+# -----------------------------------------------------------------------------
+# Target installation
+# -----------------------------------------------------------------------------
 add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
     "$<TARGET_FILE:${SPIDRPLUGIN}>"
-    "$ENV{HDPS_INSTALL_DIR}/$<CONFIGURATION>/Plugins/$<TARGET_FILE_NAME:${SPIDRPLUGIN}>"
+    "${INSTALL_DIR}/$<CONFIGURATION>/Plugins/$<TARGET_FILE_NAME:${SPIDRPLUGIN}>"
 )
 
+# -----------------------------------------------------------------------------
+# Miscellaneous
+# -----------------------------------------------------------------------------
 # Automatically set the debug environment (command + working directory) for MSVC in debug mode
-set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<IF:$<CONFIG:DEBUG>,${HDPS_INSTALL_DIR}/Debug,${HDPS_INSTALL_DIR}/Release>)
-set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_COMMAND $<IF:$<CONFIG:DEBUG>,${HDPS_INSTALL_DIR}/Debug/HDPS.exe,${HDPS_INSTALL_DIR}/Release/HDPS.exe>) 
+set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<IF:$<CONFIG:DEBUG>,${INSTALL_DIR}/Debug,${INSTALL_DIR}/Release>)
+set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_COMMAND $<IF:$<CONFIG:DEBUG>,${INSTALL_DIR}/Debug/HDPS.exe,${INSTALL_DIR}/Release/HDPS.exe>) 

@@ -9,10 +9,6 @@
 #include "hdi/dimensionality_reduction/tsne_parameters.h"
 #include "hdi/utils/scoped_timers.h"
 
-// not present in glfw 3.1.2
-#ifndef GLFW_FALSE
-#define GLFW_FALSE 0
-#endif
 
 TsneComputationQtWrapper::TsneComputationQtWrapper() :
     _currentIteration(0),
@@ -28,11 +24,19 @@ TsneComputationQtWrapper::TsneComputationQtWrapper() :
     _isGradientDescentRunning(false),
     _isTsneRunning(false),
     _isMarkedForDeletion(false),
-    _continueFromIteration(0)
+    _continueFromIteration(0),
+    _offscreenBuffer(nullptr)
 {
     _nn = _perplexity * _perplexity_multiplier + 1;
+
+    // Offscreen buffer must be created in the UI thread because it is a QWindow, afterwards we move it
+    _offscreenBuffer = new OffscreenBuffer();
 }
 
+TsneComputationQtWrapper::~TsneComputationQtWrapper()
+{
+    delete _offscreenBuffer;
+}
 
 void TsneComputationQtWrapper::computeGradientDescent()
 {
@@ -116,30 +120,14 @@ void TsneComputationQtWrapper::initGradientDescent()
     tsneParams._remove_exaggeration_iter = _exaggerationIter;
     tsneParams._exponential_decay_iter = _exponentialDecay;
     tsneParams._exaggeration_factor = 4 + _numForegroundPoints / 60000.0;
-    _A_tSNE.setTheta(std::min(0.5, std::max(0.0, (_numForegroundPoints - 1000.0)*0.00005)));
 
-    // Create a offscreen window
-    if (!glfwInit()) {
-        throw std::runtime_error("Unable to initialize GLFW.");
-    }
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#endif
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);  // invisible - ie offscreen, window
-    _offscreen_context = glfwCreateWindow(640, 480, "", NULL, NULL);
-    if (_offscreen_context == NULL) {
-        glfwTerminate();
-        throw std::runtime_error("Failed to create GLFW window");
-    }
-    glfwMakeContextCurrent(_offscreen_context);
+    // Move the Offscreen buffer to the processing thread after creating it in the UI Thread
+    _offscreenBuffer->moveToThread(QThread::currentThread());
+    
+    // Create a context local to this thread that shares with the global share context
+    _offscreenBuffer->initialize();
+    _offscreenBuffer->bindContext();
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        glfwTerminate();
-        throw std::runtime_error("Failed to initialize OpenGL context");
-    }
     // Initialize GPGPU-SNE
     _GPGPU_tSNE.initialize(_probabilityDistribution, &_embedding, tsneParams);
 
@@ -190,8 +178,8 @@ void TsneComputationQtWrapper::embed()
             elapsed += t;
 
         }
-        glfwDestroyWindow(_offscreen_context);
-        glfwTerminate();
+
+        _offscreenBuffer->releaseContext();
 
         copyFloatOutput();
         emit newEmbedding();

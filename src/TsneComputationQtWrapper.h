@@ -1,29 +1,27 @@
 #pragma once
 #include "SpidrAnalysisParameters.h"
 
-#ifdef __APPLE__
-#include "glad/glad_3_3.h"
-#define __gl3_h_
-#endif
-
-#include <GLFW/glfw3.h>
+#include "hdi/utils/glad/glad.h"
+#include "OffscreenBuffer.h"
 
 #include "hdi/dimensionality_reduction/hd_joint_probability_generator.h"
-#include "hdi/dimensionality_reduction/sparse_tsne_user_def_probabilities.h"
 #include "hdi/dimensionality_reduction/gradient_descent_tsne_texture.h"
 
 #include <vector>
 #include <string>
 
 #include <QObject> 
+#include <QThread>
 
 class SpidrParameters;
+class OffscreenBuffer;
 
 class TsneComputationQtWrapper : public QObject
 {
     Q_OBJECT
 public:
     TsneComputationQtWrapper();
+    ~TsneComputationQtWrapper();
 
     void setVerbose(bool verbose);
     void setIterations(int iterations);
@@ -88,7 +86,6 @@ private:
 private:
     // TSNE structures
     hdi::dr::HDJointProbabilityGenerator<float>::sparse_scalar_matrix_type _probabilityDistribution;
-    hdi::dr::SparseTSNEUserDefProbabilities<float> _A_tSNE;
     hdi::dr::GradientDescentTSNETexture _GPGPU_tSNE;
     hdi::data::Embedding<float> _embedding;
 
@@ -122,5 +119,7 @@ private:
     bool _isMarkedForDeletion;
 
     size_t _continueFromIteration;
-    GLFWwindow* _offscreen_context;
+
+    /** Offscreen OpenGL buffer required to run the gradient descent */
+    OffscreenBuffer* _offscreenBuffer; 
 };
