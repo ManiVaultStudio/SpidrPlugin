@@ -34,6 +34,7 @@ find_package(Qt6 COMPONENTS Widgets WebEngineWidgets REQUIRED)
 
 if(MSVC)
 	set(USE_HDILIBSLIM ON CACHE BOOL "Use the slim HDILib version")
+	set(BUILD_HDILIB OFF CACHE BOOL "Build the HDILib from submodule - otherwise provide the variable HDILIB_ROOT")
 endif()
 set(CREATE_EXAMPLE OFF CACHE BOOL "Creates an example executable using the Spidr library")
 set(CREATE_PYTHON_WRAPPER OFF CACHE BOOL "Creates a python wrapper of the Spidr library")
