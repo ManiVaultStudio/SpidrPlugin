@@ -38,6 +38,12 @@ TsneComputationQtWrapper::~TsneComputationQtWrapper()
     delete _offscreenBuffer;
 }
 
+void TsneComputationQtWrapper::moveBufferToThread(QThread* thread)
+{
+    _offscreenBuffer->moveToThread(thread);
+}
+
+
 void TsneComputationQtWrapper::computeGradientDescent()
 {
     initGradientDescent();
@@ -107,7 +113,6 @@ void TsneComputationQtWrapper::initTSNE()
 
 void TsneComputationQtWrapper::initGradientDescent()
 {
-
     emit progressSection("Initializing gradient descent");
 
     _continueFromIteration = 0;
@@ -120,9 +125,6 @@ void TsneComputationQtWrapper::initGradientDescent()
     tsneParams._remove_exaggeration_iter = _exaggerationIter;
     tsneParams._exponential_decay_iter = _exponentialDecay;
     tsneParams._exaggeration_factor = 4 + _numForegroundPoints / 60000.0;
-
-    // Move the Offscreen buffer to the processing thread after creating it in the UI Thread
-    _offscreenBuffer->moveToThread(QThread::currentThread());
     
     // Create a context local to this thread that shares with the global share context
     _offscreenBuffer->initialize();
@@ -197,6 +199,8 @@ void TsneComputationQtWrapper::embed()
 }
 
 void TsneComputationQtWrapper::compute() {
+    assert(_offscreenBuffer->thread() == this->thread());   // ensure that this object and the buffer work in the same thread
+
     initTSNE();
     computeGradientDescent();
 }

@@ -281,6 +281,7 @@ void SpidrPlugin::startComputation()
     _workerThreadtSNE = new QThread();
 
     _spidrAnalysisWrapper.moveToThread(_workerThreadSpidr);
+    _tnseWrapper.moveBufferToThread(_workerThreadtSNE);
     _tnseWrapper.moveToThread(_workerThreadtSNE);
 
     // delete threads after work is done

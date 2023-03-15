@@ -54,6 +54,9 @@ public:
     void stopGradientDescent();
     void markForDeletion();
 
+    // Move the Offscreen buffer to the processing thread after creating it in the UI Thread
+    void moveBufferToThread(QThread* thread);
+
     /*!
      * !
      *
