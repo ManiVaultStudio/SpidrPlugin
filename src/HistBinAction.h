@@ -66,6 +66,4 @@ public: // Action getters
 protected:
     OptionAction            _histBinNumHeur;
     IntegralAction          _numHistBins;
-
-    friend class Widget;
 };

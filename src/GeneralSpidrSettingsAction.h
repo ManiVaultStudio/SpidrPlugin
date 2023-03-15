@@ -58,8 +58,6 @@ protected:
     DecimalAction           _pixelWeightAction;                     /** Pixel weight action */
     SpidrComputationAction   _computationAction;                    /** Computation action */
 
-    friend class Widget;
-
 private:
     std::shared_ptr<QStandardItemModel> _distanceItemModel;
     QList<std::shared_ptr<QStandardItem>> _distanceItemList;

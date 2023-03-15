@@ -39,5 +39,4 @@ protected:
     TriggerAction           _enableDisable;          /** Start computation action */
     ToggleAction            _idsInDataAction;        /** Tick if data contains IDs for background (useful for loading backgorund IDs), otherwise assume the data is a subset and use the global data IDs */
 
-    friend class Widget;
 };

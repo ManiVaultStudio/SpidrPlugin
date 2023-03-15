@@ -39,5 +39,4 @@ protected:
     IntegralAction          _numTreesAction;            /** Exponential decay action */
     IntegralAction          _numChecksAction;           /** Exponential decay action */
 
-    friend class Widget;
 };

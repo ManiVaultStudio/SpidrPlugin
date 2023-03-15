@@ -67,5 +67,4 @@ protected:
     TriggerAction           _stopComputationAction;         /** Stop computation action */
     ToggleAction            _runningAction;                 /** Running action */
 
-    friend class Widget;
 };

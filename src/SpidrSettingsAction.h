@@ -53,5 +53,4 @@ protected:
     DimensionSelectionAction        _dimensionSelectionAction;      /** Dimension selection settings action */
     BackgroundSelectionAction       _backgroundSelectionAction;     /** Dimension selection settings action */
 
-    friend class Widget;
 };

@@ -28,5 +28,4 @@ public: // Action getters
 protected:
     DimensionsPickerAction  _pickerAction;    /** Dimension picker action */
 
-    friend class Widget;
 };
