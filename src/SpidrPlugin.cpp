@@ -290,7 +290,6 @@ void SpidrPlugin::startComputation()
 
     // connect wrappers
     connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::finishedKnn, this, &SpidrPlugin::tsneComputation);
-    connect(&_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::publishFeatures, this, &SpidrPlugin::onPublishFeatures);
     connect(this, &SpidrPlugin::startAnalysis, &_spidrAnalysisWrapper, &SpidrAnalysisQtWrapper::spatialAnalysis);
     connect(this, &SpidrPlugin::starttSNE, &_tnseWrapper, &TsneComputationQtWrapper::compute);
 
@@ -329,27 +328,6 @@ void SpidrPlugin::onFinishedEmbedding() {
 
     qDebug() << "SpidrPlugin: Done.";
 }
-
-void SpidrPlugin::onPublishFeatures(const unsigned int dataFeatsSize) {
-    qDebug() << "SpidrPlugin: Publish features to core (WARNING: Not currently enabled - no features are published to the core)";
-    //QString featureDataSetName = _core->createDerivedData(_settings->getEmbName() + "_Features", _settings->getCurrentDataItem());
-    //Points& featureDataSet = _core->requestData<Points>(featureDataSetName);
-    //featureDataSet.setData(_spidrAnalysisWrapper->getFeatures()->data(), dataFeatsSize, _spidrAnalysisWrapper->getNumFeatureValsPerPoint());
-
-    //// Set dimension names of feature data set
-    //std::vector<bool> enabledDimensions = _settings->getEnabledDimensions();
-    //std::vector<QString> dimensionNames = _core->requestData<Points>(_settings->getCurrentDataItem()).getDimensionNames();
-    //std::vector<QString> enabledDimensionNames;
-
-    //assert(enabledDimensions.size() == dimensionNames.size());
-
-    //for (int i = 0; i < enabledDimensions.size(); i++) {
-    //    if (enabledDimensions[i])
-    //        enabledDimensionNames.push_back(dimensionNames[i]);
-    //}
-    //featureDataSet.setDimensionNames(enabledDimensionNames);
-}
-
 
 void SpidrPlugin::stopComputation() {
     // Request interruption of the computation

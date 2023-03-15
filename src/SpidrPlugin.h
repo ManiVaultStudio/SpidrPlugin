@@ -44,8 +44,6 @@ public: // Action getters
 public slots:
     void onFinishedEmbedding();
 
-    void onPublishFeatures(const unsigned int dataFeatsSize);
-
 private slots:
     void tsneComputation();
 

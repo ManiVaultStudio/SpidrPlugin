@@ -91,6 +91,7 @@ add_library(${SPIDRPLUGIN} SHARED ${SOURCES})
 # Target properties
 # -----------------------------------------------------------------------------
 target_compile_features(${SPIDRPLUGIN} PRIVATE cxx_std_17)
+target_compile_features(${SPIDRPLUGIN} PRIVATE c_std_17)
 
 # -----------------------------------------------------------------------------
 # Target include directories

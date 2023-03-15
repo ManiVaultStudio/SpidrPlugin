@@ -21,7 +21,7 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
         const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, std::vector<unsigned int>& contextIDsGlobal, \
         const distance_metric distMetric, const feature_type featType, const loc_Neigh_Weighting kernelType, const size_t numLocNeighbors, const size_t numHistBins, \
         const knn_library aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, float pixelWeight, \
-        bool publishFeaturesToCore, bool forceBackgroundFeatures)
+        bool forceBackgroundFeatures)
 {
     _attribute_data = attribute_data;
     _pointIDsGlobal = pointIDsGlobal;
@@ -41,7 +41,6 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _exaggeration = exaggeration;
     _expDecay = expDecay;
     _pixelWeight = pixelWeight;
-    _publishFeaturesToCore = publishFeaturesToCore;
     _forceBackgroundFeatures = forceBackgroundFeatures;
 
     if (_contextIDsGlobal.size() > 0 || _backgroundIDsGlobal.size() > 0)
@@ -82,7 +81,6 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
     _exaggeration = spidrParameters._exaggeration;
     _expDecay = spidrParameters._expDecay;
     _pixelWeight = spidrParameters._pixelWeight;
-    _publishFeaturesToCore = false;     // TODO not really used at all
     _forceBackgroundFeatures = spidrParameters._forceCalcBackgroundFeatures;
 
     if (_contextIDsGlobal.size() > 0 || _backgroundIDsGlobal.size() > 0)
@@ -127,24 +125,13 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
     // Compute data features
     emit progressSection("Calculate features");
     _SpidrAnalysis->computeFeatures();
-    _dataFeats = _SpidrAnalysis->getDataFeatures();
-
-    // Publish feature to the core
-    // TODO: Re-enable publishing features to core, maybe? See SpidrPlugin::onPublishFeatures
-    if (_publishFeaturesToCore || _forceBackgroundFeatures)
-    {
-        //emit publishFeatures(_dataFeats.size() / _SpidrAnalysis->getParameters()._numFeatureValsPerPoint);
-        emit publishFeatures(0);
-    }
     
     // Compute knn dists and inds
     emit progressSection("Calculate distances and kNN");
     _SpidrAnalysis->computekNN();
-    //std::tie(_knnIds, _knnDists) = _SpidrAnalysis->getKnn();
-    emit finishedKnn(); // this connects to SpidrPlugin::tsneComputation, which triggers the t-SNE computation in TsneComputationQtWrapper
-    // We don't do the following but instead transform in TsneComputationQtWrapper so that we can easily update the embedding view live
-    //_SpidrAnalysis->computeEmbedding();
-    //_emd_with_backgound = _SpidrAnalysis->outputWithBackground();
+
+    // trigger SpidrPlugin::tsneComputation, which starts the t-SNE computation in TsneComputationQtWrapper
+    emit finishedKnn(); 
 }
 
 const std::tuple<std::vector<int>, std::vector<float>> SpidrAnalysisQtWrapper::getKnn() {
@@ -228,10 +215,6 @@ const size_t SpidrAnalysisQtWrapper::getNumFeatureValsPerPoint() {
 const size_t SpidrAnalysisQtWrapper::getNumEmbPoints() {
     assert(_pointIDsGlobal.size() == _SpidrAnalysis->getParameters()._numForegroundPoints + _contextIDsGlobal.size() +  _backgroundIDsGlobal.size());
     return _foregroundIDsGlobal.size() + _backgroundIDsGlobal.size();
-}
-
-const Feature SpidrAnalysisQtWrapper::getFeatures() {
-    return _dataFeats;
 }
 
 bool SpidrAnalysisQtWrapper::embeddingIsRunning() {

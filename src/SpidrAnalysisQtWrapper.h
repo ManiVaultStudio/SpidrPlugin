@@ -25,7 +25,7 @@ public:
         const size_t numDimensions, const ImgSize imgSize, const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, std::vector<unsigned int>& contextIDsGlobal, \
         const distance_metric distMetric, const feature_type featType, const loc_Neigh_Weighting kernelType, const size_t numLocNeighbors,  const size_t numHistBins, \
         const knn_library aknnAlgType, const int numIterations, const int perplexity, const int exaggeration, const int expDecay, float pixelWeight,\
-        bool publishFeaturesToCore, bool forceBackgroundFeatures);
+        bool forceBackgroundFeatures);
 
     void setup(const std::vector<float>& attribute_data, const std::vector<unsigned int>& pointIDsGlobal, \
         const QString embeddingName, std::vector<unsigned int>& backgroundIDsGlobal, std::vector<unsigned int>& contextIDsGlobal, \
@@ -38,8 +38,6 @@ public:
     const size_t getNumEmbPoints();
 
     const size_t getNumFeatureValsPerPoint();
-
-    const Feature getFeatures();
 
     bool embeddingIsRunning();
     
@@ -72,7 +70,6 @@ public slots:
 signals:
     void finishedKnn();
 
-    void publishFeatures(const unsigned int dataFeatsSize);
     void progressSection(const QString& section);
 
 
@@ -103,12 +100,10 @@ private:
     size_t _exaggeration;
     size_t _expDecay;
     float _pixelWeight;
-    bool _publishFeaturesToCore;
     bool _forceBackgroundFeatures;
 
     // output
     std::vector<float> _emd_with_backgound;
-    Feature _dataFeats;
     std::vector<int> _knnIds;
     std::vector<float> _knnDists;
 
