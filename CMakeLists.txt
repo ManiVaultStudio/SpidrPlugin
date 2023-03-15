@@ -21,7 +21,7 @@ set(INSTALL_DIR $ENV{HDPS_INSTALL_DIR})
 message(STATUS "Install to ${INSTALL_DIR}")
 
 if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DWIN32 /EHsc /MP /permissive- /Zc:__cplusplus")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DWIN32 /EHsc /MP /W3 /permissive- /Zc:__cplusplus")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
@@ -127,6 +127,8 @@ add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
 # -----------------------------------------------------------------------------
 # Miscellaneous
 # -----------------------------------------------------------------------------
-# Automatically set the debug environment (command + working directory) for MSVC in debug mode
-set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<IF:$<CONFIG:DEBUG>,${INSTALL_DIR}/Debug,${INSTALL_DIR}/Release>)
-set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_COMMAND $<IF:$<CONFIG:DEBUG>,${INSTALL_DIR}/Debug/HDPS.exe,${INSTALL_DIR}/Release/HDPS.exe>) 
+if(MSVC)
+	# Automatically set the debug environment (command + working directory) for MSVC
+	set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<IF:$<CONFIG:DEBUG>,${INSTALL_DIR}/Debug,${INSTALL_DIR}/Release>)
+	set_property(TARGET ${SPIDRPLUGIN} PROPERTY VS_DEBUGGER_COMMAND $<IF:$<CONFIG:DEBUG>,${INSTALL_DIR}/Debug/HDPS.exe,${INSTALL_DIR}/Release/HDPS.exe>) 
+endif()
