@@ -1,6 +1,8 @@
 from conans import ConanFile
 from conan.tools.cmake import CMakeDeps, CMake, CMakeToolchain
 from conans.tools import save, load
+from conans.tools import os_info, SystemPackageTool
+#from conan.tools.system.package_manager import Brew
 import os
 import shutil
 import pathlib
@@ -9,8 +11,7 @@ from rules_support import PluginBranchInfo
 
 
 class SpidrPluginConan(ConanFile):
-    """Class to package the Cross Species Viewer plugin using conan
-
+    """Class to package SpidrLib-Analyses using conan
     Packages both RELEASE and DEBUG.
     Uses rules_support (github.com/hdps/rulessupport) to derive
     versioninfo based on the branch naming convention
@@ -18,11 +19,13 @@ class SpidrPluginConan(ConanFile):
     """
 
     name = "SpidrPlugin"
-    description = "Spatial Information in Dimensionality Reduction (Spidr)"
-    topics = ("hdps", "plugin", "data", "SPIDR")
+    description = (
+        "Spatial Information in Dimensionality Reduction (Spidr) plugin for dimensionality reduction of data. "
+    )
+    topics = ("hdps", "plugin", "data", "dimensionality reduction", "SPIDR", "spatial data")
     url = "https://github.com/hdps/SpidrPlugin"
-    author = "J. Eggermont"
-    license = "MIT"  # conan recipe license
+    author = "B. van Lew b.van_lew@lumc.nl"  # conan recipe author
+    license = "MIT"
 
     short_paths = True
     generators = "CMakeDeps"
@@ -64,12 +67,18 @@ class SpidrPluginConan(ConanFile):
         print(f"Core requirement {branch_info.core_requirement}")
         self.requires(branch_info.core_requirement)
 
+    # Remove runtime and use always default (MD/MDd)
     def configure(self):
+        # if self.settings.compiler == "Visual Studio":
+        #    del self.settings.compiler.runtime
         pass
 
     def system_requirements(self):
-        #  May be needed for macOS or Linux
-        pass
+        if os_info.is_macos:
+            installer = SystemPackageTool()
+            installer.install("libomp")
+            proc = subprocess.run("brew --prefix libomp",  shell=True, capture_output=True)
+            subprocess.run(f"ln {proc.stdout.decode('UTF-8').strip()}/lib/libomp.dylib /usr/local/lib/libomp.dylib", shell=True)
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -90,9 +99,15 @@ class SpidrPluginConan(ConanFile):
             tc.variables["CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS"] = True
         if self.settings.os == "Linux" or self.settings.os == "Macos":
             tc.variables["CMAKE_CXX_STANDARD_REQUIRED"] = "ON"
-        tc.variables["CMAKE_PREFIX_PATH"] = qt_root
+        tc.variables["Qt6_ROOT"] = qt_root
+        if os_info.is_macos:
+            proc = subprocess.run(
+                "brew --prefix libomp", shell=True, capture_output=True
+            )
+            prefix_path = f"{proc.stdout.decode('UTF-8').strip()}"
+            tc.variables["OpenMP_ROOT"] = prefix_path
         tc.generate()
-
+        
     def _configure_cmake(self):
         cmake = CMake(self)
         cmake.configure(build_script_folder="hdps/SpidrPlugin")
@@ -146,6 +161,10 @@ class SpidrPluginConan(ConanFile):
             ]
         )
         self.copy(pattern="*", src=package_dir)
+        # Add the debug support files to the package
+        # (*.pdb) if building the Visual Studio version
+        if self.settings.compiler == "Visual Studio":
+            self.copy("*.pdb", dst="lib/Debug", keep_path=False)
 
     def package_info(self):
         self.cpp_info.debug.libdirs = ["Debug/lib"]
