@@ -147,10 +147,17 @@ target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)
 # -----------------------------------------------------------------------------
 # Target installation
 # -----------------------------------------------------------------------------
+install(TARGETS ${SPIDRPLUGIN}
+	RUNTIME DESTINATION Plugins COMPONENT SHAREDLIB
+	LIBRARY DESTINATION Plugins COMPONENT LINKLIB
+	ARCHIVE DESTINATION lib COMPONENT LINKLIB
+)
+
 add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-    "$<TARGET_FILE:${SPIDRPLUGIN}>"
-    "${INSTALL_DIR}/$<CONFIGURATION>/Plugins/$<TARGET_FILE_NAME:${SPIDRPLUGIN}>"
+	COMMAND "${CMAKE_COMMAND}"
+	--install ${CMAKE_CURRENT_BINARY_DIR}
+	--config $<CONFIGURATION>
+	--prefix ${INSTALL_DIR}/$<CONFIGURATION>
 )
 
 # -----------------------------------------------------------------------------
