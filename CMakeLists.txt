@@ -157,7 +157,7 @@ add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
 	COMMAND "${CMAKE_COMMAND}"
 	--install ${CMAKE_CURRENT_BINARY_DIR}
 	--config $<CONFIGURATION>
-	--prefix ${INSTALL_DIR}/$<CONFIGURATION>/Plugins
+	--prefix ${INSTALL_DIR}/$<CONFIGURATION>
 )
 
 # -----------------------------------------------------------------------------
