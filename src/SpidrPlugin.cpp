@@ -1,10 +1,10 @@
 #include "SpidrPlugin.h"
 
 #include "ImageData/Images.h"
-#include "PointData.h"
+#include "PointData/PointData.h"
+#include "PointData/InfoAction.h"
 
 #include <actions/PluginTriggerAction.h>
-#include "InfoAction.h"
 
 #include <QtCore>
 #include <QSize>

@@ -2,7 +2,7 @@
 
 #include <actions/GroupAction.h>
 
-#include <DimensionsPickerAction.h>
+#include <PointData/DimensionsPickerAction.h>
 
 /**
  * Dataset picker action class
