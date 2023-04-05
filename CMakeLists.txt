@@ -130,27 +130,32 @@ target_include_directories(${SPIDRPLUGIN} PRIVATE "external/Spidr/include/")
 # -----------------------------------------------------------------------------
 # Target library linking
 # -----------------------------------------------------------------------------
-if(MSVC)
-    set(LIB_SUFFIX "${CMAKE_STATIC_LIBRARY_SUFFIX}")
-else()
-    set(LIB_SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}")
-endif()
-
+# link against Qt
 target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt6::Widgets)
 target_link_libraries(${SPIDRPLUGIN} PRIVATE Qt6::WebEngineWidgets)
-target_link_libraries(${SPIDRPLUGIN} PRIVATE "${INSTALL_DIR}/$<CONFIGURATION>/lib/${CMAKE_SHARED_LIBRARY_PREFIX}HDPS_Public${LIB_SUFFIX}")
-target_link_libraries(${SPIDRPLUGIN} PRIVATE "${INSTALL_DIR}/$<CONFIGURATION>/lib/${CMAKE_SHARED_LIBRARY_PREFIX}PointData${LIB_SUFFIX}")
-target_link_libraries(${SPIDRPLUGIN} PRIVATE "${INSTALL_DIR}/$<CONFIGURATION>/lib/${CMAKE_SHARED_LIBRARY_PREFIX}ImageData${LIB_SUFFIX}")
 
+# Link against ManiVault core and data plugins
+set(HDPS_LINK_PATH "${INSTALL_DIR}/$<CONFIGURATION>/lib")
+set(PLUGIN_LINK_PATH "${INSTALL_DIR}/$<CONFIGURATION>/$<IF:$<CXX_COMPILER_ID:MSVC>,lib,Plugins>")
+set(HDPS_LINK_SUFFIX $<IF:$<CXX_COMPILER_ID:MSVC>,${CMAKE_LINK_LIBRARY_SUFFIX},${CMAKE_SHARED_LIBRARY_SUFFIX}>)
+
+set(HDPS_LINK_LIBRARY "${HDPS_LINK_PATH}/${CMAKE_SHARED_LIBRARY_PREFIX}HDPS_Public${HDPS_LINK_SUFFIX}")
+set(POINTDATA_LINK_LIBRARY "${PLUGIN_LINK_PATH}/${CMAKE_SHARED_LIBRARY_PREFIX}PointData${HDPS_LINK_SUFFIX}") 
+set(IMAGEDATA_LINK_LIBRARY "${PLUGIN_LINK_PATH}/${CMAKE_SHARED_LIBRARY_PREFIX}ImageData${HDPS_LINK_SUFFIX}") 
+
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "${HDPS_LINK_LIBRARY}")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "${POINTDATA_LINK_LIBRARY}")
+target_link_libraries(${SPIDRPLUGIN} PRIVATE "${IMAGEDATA_LINK_LIBRARY}")
+
+# Link against SpidrLib
 target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)
 
 # -----------------------------------------------------------------------------
 # Target installation
 # -----------------------------------------------------------------------------
 install(TARGETS ${SPIDRPLUGIN}
-	RUNTIME DESTINATION Plugins COMPONENT SHAREDLIB
-	LIBRARY DESTINATION Plugins COMPONENT LINKLIB
-	ARCHIVE DESTINATION lib COMPONENT LINKLIB
+    RUNTIME DESTINATION Plugins COMPONENT PLUGINS # Windows .dll
+    LIBRARY DESTINATION Plugins COMPONENT PLUGINS # Linux/Mac .so
 )
 
 add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
