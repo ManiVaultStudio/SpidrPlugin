@@ -1,6 +1,6 @@
 #include "BackgroundSelectionAction.h"
 
-#include <PointData.h>
+#include <PointData/PointData.h>
 
 
 class hdps::DataHierarchyManager;
