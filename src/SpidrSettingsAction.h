@@ -11,8 +11,6 @@ using namespace hdps::gui;
 
 class QMenu;
 
-class SpidrComputationAction;
-
 /**
  * Spidr settings class
  *
@@ -42,7 +40,6 @@ public: // Action getters
     SpidrParameters& getSpidrParameters() { return _spidrParameters; }
     GeneralSpidrSettingsAction& getGeneralSpidrSettingsAction() { return _generalSpidrSettingsAction; }
     AdvancedTsneSettingsAction& getAdvancedTsneSettingsAction() { return _advancedTsneSettingsAction; }
-    SpidrComputationAction& getComputationAction() { return _generalSpidrSettingsAction.getComputationAction(); }
     DimensionSelectionAction& getDimensionSelectionAction() { return _dimensionSelectionAction; }
     BackgroundSelectionAction& getBackgroundSelectionAction() { return _backgroundSelectionAction; }
 

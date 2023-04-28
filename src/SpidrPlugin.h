@@ -3,14 +3,11 @@
 #include <actions/WidgetAction.h>
 #include <AnalysisPlugin.h>
 
-#include "SpidrSettingsAction.h"
-
 #include <memory>
 
-#include "SpidrAnalysisQtWrapper.h"
-#include "TsneComputationQtWrapper.h"
-
-class SpidrSettingsWidget;
+class SpidrSettingsAction;
+class SpidrAnalysisQtWrapper;
+class TsneComputationQtWrapper;
 
 using namespace hdps::plugin;
 using namespace hdps::gui;
@@ -35,12 +32,6 @@ public:
     void startComputation();
     void stopComputation();
 
-
-public: // Action getters
-
-    SpidrSettingsAction& getGeneralSpidrSettingsAction() { return _spidrSettingsAction; }
-
-
 public slots:
     void onFinishedEmbedding();
 
@@ -54,17 +45,13 @@ signals:
 
 private:
 
-    SpidrAnalysisQtWrapper _spidrAnalysisWrapper;
-    TsneComputationQtWrapper _tnseWrapper;
+    std::unique_ptr<SpidrAnalysisQtWrapper>      _spidrAnalysisWrapper;         /** Spidr feature and knn computation wrapper */
+    std::unique_ptr<TsneComputationQtWrapper>    _tnseWrapper;                  /** t-sne computation wrapper */
 
-    SpidrSettingsAction         _spidrSettingsAction;           /** Spidr settings action */
+    std::unique_ptr<SpidrSettingsAction>         _spidrSettingsAction;          /** Spidr settings action */
 
-    QString _embeddingName;                             /*!<> */
-    QThread* _workerThreadSpidr;                        /*!<> */
-    QThread* _workerThreadtSNE;                         /*!<> */
-
-    //QString _inputSourceName;    // the input image name is available with getInputDatasetName()
-    //QString _outputDataName;     // since the output has a different data type than the input (Points intead of Images) we have to create it separately 
+    QThread* _workerThreadSpidr;        /** worker thread for spidr feature amd knn computation */
+    QThread* _workerThreadtSNE;         /** worker thread for t-SNE layout computation */
 };
 
 // =============================================================================

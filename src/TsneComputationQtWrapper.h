@@ -70,6 +70,8 @@ public:
      */
     std::vector<float> output();
 
+    std::vector<float>& outputRef();
+
     inline bool isTsneRunning() { return _isTsneRunning; }
     inline bool isGradientDescentRunning() { return _isGradientDescentRunning; }
     inline bool isMarkedForDeletion() { return _isMarkedForDeletion; }

@@ -16,7 +16,7 @@ AdvancedTsneSettingsAction::AdvancedTsneSettingsAction(SpidrSettingsAction& tsne
     setText("Advanced TSNE");
     setObjectName("Advanced TSNE");
 
-    const auto& tsneParameters = _spidrSettingsAction.getSpidrParameters();
+    auto& tsneParameters = _spidrSettingsAction.getSpidrParameters();
 
     _exaggerationAction.setDefaultWidgetFlags(IntegralAction::SpinBox);
     _exponentialDecayAction.setDefaultWidgetFlags(IntegralAction::SpinBox);
@@ -28,12 +28,12 @@ AdvancedTsneSettingsAction::AdvancedTsneSettingsAction(SpidrSettingsAction& tsne
     _numTreesAction.initialize(1, 10000, 4, 4);
     _numChecksAction.initialize(1, 10000, 1024, 1024);
 
-    const auto updateExaggeration = [this]() -> void {
-        _spidrSettingsAction.getSpidrParameters()._exaggeration =_exaggerationAction.getValue();
+    const auto updateExaggeration = [this, &tsneParameters]() -> void {
+        tsneParameters._exaggeration =_exaggerationAction.getValue();
     };
 
-    const auto updateExponentialDecay = [this]() -> void {
-        _spidrSettingsAction.getSpidrParameters()._expDecay = _exponentialDecayAction.getValue();
+    const auto updateExponentialDecay = [this, &tsneParameters]() -> void {
+        tsneParameters._expDecay = _exponentialDecayAction.getValue();
     };
 
     const auto updateNumTrees = [this]() -> void {

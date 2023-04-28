@@ -7,9 +7,7 @@
 #include <QVariant> 
 
 #include "FeatureUtils.h"
-
 #include "SpidrAnalysisParameters.h"  // get_feat_and_dist
-
 
 using namespace hdps::gui;
 
@@ -47,7 +45,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
 
     _knnTypeAction.initialize(QStringList({ "HNSW", "Exact kNN"}), "HNSW", "HNSW");
 
-    // Use an item model to add feat_dist enums to each drop down menu entry
+     //Use an item model to add feat_dist enums to each drop down menu entry
     _distanceItemModel = std::make_shared<QStandardItemModel>(0, 1);
 
     _distanceItemList.append(std::make_shared<QStandardItem>("Texture Hist. (QF)"));

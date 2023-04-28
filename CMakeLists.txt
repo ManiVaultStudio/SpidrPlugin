@@ -1,21 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
 
-set(USE_HDILIBSLIM OFF CACHE BOOL "Use a pre-build slim HDILib version, provide the variable HDILIBSLIM_ROOT")
-set(BUILD_HDILIB OFF CACHE BOOL "Build the HDILib from submodule - otherwise provide the variable HDILIB_ROOT")
-set(BUILD_HDILIBSLIM ON CACHE BOOL "Build the HDILibSlim from submodule - otherwise provide the variable HDILIBSLIM_ROOT")
-set(USE_AVX ON CACHE BOOL "Use AVX instructions sets if available")
-
-if(NOT (BUILD_HDILIBSLIM OR USE_HDILIBSLIM))
-	# setup vcpkg cmake toolchain
-	set(VCPKG_LIBRARY_LINKAGE static)
-	set(VCPKG_CRT_LINKAGE dynamic)
-	set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/external/Spidr/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
-	  CACHE STRING "Vcpkg toolchain file")
-endif()
+option(USE_AVX "Use AVX instructions sets if available" ON)
+option(USE_OPENMP "Use OpenMP - by default ON" ON)
 
 set(SPIDRPLUGIN "SpidrPlugin")
-
-PROJECT(${SPIDRPLUGIN})
+PROJECT(${SPIDRPLUGIN} C CXX)
 
 # -----------------------------------------------------------------------------
 # CMake settings
@@ -38,6 +27,7 @@ endif(MSVC)
 # Library dependencies
 # -----------------------------------------------------------------------------
 find_package(Qt6 COMPONENTS Widgets WebEngineWidgets REQUIRED)
+find_package(OpenMP)
 
 set(CREATE_EXAMPLE OFF CACHE BOOL "Creates an example executable using the Spidr library")
 set(CREATE_PYTHON_WRAPPER OFF CACHE BOOL "Creates a python wrapper of the Spidr library")
@@ -90,36 +80,16 @@ source_group(Aux FILES ${AUX})
 # -----------------------------------------------------------------------------
 add_library(${SPIDRPLUGIN} SHARED ${SOURCES})
 
+add_dependencies(${SPIDRPLUGIN} SpidrLib)
+
 # -----------------------------------------------------------------------------
 # Target properties
 # -----------------------------------------------------------------------------
 target_compile_features(${SPIDRPLUGIN} PRIVATE cxx_std_17)
 target_compile_features(${SPIDRPLUGIN} PRIVATE c_std_17)
 
-# Hardware accelations: SSE and AVX
-set(AXV_CompileOption $<IF:$<CXX_COMPILER_ID:MSVC>,/arch:AVX,-DUSE_AVX>)
-set(AXV2_CompileOption $<IF:$<CXX_COMPILER_ID:MSVC>,/arch:AVX2,-DUSE_AVX2>)
-set(SSE2_CompileOption $<IF:$<CXX_COMPILER_ID:MSVC>,/arch:SSE2,-DUSE_SSE2>)
-
-include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag(${AXV_CompileOption} COMPILER_OPT_AVX_SUPPORTED)
-check_cxx_compiler_flag(${AXV2_CompileOption} COMPILER_OPT_AVX2_SUPPORTED)
-
-if(${USE_AVX})
-	if(${COMPILER_OPT_AVX2_SUPPORTED})
-		MESSAGE( STATUS "Use AXV2")
-		target_compile_options(${SPIDRPLUGIN} PRIVATE ${AXV2_CompileOption})
-	elseif(${COMPILER_OPT_AVX_SUPPORTED})
-		MESSAGE( STATUS "Use AXV")
-		target_compile_options(${SPIDRPLUGIN} PRIVATE ${AXV_CompileOption})
-	else()
-		message(STATUS "USE_AVX is ON but no AVX hardware acceleration available, default to SSE2")
-		target_compile_options(${SPIDRPLUGIN} PRIVATE ${SSE2_CompileOption})
-	endif()
-else()
-	MESSAGE( STATUS "Use SSE2")
-	target_compile_options(${SPIDRPLUGIN} PRIVATE ${SSE2_CompileOption})
-endif()
+# Hardware accelations: AVX
+check_and_link_AVX(${SPIDRPLUGIN} ${USE_AVX})
 
 # -----------------------------------------------------------------------------
 # Target include directories
@@ -149,6 +119,10 @@ target_link_libraries(${SPIDRPLUGIN} PRIVATE "${IMAGEDATA_LINK_LIBRARY}")
 
 # Link against SpidrLib
 target_link_libraries(${SPIDRPLUGIN} PRIVATE SpidrLib)
+
+if(USE_OPENMP AND OpenMP_CXX_FOUND)
+	target_link_libraries(${SPIDRPLUGIN} PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 # -----------------------------------------------------------------------------
 # Target installation

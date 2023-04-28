@@ -216,6 +216,11 @@ std::vector<float> TsneComputationQtWrapper::output()
     return _outputData;
 }
 
+std::vector<float>& TsneComputationQtWrapper::outputRef()
+{
+    return _outputData;
+}
+
 void TsneComputationQtWrapper::setVerbose(bool verbose)
 {
     _verbose = verbose;
