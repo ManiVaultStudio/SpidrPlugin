@@ -14,7 +14,7 @@ using namespace hdps::gui;
 Q_DECLARE_METATYPE(feat_dist);      // in order to use QVariant::fromValue with custom type feat_dist
 
 GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spidrSettingsAction) :
-    GroupAction(&spidrSettingsAction, true),
+    GroupAction(&spidrSettingsAction, "GeneralSpidrSettingsAction", true),
     _spidrSettingsAction(spidrSettingsAction),
     _knnTypeAction(this, "KNN Type"),
     _distanceMetricAction(this, "Distance metric"),
@@ -22,7 +22,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _kernelWeight(this, "Neighborhood weighting"), 
     _histBinSizeAction(this),
     _numIterationsAction(this, "Number of iterations"),
-    _numberOfComputatedIterationsAction(this, "Computed iterations", 0, 1000000000, 0, 0),
+    _numberOfComputatedIterationsAction(this, "Computed iterations", 0, 1000000000, 0),
     _perplexityAction(this, "Perplexity"),
     _pixelWeightAction(this, "Pixel Weight"),
     _computationAction(this)
@@ -43,7 +43,7 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     _perplexityAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
     _pixelWeightAction.setDefaultWidgetFlags(IntegralAction::SpinBox | IntegralAction::Slider);
 
-    _knnTypeAction.initialize(QStringList({ "HNSW", "Exact kNN"}), "HNSW", "HNSW");
+    _knnTypeAction.initialize(QStringList({ "HNSW", "Exact kNN"}), "HNSW");
 
      //Use an item model to add feat_dist enums to each drop down menu entry
     _distanceItemModel = std::make_shared<QStandardItemModel>(0, 1);
@@ -78,11 +78,11 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
 
     _distanceMetricAction.initialize(*_distanceItemModel, "Texture Hist. (QF)", "Texture Hist. (QF)");
 
-    _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform", "Uniform");
-    _kernelSize.initialize(1, 50, 1, 1);
-    _numIterationsAction.initialize(1, 10000, 1000, 1000);
-    _perplexityAction.initialize(2, 100, 30, 30);
-    _pixelWeightAction.initialize(0, 1, 0.5, 0.5, 3);
+    _kernelWeight.initialize(QStringList({ "Uniform", "Gaussian" }), "Uniform");
+    _kernelSize.initialize(1, 50, 1);
+    _numIterationsAction.initialize(1, 10000, 1000);
+    _perplexityAction.initialize(2, 100, 30);
+    _pixelWeightAction.initialize(0, 1, 0.5, 0.5);
 
     // set default values
     _spidrSettingsAction.getSpidrParameters().set_numNeighborsInEachDirection(_kernelSize.getValue());
@@ -181,33 +181,33 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     };
 
 
-    const auto isResettable = [this]() -> bool {
-        if (_knnTypeAction.isResettable())
-            return true;
+    //const auto isResettable = [this]() -> bool {
+    //    if (_knnTypeAction.isResettable())
+    //        return true;
 
-        if (_distanceMetricAction.isResettable())
-            return true;
+    //    if (_distanceMetricAction.isResettable())
+    //        return true;
 
-        if (_numIterationsAction.isResettable())
-            return true;
+    //    if (_numIterationsAction.isResettable())
+    //        return true;
 
-        if (_histBinSizeAction.isResettable())
-            return true;
+    //    if (_histBinSizeAction.isResettable())
+    //        return true;
 
-        if (_kernelSize.isResettable())
-            return true;
+    //    if (_kernelSize.isResettable())
+    //        return true;
 
-        if (_kernelWeight.isResettable())
-            return true;
+    //    if (_kernelWeight.isResettable())
+    //        return true;
 
-        if (_perplexityAction.isResettable())
-            return true;
+    //    if (_perplexityAction.isResettable())
+    //        return true;
 
-        if (_pixelWeightAction.isResettable())
-            return true;
+    //    if (_pixelWeightAction.isResettable())
+    //        return true;
 
-        return false;
-    };
+    //    return false;
+    //};
 
     // call this after updateDistanceMetric
     const auto updateEnabledSettings = [this]() -> void {

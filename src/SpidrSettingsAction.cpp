@@ -5,7 +5,7 @@
 using namespace hdps::gui;
 
 SpidrSettingsAction::SpidrSettingsAction(QObject* parent) :
-    GroupAction(parent, false),
+    GroupAction(parent, "SpidrSettingsAction", false),
     _spidrParameters(),
     _generalSpidrSettingsAction(*this),
     _advancedTsneSettingsAction(*this),

@@ -155,7 +155,7 @@ void SpidrPlugin::init()
         QCoreApplication::processEvents();
 
         // Notify others that the embedding data changed
-        events().notifyDatasetChanged(getOutputDataset());
+        events().notifyDatasetDataChanged(getOutputDataset());
         });
 
 
@@ -326,7 +326,7 @@ void SpidrPlugin::onFinishedEmbedding() {
     qDebug() << "SpidrPlugin: Publishing final embedding";
 
     embedding->setData(embWithBg.data(), embWithBg.size() / 2, 2);
-    events().notifyDatasetChanged(getOutputDataset());
+    events().notifyDatasetDataChanged(getOutputDataset());
 
     qDebug() << "SpidrPlugin: Done.";
 }

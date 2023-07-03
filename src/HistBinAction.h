@@ -53,7 +53,7 @@ public:
 
 //    bool isResettable() const override;
 
-    void reset() override;
+    //void reset() override;
 
 private slots:
     void onHistBinNumHeurChanged();

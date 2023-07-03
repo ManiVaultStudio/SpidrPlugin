@@ -3,14 +3,12 @@
 #include <PointData/PointData.h>
 
 
-class hdps::DataHierarchyManager;
-
 BackgroundSelectionAction::BackgroundSelectionAction(QObject* parent) :
-    GroupAction(parent),
+    GroupAction(parent, "BackgroundSelectionAction"),
     _datasetPickerAction(this, "Background dataset"),
     _reloadDataSets(this, "Reload Datasets"),
     _enableDisable(this, "Enable/Disable"),
-    _idsInDataAction(this, "IDs in data", false, false)
+    _idsInDataAction(this, "IDs in data", false)
 {
     setText("Background dataset");
 

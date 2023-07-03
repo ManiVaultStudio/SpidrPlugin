@@ -6,7 +6,7 @@
 using namespace hdps::gui;
 
 AdvancedTsneSettingsAction::AdvancedTsneSettingsAction(SpidrSettingsAction& tsneSettingsAction) :
-    GroupAction(&tsneSettingsAction),
+    GroupAction(&tsneSettingsAction, "AdvancedTsneSettingsAction"),
     _spidrSettingsAction(tsneSettingsAction),
     _exaggerationAction(this, "Exaggeration"),
     _exponentialDecayAction(this, "Exponential decay"),
@@ -23,10 +23,10 @@ AdvancedTsneSettingsAction::AdvancedTsneSettingsAction(SpidrSettingsAction& tsne
     _numTreesAction.setDefaultWidgetFlags(IntegralAction::SpinBox);
     _numChecksAction.setDefaultWidgetFlags(IntegralAction::SpinBox);
 
-    _exaggerationAction.initialize(1, 10000, 250, 250);
-    _exponentialDecayAction.initialize(1, 10000, 70, 70);
-    _numTreesAction.initialize(1, 10000, 4, 4);
-    _numChecksAction.initialize(1, 10000, 1024, 1024);
+    _exaggerationAction.initialize(1, 10000, 250);
+    _exponentialDecayAction.initialize(1, 10000, 70);
+    _numTreesAction.initialize(1, 10000, 4);
+    _numChecksAction.initialize(1, 10000, 1024);
 
     const auto updateExaggeration = [this, &tsneParameters]() -> void {
         tsneParameters._exaggeration =_exaggerationAction.getValue();

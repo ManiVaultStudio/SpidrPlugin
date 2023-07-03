@@ -7,7 +7,7 @@
 using namespace hdps::gui;
 
 SpidrComputationAction::SpidrComputationAction(QObject* parent) :
-    WidgetAction(parent),
+    WidgetAction(parent, "SpidrComputationAction"),
     _startComputationAction(this, "Start"),
     //_continueComputationAction(this, "Continue"),
     _stopComputationAction(this, "Stop"),

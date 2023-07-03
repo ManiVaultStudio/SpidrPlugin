@@ -7,7 +7,7 @@
 using namespace hdps::gui;
 
 HistBinAction::HistBinAction(QObject* parent) :
-    WidgetAction(parent),
+    WidgetAction(parent, "HistBinAction"),
     _histBinNumHeur(this, "Histo. bin heuristic: Sqrt: ceil(sqrt(n)) \nSturges: ceil(log_2(n))+1 \nRice: ceil(2*pow(n, 1/3))"),
     _numHistBins(this, "Num bins")
 {
@@ -19,8 +19,8 @@ HistBinAction::HistBinAction(QObject* parent) :
     _histBinNumHeur.setDefaultWidgetFlags(OptionAction::ComboBox);
     _numHistBins.setDefaultWidgetFlags(IntegralAction::SpinBox);
 
-    _histBinNumHeur.initialize(QStringList({ "Manual", "Rice", "Sturges", "Sqrt" }), "Rice", "Rice");
-    _numHistBins.initialize(1, 10000, 5, 5);
+    _histBinNumHeur.initialize(QStringList({ "Manual", "Rice", "Sturges", "Sqrt" }), "Rice");
+    _numHistBins.initialize(1, 10000, 5);
     _numHistBins.setDisabled(true); // enable only for manual
 
     connect(&_histBinNumHeur, &OptionAction::currentIndexChanged, this, &HistBinAction::onHistBinNumHeurChanged);
@@ -68,6 +68,6 @@ void HistBinAction::onHistBinNumHeurChanged()
 //    return _histBinNumHeur.getCurrentIndex() != _histBinNumHeur.getDefaultIndex();
 //}
 
-void HistBinAction::reset() {
-    _histBinNumHeur.reset();
-}
+//void HistBinAction::reset() {
+//    _histBinNumHeur.reset();
+//}
