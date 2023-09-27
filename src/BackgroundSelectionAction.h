@@ -1,6 +1,7 @@
 #pragma once
 
 #include <actions/GroupAction.h>
+#include <actions/DatasetPickerAction.h>
 
 #include <PointData/DimensionsPickerAction.h>
 

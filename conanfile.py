@@ -74,11 +74,24 @@ class SpidrPluginConan(ConanFile):
         pass
 
     def system_requirements(self):
-        if os_info.is_macos:
-            installer = SystemPackageTool()
+        print("In system requirements")
+        installer = SystemPackageTool()
+
+        if self.settings.os == "Macos":
             installer.install("libomp")
             proc = subprocess.run("brew --prefix libomp",  shell=True, capture_output=True)
             subprocess.run(f"ln {proc.stdout.decode('UTF-8').strip()}/lib/libomp.dylib /usr/local/lib/libomp.dylib", shell=True)
+
+
+        if os_info.linux_distro in ["ubuntu", "debian"]:
+            print("glfw system dependencies")
+            packages = []
+            packages.append('libxi-dev')
+            packages.append('libxcursor-dev')
+            packages.append('libxrandr-dev')
+            packages.append('libxinerama-dev')
+            installer.install_packages(packages)
+
 
     def config_options(self):
         if self.settings.os == "Windows":

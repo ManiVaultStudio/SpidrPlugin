@@ -1,6 +1,6 @@
 #pragma once
 
-#include "actions/Actions.h"
+#include <actions/GroupAction.h>
 
 #include "SpidrComputationAction.h"
 #include "HistBinAction.h"
