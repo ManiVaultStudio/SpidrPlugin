@@ -91,6 +91,7 @@ class SpidrPluginConan(ConanFile):
             packages.append('libxrandr-dev')
             packages.append('libxinerama-dev')
             installer.install_packages(packages)
+            self.run("sudo apt update && sudo apt install -y libtbb2-dev")
 
 
     def config_options(self):
