@@ -185,7 +185,7 @@ void SpidrPlugin::startComputation()
     setTaskProgress(0.0f);
     setTaskDescription("Preparing data");
 
-    _spidrSettingsAction->getGeneralSpidrSettingsAction().getNumberOfComputatedIterationsAction().reset();
+    // _spidrSettingsAction->getGeneralSpidrSettingsAction().getNumberOfComputatedIterationsAction().reset(); // deprecated
 
     // Get the data
     // Use the source data to get the points 

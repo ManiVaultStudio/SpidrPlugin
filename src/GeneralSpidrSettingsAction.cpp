@@ -11,17 +11,7 @@
 
 using namespace hdps::gui;
 
-/*****            Note to Alex - 
- * feat_dist is causing an ambiguity in matching type QDataStream &QDataStream::operator<< 
- * This is visible in gcc 10.
- * For now the feat_dist has been ifndef-ed (#ifndef __linux__) 
- * so while it is compiling on gcc it is not working correctly.
- * There are some other deprecated errorsfor old core functions  e.g. isResettable
-**********************/
-
-#ifndef __linux
 Q_DECLARE_METATYPE(feat_dist);      // in order to use QVariant::fromValue with custom type feat_dist 
-#endif
 
 GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spidrSettingsAction) :
     GroupAction(&spidrSettingsAction, "GeneralSpidrSettingsAction", true),
@@ -58,7 +48,6 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
      //Use an item model to add feat_dist enums to each drop down menu entry
     _distanceItemModel = std::make_shared<QStandardItemModel>(0, 1);
 
-#ifndef __linux
     _distanceItemList.append(std::make_shared<QStandardItem>("Texture Hist. (QF)"));
     _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::HIST_QF));
 
@@ -82,7 +71,6 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
 
     _distanceItemList.append(std::make_shared<QStandardItem>("XY Pos (normed)"));
     _distanceItemList.last()->setData(QVariant::fromValue(feat_dist::XYRNORM_EUC));
-#endif
 
     // add all feat_dist entries
     for (auto& item : _distanceItemList)
@@ -125,10 +113,8 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
         auto data = model->item(index, 0)->data();
 
         // Set feature attribute and distance metric
-#ifndef __linux__
         feat_dist seleted_feat_dist = data.value<feat_dist>();
         std::tie(feat, dist) = get_feat_and_dist(seleted_feat_dist);
-#endif
 
         _spidrSettingsAction.getSpidrParameters()._featureType = feat;
         _spidrSettingsAction.getSpidrParameters()._aknn_metric = dist;
