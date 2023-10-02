@@ -4,16 +4,18 @@ option(USE_AVX "Use AVX instructions sets if available" ON)
 option(USE_OPENMP "Use OpenMP - by default ON" ON)
 
 set(SPIDRPLUGIN "SpidrPlugin")
-PROJECT(${SPIDRPLUGIN} C CXX)
+PROJECT(${SPIDRPLUGIN} CXX)
 
 # -----------------------------------------------------------------------------
 # CMake settings
 # -----------------------------------------------------------------------------
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
-set(INSTALL_DIR $ENV{HDPS_INSTALL_DIR})
+# Get the env path and allow the user to change it
+set(INSTALL_DIR $ENV{HDPS_INSTALL_DIR} CACHE PATH "The HDPS Install Directoy")
+# Normalize the incoming install path
+file(TO_CMAKE_PATH ${INSTALL_DIR} INSTALL_DIR)
 message(STATUS "Install to ${INSTALL_DIR}")
 
 if(MSVC)
@@ -48,6 +50,10 @@ set(PLUGIN
     src/OffscreenBuffer.cpp
 )
 
+set(PLUGIN_MOC_HEADERS
+    src/SpidrPlugin.h
+)
+
 set(ACTIONS
     src/GeneralSpidrSettingsAction.h
     src/GeneralSpidrSettingsAction.cpp
@@ -80,13 +86,13 @@ source_group(Aux FILES ${AUX})
 # -----------------------------------------------------------------------------
 add_library(${SPIDRPLUGIN} SHARED ${SOURCES})
 
-add_dependencies(${SPIDRPLUGIN} SpidrLib)
+qt_wrap_cpp(SPIDRPLUGIN_MOC ${PLUGIN_MOC_HEADERS} TARGET ${SPIDRPLUGIN})
+target_sources(${SPIDRPLUGIN} PRIVATE ${SPIDRPLUGIN_MOC})
 
 # -----------------------------------------------------------------------------
 # Target properties
 # -----------------------------------------------------------------------------
 target_compile_features(${SPIDRPLUGIN} PRIVATE cxx_std_17)
-target_compile_features(${SPIDRPLUGIN} PRIVATE c_std_17)
 
 # Hardware accelations: AVX
 check_and_link_AVX(${SPIDRPLUGIN} ${USE_AVX})
