@@ -84,47 +84,48 @@ void SpidrPlugin::init()
         computationAction.getStopComputationAction().setEnabled(isRunning);
     };
 
+    auto& dataset = outputDataset->getTask();
 
     // Update task description in GUI
-    connect(_spidrAnalysisWrapper.get(), &SpidrAnalysisQtWrapper::progressSection, this, [this](const QString& section) {
-        if (getTaskStatus() == DataHierarchyItem::TaskStatus::Aborted)
+    connect(_spidrAnalysisWrapper.get(), &SpidrAnalysisQtWrapper::progressSection, this, [this, &dataset](const QString& section) {
+        if (dataset.getStatus() == Task::Status::Aborted)
             return;
 
-        setTaskDescription(section);
-        });
+        dataset.setProgressDescription(section);
+    });
 
-    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::progressPercentage, this, [this](const float& percentage) {
-        if (getTaskStatus() == DataHierarchyItem::TaskStatus::Aborted)
+    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::progressPercentage, this, [this, &dataset](const float& percentage) {
+        if (dataset.getStatus() == Task::Status::Aborted)
             return;
 
-        setTaskProgress(percentage);
-        });
+        dataset.setProgress(percentage);
+    });
 
-    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::progressSection, this, [this](const QString& section) {
-        if (getTaskStatus() == DataHierarchyItem::TaskStatus::Aborted)
+    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::progressSection, this, [this, &dataset](const QString& section) {
+        if (dataset.getStatus() == Task::Status::Aborted)
             return;
 
-        setTaskDescription(section);
-        });
+        dataset.setProgressDescription(section);
+    });
 
-    connect(_spidrAnalysisWrapper.get(), &SpidrAnalysisQtWrapper::progressSection, this, [this](const QString& section) {
-        if (getTaskStatus() == DataHierarchyItem::TaskStatus::Aborted)
+    connect(_spidrAnalysisWrapper.get(), &SpidrAnalysisQtWrapper::progressSection, this, [this, &dataset](const QString& section) {
+        if (dataset.getStatus() == Task::Status::Aborted)
             return;
 
-        setTaskDescription(section);
-        });
+        dataset.setProgressDescription(section);
+    });
 
     // Embedding finished
-    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::finishedEmbedding, this, [this, &computationAction]() {
+    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::finishedEmbedding, this, [this, &computationAction, &dataset]() {
         onFinishedEmbedding();
 
-        setTaskFinished();
+        dataset.setFinished();
 
         computationAction.getRunningAction().setChecked(false);
 
         _spidrSettingsAction->getGeneralSpidrSettingsAction().setReadOnly(false);
         _spidrSettingsAction->getAdvancedTsneSettingsAction().setReadOnly(false);
-        });
+    });
 
     // start computation
     connect(&computationAction.getStartComputationAction(), &TriggerAction::triggered, this, [this, &computationAction]() {
@@ -135,8 +136,8 @@ void SpidrPlugin::init()
         });
 
     // abort t-SNE
-    connect(&computationAction.getStopComputationAction(), &TriggerAction::triggered, this, [this]() {
-        setTaskDescription("Aborting TSNE");
+    connect(&computationAction.getStopComputationAction(), &TriggerAction::triggered, this, [this, &dataset]() {
+        dataset.setProgressDescription("Aborting TSNE");
 
         qApp->processEvents();
 
@@ -176,14 +177,16 @@ void SpidrPlugin::init()
         _spidrSettingsAction->getDimensionSelectionAction().getPickerAction().setPointsDataset(inputDataset);
         });
 
-    setTaskName("Spidr");
+    dataset.setName("Spidr");
 }
 
 void SpidrPlugin::startComputation()
 {
-    setTaskRunning();
-    setTaskProgress(0.0f);
-    setTaskDescription("Preparing data");
+    auto& dataset = getOutputDataset()->getTask();
+
+    dataset.setRunning();
+    dataset.setProgress(0.0f);
+    dataset.setDescription("Preparing data");
 
     // _spidrSettingsAction->getGeneralSpidrSettingsAction().getNumberOfComputatedIterationsAction().reset(); // deprecated
 
