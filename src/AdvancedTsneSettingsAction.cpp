@@ -3,7 +3,7 @@
 
 #include <QTableView>
 
-using namespace hdps::gui;
+using namespace mv::gui;
 
 AdvancedTsneSettingsAction::AdvancedTsneSettingsAction(SpidrSettingsAction& tsneSettingsAction) :
     GroupAction(&tsneSettingsAction, "AdvancedTsneSettingsAction"),

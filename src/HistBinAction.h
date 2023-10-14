@@ -2,7 +2,7 @@
 
 #include "actions/Actions.h"
 
-using namespace hdps::gui;
+using namespace mv::gui;
 
 class SpidrSettingsAction;
 class QMenu;

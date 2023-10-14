@@ -9,7 +9,7 @@
 #include "FeatureUtils.h"
 #include "SpidrAnalysisParameters.h"  // get_feat_and_dist
 
-using namespace hdps::gui;
+using namespace mv::gui;
 
 Q_DECLARE_METATYPE(feat_dist);      // in order to use QVariant::fromValue with custom type feat_dist 
 

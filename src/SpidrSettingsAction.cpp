@@ -2,7 +2,7 @@
 
 #include <QMenu>
 
-using namespace hdps::gui;
+using namespace mv::gui;
 
 SpidrSettingsAction::SpidrSettingsAction(QObject* parent) :
     GroupAction(parent, "SpidrSettingsAction", false),

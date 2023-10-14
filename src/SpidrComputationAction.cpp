@@ -4,7 +4,7 @@
 #include <QHBoxLayout>
 #include <QMenu>
 
-using namespace hdps::gui;
+using namespace mv::gui;
 
 SpidrComputationAction::SpidrComputationAction(QObject* parent) :
     WidgetAction(parent, "SpidrComputationAction"),

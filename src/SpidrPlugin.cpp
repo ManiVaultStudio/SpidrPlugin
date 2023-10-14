@@ -22,8 +22,8 @@
 
 Q_PLUGIN_METADATA(IID "nl.tudelft.SpidrPlugin")
 
-using namespace hdps;
-using namespace hdps::gui;
+using namespace mv;
+using namespace mv::gui;
 
 // =============================================================================
 // Analysis Plugin
@@ -47,7 +47,7 @@ void SpidrPlugin::init()
 {
     // Get both image data and its parent data set
     auto imagesDataset = getInputDataset<Images>();
-    auto inputDataset = static_cast<hdps::Dataset<Points>>(imagesDataset->getParent());
+    auto inputDataset = static_cast<mv::Dataset<Points>>(imagesDataset->getParent());
     
     // set the output data as derived from the parent data set (since the type differs from the input data set)
     setOutputDataset(_core->createDerivedDataset("sp-tsne_embedding", inputDataset, inputDataset));
@@ -196,8 +196,8 @@ void SpidrPlugin::startComputation()
     // if inputPoints is not a subset, inputPointsParent = inputPoints and contextIDsGlobal will remain empty
     qDebug() << "SpidrPlugin: Read data ";
     auto inputImages = getInputDataset<Images>();
-    auto inputPoints = static_cast<hdps::Dataset<Points>>(inputImages->getParent());
-    auto inputPointsParent = static_cast<hdps::Dataset<Points>>(inputImages->getParent());
+    auto inputPoints = static_cast<mv::Dataset<Points>>(inputImages->getParent());
+    auto inputPointsParent = static_cast<mv::Dataset<Points>>(inputImages->getParent());
 
     // we introduce all there global ID sets so that the user can work on subsets of data and still define background selections in those subsets
 
@@ -246,7 +246,7 @@ void SpidrPlugin::startComputation()
     }
 
     // Background IDs
-    hdps::Dataset<Points> backgroundDataset = static_cast<hdps::Dataset<Points>>(_spidrSettingsAction->getBackgroundSelectionAction().getBackgroundDataset());
+    mv::Dataset<Points> backgroundDataset = static_cast<mv::Dataset<Points>>(_spidrSettingsAction->getBackgroundSelectionAction().getBackgroundDataset());
     if (backgroundDataset.isValid())
     {
         if (!_spidrSettingsAction->getBackgroundSelectionAction().getIDsInData())  // use the global IDs of the background dataset (it is a subset of the inputPoints dataset)
@@ -380,7 +380,7 @@ AnalysisPlugin* SpidrPluginFactory::produce()
     return new SpidrPlugin(this);
 }
 
-PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const hdps::Datasets& datasets) const
+PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const mv::Datasets& datasets) const
 {
     PluginTriggerActions pluginTriggerActions;
 

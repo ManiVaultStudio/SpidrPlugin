@@ -11,7 +11,7 @@
 
 #include <memory> 
 
-using namespace hdps::gui;
+using namespace mv::gui;
 
 class QMenu;
 class SpidrSettingsAction;

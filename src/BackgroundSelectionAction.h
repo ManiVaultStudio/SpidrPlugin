@@ -25,7 +25,7 @@ public:
 public: // Action getters
 
     /** Get smart pointer to dataset (if any) */
-    hdps::Dataset<hdps::DatasetImpl> getBackgroundDataset() {
+    mv::Dataset<mv::DatasetImpl> getBackgroundDataset() {
         if (_datasetPickerAction.isEnabled())
             return _datasetPickerAction.getCurrentDataset();
         else
