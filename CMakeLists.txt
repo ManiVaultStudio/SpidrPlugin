@@ -100,6 +100,14 @@ target_compile_features(${SPIDRPLUGIN} PRIVATE cxx_std_17)
 # Hardware accelations: AVX
 check_and_link_AVX(${SPIDRPLUGIN} ${USE_AVX})
 
+if(MSVC)
+    message(STATUS "Prevent compilation error on MSVC: Use AVX instead of AVX2")
+    get_target_property(SPIDRPLUGIN_COMPILE_OPTIONS ${SPIDRPLUGIN} COMPILE_OPTIONS)
+    list(REMOVE_ITEM SPIDRPLUGIN_COMPILE_OPTIONS "/arch:AVX2")
+    list(APPEND SPIDRPLUGIN_COMPILE_OPTIONS "/arch:AVX")
+    set_target_properties(${SPIDRPLUGIN} PROPERTIES COMPILE_OPTIONS "${SPIDRPLUGIN_COMPILE_OPTIONS}")
+endif()
+
 # -----------------------------------------------------------------------------
 # Target include directories
 # -----------------------------------------------------------------------------
