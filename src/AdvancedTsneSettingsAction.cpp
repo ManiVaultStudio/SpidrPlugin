@@ -16,6 +16,11 @@ AdvancedTsneSettingsAction::AdvancedTsneSettingsAction(SpidrSettingsAction& tsne
     setText("Advanced TSNE");
     setObjectName("Advanced TSNE");
 
+    addAction(&_exaggerationAction);
+    addAction(&_exponentialDecayAction);
+    addAction(&_numTreesAction);
+    addAction(&_numChecksAction);
+
     auto& tsneParameters = _spidrSettingsAction.getSpidrParameters();
 
     _exaggerationAction.setDefaultWidgetFlags(IntegralAction::SpinBox);

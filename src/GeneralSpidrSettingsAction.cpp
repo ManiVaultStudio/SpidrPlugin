@@ -30,6 +30,17 @@ GeneralSpidrSettingsAction::GeneralSpidrSettingsAction(SpidrSettingsAction& spid
     setText("Spidr");
     setObjectName("Spidr");
 
+    addAction(&_knnTypeAction);
+    addAction(&_distanceMetricAction);
+    addAction(&_kernelSize);
+    addAction(&_kernelWeight);
+    addAction(&_histBinSizeAction);
+    addAction(&_numIterationsAction);
+    addAction(&_numberOfComputatedIterationsAction);
+    addAction(&_perplexityAction);
+    addAction(&_pixelWeightAction);
+    addAction(&_computationAction);
+
     const auto& spidrParameters = _spidrSettingsAction.getSpidrParameters();
 
     _numberOfComputatedIterationsAction.setEnabled(false);
