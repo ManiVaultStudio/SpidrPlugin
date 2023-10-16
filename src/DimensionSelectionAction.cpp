@@ -5,4 +5,6 @@ DimensionSelectionAction::DimensionSelectionAction(QObject* parent) :
     _pickerAction(this, "DimensionPicker")
 {
     setText("Dimensions");
+
+    addAction(&_pickerAction);
 }
