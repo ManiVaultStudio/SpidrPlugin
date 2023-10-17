@@ -120,7 +120,8 @@ class SpidrPluginConan(ConanFile):
             )
             prefix_path = f"{proc.stdout.decode('UTF-8').strip()}"
             tc.variables["OpenMP_ROOT"] = prefix_path
-        
+            tc.variables["USE_MACOSSDK_OPENGL"] = "ON"
+         
         # Set the installation directory for ManiVault based on the MV_INSTALL_DIR environment variable
         # or if none is specified, set it to the build/install dir.
         if not os.environ.get("MV_INSTALL_DIR", None):

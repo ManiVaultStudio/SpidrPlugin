@@ -36,6 +36,7 @@ find_package(OpenMP)
 
 set(CREATE_EXAMPLE OFF CACHE BOOL "Creates an example executable using the Spidr library")
 set(CREATE_PYTHON_WRAPPER OFF CACHE BOOL "Creates a python wrapper of the Spidr library")
+set(USE_MACOSSDK_OPENGL OFF CACHE BOOL "Use MACOS SDK provided glad.h instead of hdi/utils/glad/glad.h")
 
 add_subdirectory("external/Spidr")
 
@@ -113,6 +114,13 @@ endif()
 # -----------------------------------------------------------------------------
 target_include_directories(${SPIDRPLUGIN} PRIVATE "${MV_INSTALL_DIR}/$<CONFIGURATION>/include/")
 target_include_directories(${SPIDRPLUGIN} PRIVATE "external/Spidr/include/")
+
+#------------------------------------------------------------------------------
+# Compile defines
+#------------------------------------------------------------------------------
+if(USE_MACOSSDK_OPENGL)
+    target_compile_definitions(${SPIDRPLUGIN} PRIVATE USE_MACOSSDK_OPENGL)
+endif()
 
 # -----------------------------------------------------------------------------
 # Target library linking

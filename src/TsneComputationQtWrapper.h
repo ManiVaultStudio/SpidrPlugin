@@ -1,7 +1,9 @@
 #pragma once
 #include "SpidrAnalysisParameters.h"
 
+#ifndef USE_MACOSSDK_OPENGL
 #include "hdi/utils/glad/glad.h"
+#endif
 #include "OffscreenBuffer.h"
 
 #include "hdi/dimensionality_reduction/hd_joint_probability_generator.h"
