@@ -6,12 +6,21 @@
 #include <algorithm>
 #include <tuple>
 
+SpidrWorkerTasks::SpidrWorkerTasks(QObject* parent, mv::Task* parentTask) :
+    QObject(parent),
+    _computeFeaturesTask(this, "Compute spatial neighborhood features", mv::Task::GuiScopes{ mv::Task::GuiScope::DataHierarchy, mv::Task::GuiScope::Foreground }, mv::Task::Status::Idle),
+    _computekNN(this, "Compute kNN", mv::Task::GuiScopes{ mv::Task::GuiScope::DataHierarchy, mv::Task::GuiScope::Foreground }, mv::Task::Status::Idle)
+{
+    _computeFeaturesTask.setParentTask(parentTask);
+    _computekNN.setParentTask(parentTask);
+}
 
-SpidrAnalysisQtWrapper::SpidrAnalysisQtWrapper()
+SpidrAnalysisQtWrapper::SpidrAnalysisQtWrapper() :
+    _parentTask(nullptr),
+    _tasks(nullptr)
 {
 
 }
-
 
 SpidrAnalysisQtWrapper::~SpidrAnalysisQtWrapper()
 {
@@ -104,11 +113,11 @@ void SpidrAnalysisQtWrapper::setup(const std::vector<float>& attribute_data, con
 
 }
 
-
-
 void SpidrAnalysisQtWrapper::spatialAnalysis() {
 
     _SpidrAnalysis = std::make_unique<SpidrAnalysis>();
+
+    createTasks();
 
     // Pass data to SpidrLib
     if (_contextAndBackgroundIDsGlobal.empty())
@@ -123,12 +132,14 @@ void SpidrAnalysisQtWrapper::spatialAnalysis() {
         _aknnAlgType, _distMetric, _numIterations, _perplexity, _exaggeration, _expDecay, _forceBackgroundFeatures);
 
     // Compute data features
-    emit progressSection("Calculate features");
+    _tasks->getComputeFeaturesTask().setRunning();
     _SpidrAnalysis->computeFeatures();
-    
+    _tasks->getComputeFeaturesTask().setFinished();
+
     // Compute knn dists and inds
-    emit progressSection("Calculate distances and kNN");
+    _tasks->getComputekNNTask().setRunning();
     _SpidrAnalysis->computekNN();
+    _tasks->getComputekNNTask().setFinished();
 
     // trigger SpidrPlugin::tsneComputation, which starts the t-SNE computation in TsneComputationQtWrapper
     emit finishedKnn(); 
@@ -231,4 +242,9 @@ const std::vector<float>& SpidrAnalysisQtWrapper::outputWithBackground() {
 
 const SpidrParameters SpidrAnalysisQtWrapper::getParameters() {
     return _SpidrAnalysis->getParameters();
+}
+
+void SpidrAnalysisQtWrapper::createTasks()
+{
+    _tasks = new SpidrWorkerTasks(this, _parentTask);
 }

@@ -9,6 +9,22 @@
 #include "hdi/dimensionality_reduction/tsne_parameters.h"
 #include "hdi/utils/scoped_timers.h"
 
+TsneWorkerTasks::TsneWorkerTasks(QObject* parent, mv::Task* parentTask) :
+    QObject(parent),
+    _initializeOffScreenBufferTask(this, "Initializing off-screen GP-GPU buffer", mv::Task::GuiScopes{ mv::Task::GuiScope::DataHierarchy, mv::Task::GuiScope::Foreground }, mv::Task::Status::Idle),
+    _initializeTsneTask(this, "Initialize TSNE", mv::Task::GuiScopes{ mv::Task::GuiScope::DataHierarchy, mv::Task::GuiScope::Foreground }, mv::Task::Status::Idle),
+    _initializeGradientDescentTask(this, "Initialize Computing gradient", mv::Task::GuiScopes{ mv::Task::GuiScope::DataHierarchy, mv::Task::GuiScope::Foreground }, mv::Task::Status::Idle),
+    _computeGradientDescentTask(this, "Computing gradient descent", mv::Task::GuiScopes{ mv::Task::GuiScope::DataHierarchy, mv::Task::GuiScope::Foreground }, mv::Task::Status::Idle)
+{
+    _initializeOffScreenBufferTask.setParentTask(parentTask);
+    _initializeTsneTask.setParentTask(parentTask);
+    _initializeGradientDescentTask.setParentTask(parentTask);
+    _computeGradientDescentTask.setParentTask(parentTask);
+
+    _computeGradientDescentTask.setWeight(20.f);
+    _computeGradientDescentTask.setSubtaskNamePrefix("Compute gradient descent step");
+}
+
 
 TsneComputationQtWrapper::TsneComputationQtWrapper() :
     _currentIteration(0),
@@ -20,12 +36,15 @@ TsneComputationQtWrapper::TsneComputationQtWrapper() :
     _perplexity(30),
     _perplexity_multiplier(3),
     _numDimensionsOutput(2),
+    _numDataDims(0), _numForegroundPoints(0),
     _verbose(false),
     _isGradientDescentRunning(false),
     _isTsneRunning(false),
     _isMarkedForDeletion(false),
     _continueFromIteration(0),
-    _offscreenBuffer(nullptr)
+    _offscreenBuffer(nullptr),
+    _parentTask(nullptr),
+    _tasks(nullptr)
 {
     _nn = _perplexity * _perplexity_multiplier + 1;
 
@@ -77,7 +96,7 @@ void TsneComputationQtWrapper::setup(const std::vector<int> knn_indices, const s
 
 void TsneComputationQtWrapper::initTSNE()
 {
-    emit progressSection("Initializing A-tSNE");
+    _tasks->getInitializeTsneTask().setRunning();
 
     // Computation of the high dimensional similarities
     {
@@ -89,10 +108,9 @@ void TsneComputationQtWrapper::initTSNE()
 
         spdlog::info("tSNE initialized.");
 
-        emit progressSection("Calculate probability distributions");
-
         _probabilityDistribution.clear();
         _probabilityDistribution.resize(_numForegroundPoints);
+
         spdlog::info("Sparse matrix allocated.");
 
         hdi::dr::HDJointProbabilityGenerator<float> probabilityGenerator;
@@ -107,13 +125,12 @@ void TsneComputationQtWrapper::initTSNE()
         spdlog::info("--------------------------------------------------------------------------------");
     }
 
-    emit progressSection("Probability distributions calculated");
-
+    _tasks->getInitializeTsneTask().setFinished();
 }
 
 void TsneComputationQtWrapper::initGradientDescent()
 {
-    emit progressSection("Initializing gradient descent");
+    _tasks->getInitializeGradientDescentTask().setRunning();
 
     _continueFromIteration = 0;
     _isTsneRunning = true;
@@ -126,37 +143,49 @@ void TsneComputationQtWrapper::initGradientDescent()
     tsneParams._exponential_decay_iter = _exponentialDecay;
     tsneParams._exaggeration_factor = 4 + _numForegroundPoints / 60000.0;
     
+    _tasks->getInitializeOffScreenBufferTask().setRunning();
+
     // Create a context local to this thread that shares with the global share context
     _offscreenBuffer->initialize();
     _offscreenBuffer->bindContext();
+
+    _tasks->getInitializeOffScreenBufferTask().setFinished();
 
     // Initialize GPGPU-SNE
     _GPGPU_tSNE.initialize(_probabilityDistribution, &_embedding, tsneParams);
 
     copyFloatOutput();
+
+    _tasks->getInitializeGradientDescentTask().setFinished();
 }
 
 // Computing gradient descent
 void TsneComputationQtWrapper::embed()
 {
-    emit progressSection("Embedding");
-    
-    const auto emitEmbeddingUpdate = [this](const std::uint32_t& numProcessed, const std::uint32_t& numTotal) -> void {
-        emit progressSection(QString("Embedding (step %1 of %2)").arg(QString::number(numProcessed), QString::number(numTotal)));
-        emit progressPercentage(static_cast<float>(numProcessed) / static_cast<float>(numTotal));
-    };
+
+    const auto updateEmbedding = [this]() -> void {
+        copyFloatOutput();
+        emit newEmbedding();
+        };
 
     double elapsed = 0;
     double t = 0;
     {
         spdlog::info("A-tSNE: Computing gradient descent..\n");
-        _isGradientDescentRunning = true;
 
+        _tasks->getComputeGradientDescentTask().setRunning();
+        _tasks->getComputeGradientDescentTask().setSubtasks(_iterations);
+
+        updateEmbedding();
+
+        _isGradientDescentRunning = true;
         const auto beginIteration = _currentIteration;
 
         // Performs gradient descent for every iteration
         for (_currentIteration = beginIteration; _currentIteration < _iterations; ++_currentIteration)
         {
+            _tasks->getComputeGradientDescentTask().setSubtaskFinished(_currentIteration);
+
             hdi::utils::ScopedTimer<double> timer(t);
             if (!_isGradientDescentRunning)
             {
@@ -168,39 +197,37 @@ void TsneComputationQtWrapper::embed()
             _GPGPU_tSNE.doAnIteration();
 
             if (_currentIteration > 0 && _currentIteration % 10 == 0)
-            {
-                copyFloatOutput();
-                emit newEmbedding();
-                emitEmbeddingUpdate(_currentIteration, _iterations);
-            }
+                updateEmbedding();
 
             if (t > 1000)
                 spdlog::info("Time: {}", t);
 
             elapsed += t;
 
+            _tasks->getComputeGradientDescentTask().setSubtaskFinished(_currentIteration);
         }
 
         _offscreenBuffer->releaseContext();
 
-        copyFloatOutput();
-        emit newEmbedding();
+        updateEmbedding();
 
         _isGradientDescentRunning = false;
         _isTsneRunning = false;
 
+        _tasks->getComputeGradientDescentTask().setFinished();
     }
-
-    emit finishedEmbedding();
 
     spdlog::info("--------------------------------------------------------------------------------");
     spdlog::info("A-tSNE: Finished embedding of tSNE Analysis in: {} seconds", elapsed / 1000);
     spdlog::info("================================================================================");
+
+    emit finishedEmbedding();
 }
 
 void TsneComputationQtWrapper::compute() {
     assert(_offscreenBuffer->thread() == this->thread());   // ensure that this object and the buffer work in the same thread
 
+    createTasks();
     initTSNE();
     computeGradientDescent();
 }
@@ -263,3 +290,7 @@ void TsneComputationQtWrapper::markForDeletion()
     stopGradientDescent();
 }
 
+void TsneComputationQtWrapper::createTasks()
+{
+    _tasks = new TsneWorkerTasks(this, _parentTask);
+}

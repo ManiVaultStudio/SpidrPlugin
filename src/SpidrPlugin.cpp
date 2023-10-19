@@ -33,9 +33,13 @@ SpidrPlugin::SpidrPlugin(const PluginFactory* factory) :
     AnalysisPlugin(factory),
     _spidrSettingsAction(std::make_unique<SpidrSettingsAction>(this)),
     _spidrAnalysisWrapper(std::make_unique<SpidrAnalysisQtWrapper>()),
-    _tnseWrapper(std::make_unique<TsneComputationQtWrapper>())
+    _tnseWrapper(std::make_unique<TsneComputationQtWrapper>()),
+    _computationPreparationTask(this, "Preparing Spidr computation"),
+    _workerThreadSpidr(nullptr), _workerThreadtSNE(nullptr)
 {
     setObjectName("Spidr");
+
+    _computationPreparationTask.setDescription("All operations prior to Spidr computation");
 }
 
 SpidrPlugin::~SpidrPlugin(void)
@@ -55,6 +59,9 @@ void SpidrPlugin::init()
 
     // Automaticallt select the output data in the GUI data hierarchy
     getOutputDataset()->getDataHierarchyItem().select();
+
+    // Setup ManiVault progress reporting
+    _computationPreparationTask.setParentTask(&outputDataset->getTask());
 
     // Set up output data
     std::vector<float> initialData;
@@ -84,47 +91,17 @@ void SpidrPlugin::init()
         computationAction.getStopComputationAction().setEnabled(isRunning);
     };
 
-    auto& dataset = outputDataset->getTask();
-
-    // Update task description in GUI
-    connect(_spidrAnalysisWrapper.get(), &SpidrAnalysisQtWrapper::progressSection, this, [this, &dataset](const QString& section) {
-        if (dataset.getStatus() == Task::Status::Aborted)
-            return;
-
-        dataset.setProgressDescription(section);
-    });
-
-    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::progressPercentage, this, [this, &dataset](const float& percentage) {
-        if (dataset.getStatus() == Task::Status::Aborted)
-            return;
-
-        dataset.setProgress(percentage);
-    });
-
-    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::progressSection, this, [this, &dataset](const QString& section) {
-        if (dataset.getStatus() == Task::Status::Aborted)
-            return;
-
-        dataset.setProgressDescription(section);
-    });
-
-    connect(_spidrAnalysisWrapper.get(), &SpidrAnalysisQtWrapper::progressSection, this, [this, &dataset](const QString& section) {
-        if (dataset.getStatus() == Task::Status::Aborted)
-            return;
-
-        dataset.setProgressDescription(section);
-    });
-
     // Embedding finished
-    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::finishedEmbedding, this, [this, &computationAction, &dataset]() {
+    connect(_tnseWrapper.get(), &TsneComputationQtWrapper::finishedEmbedding, this, [this, &computationAction]() {
         onFinishedEmbedding();
-
-        dataset.setFinished();
 
         computationAction.getRunningAction().setChecked(false);
 
         _spidrSettingsAction->getGeneralSpidrSettingsAction().setReadOnly(false);
         _spidrSettingsAction->getAdvancedTsneSettingsAction().setReadOnly(false);
+
+        _computationPreparationTask.setFinished();
+        getOutputDataset()->getTask().setFinished();
     });
 
     // start computation
@@ -136,9 +113,7 @@ void SpidrPlugin::init()
         });
 
     // abort t-SNE
-    connect(&computationAction.getStopComputationAction(), &TriggerAction::triggered, this, [this, &dataset]() {
-        dataset.setProgressDescription("Aborting TSNE");
-
+    connect(&computationAction.getStopComputationAction(), &TriggerAction::triggered, this, [this]() {
         qApp->processEvents();
 
         stopComputation();
@@ -177,16 +152,24 @@ void SpidrPlugin::init()
         _spidrSettingsAction->getDimensionSelectionAction().getPickerAction().setPointsDataset(inputDataset);
         });
 
-    dataset.setName("Spidr");
+
+    // Update task description in GUI
+    auto& datasetTask = getOutputDataset()->getTask();
+    datasetTask.setName("Spidr Computation");
+    datasetTask.setConfigurationFlag(Task::ConfigurationFlag::OverrideAggregateStatus);
+
+    _tnseWrapper->setTask(&datasetTask);
+    _spidrAnalysisWrapper->setTask(&datasetTask);
 }
 
 void SpidrPlugin::startComputation()
 {
-    auto& dataset = getOutputDataset()->getTask();
+    getOutputDataset()->getTask().setRunning();
 
-    dataset.setRunning();
-    dataset.setProgress(0.0f);
-    dataset.setDescription("Preparing data");
+    _computationPreparationTask.setEnabled(true);
+    _computationPreparationTask.setRunning();
+    _computationPreparationTask.setProgress(0.0f);
+    _computationPreparationTask.setDescription("Preparing data");
 
     // _spidrSettingsAction->getGeneralSpidrSettingsAction().getNumberOfComputatedIterationsAction().reset(); // deprecated
 

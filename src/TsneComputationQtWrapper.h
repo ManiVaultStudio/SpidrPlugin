@@ -6,6 +6,8 @@
 #endif
 #include "OffscreenBuffer.h"
 
+#include <Task.h>
+
 #include "hdi/dimensionality_reduction/hd_joint_probability_generator.h"
 #include "hdi/dimensionality_reduction/gradient_descent_tsne_texture.h"
 
@@ -17,6 +19,24 @@
 
 class SpidrParameters;
 class OffscreenBuffer;
+
+class TsneWorkerTasks : public QObject
+{
+public:
+    TsneWorkerTasks(QObject* parent, mv::Task* parentTask);
+
+    mv::Task& getInitializeOffScreenBufferTask() { return _initializeOffScreenBufferTask; };
+    mv::Task& getInitializeTsneTask() { return _initializeTsneTask; };
+    mv::Task& getInitializeGradientDescentTask() { return _initializeGradientDescentTask; };
+    mv::Task& getComputeGradientDescentTask() { return _computeGradientDescentTask; };
+
+private:
+    mv::Task    _initializeOffScreenBufferTask;
+    mv::Task    _initializeGradientDescentTask;
+    mv::Task    _initializeTsneTask;
+    mv::Task    _computeGradientDescentTask;
+};
+
 
 class TsneComputationQtWrapper : public QObject
 {
@@ -74,6 +94,9 @@ public:
 
     std::vector<float>& outputRef();
 
+    void setTask(mv::Task* parentTask) { _parentTask = parentTask; }
+    void createTasks();
+
     inline bool isTsneRunning() { return _isTsneRunning; }
     inline bool isGradientDescentRunning() { return _isGradientDescentRunning; }
     inline bool isMarkedForDeletion() { return _isMarkedForDeletion; }
@@ -129,4 +152,8 @@ private:
 
     /** Offscreen OpenGL buffer required to run the gradient descent */
     OffscreenBuffer* _offscreenBuffer; 
+
+private: // Task
+    mv::Task* _parentTask;
+    TsneWorkerTasks* _tasks;
 };

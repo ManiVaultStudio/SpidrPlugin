@@ -7,6 +7,22 @@
 #include <memory>
 #include <vector>
 
+#include <Task.h>
+
+class SpidrWorkerTasks : public QObject
+{
+public:
+    SpidrWorkerTasks(QObject* parent, mv::Task* parentTask);
+
+    mv::Task& getComputeFeaturesTask() { return _computeFeaturesTask; };
+    mv::Task& getComputekNNTask() { return _computekNN; };
+
+private:
+    mv::Task    _computeFeaturesTask;
+    mv::Task    _computekNN;
+};
+
+
 /*!
  *
  *
@@ -58,6 +74,8 @@ public:
     /* Add bg points to emb */
     void addBackgroundToEmbedding(std::vector<float>& emb, std::vector<float>& emb_wo_bg);
 
+    void setTask(mv::Task* parentTask) { _parentTask = parentTask; }
+    void createTasks();
 
 public slots:
 
@@ -106,6 +124,10 @@ private:
     std::vector<float> _emd_with_backgound;
     std::vector<int> _knnIds;
     std::vector<float> _knnDists;
+
+private: // Task
+    mv::Task* _parentTask;
+    SpidrWorkerTasks* _tasks;
 
 };
 

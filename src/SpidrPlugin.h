@@ -3,6 +3,8 @@
 #include <actions/WidgetAction.h>
 #include <AnalysisPlugin.h>
 
+#include <ForegroundTask.h>
+
 #include <memory>
 
 class SpidrSettingsAction;
@@ -45,13 +47,15 @@ signals:
 
 private:
 
-    std::unique_ptr<SpidrAnalysisQtWrapper>      _spidrAnalysisWrapper;         /** Spidr feature and knn computation wrapper */
-    std::unique_ptr<TsneComputationQtWrapper>    _tnseWrapper;                  /** t-sne computation wrapper */
+    std::unique_ptr<SpidrAnalysisQtWrapper>     _spidrAnalysisWrapper;          /** Spidr feature and knn computation wrapper */
+    std::unique_ptr<TsneComputationQtWrapper>   _tnseWrapper;                   /** t-sne computation wrapper */
 
-    std::unique_ptr<SpidrSettingsAction>         _spidrSettingsAction;          /** Spidr settings action */
+    std::unique_ptr<SpidrSettingsAction>        _spidrSettingsAction;           /** Spidr settings action */
 
-    QThread* _workerThreadSpidr;        /** worker thread for spidr feature amd knn computation */
-    QThread* _workerThreadtSNE;         /** worker thread for t-SNE layout computation */
+    QThread*                                    _workerThreadSpidr;             /** worker thread for spidr feature amd knn computation */
+    QThread*                                    _workerThreadtSNE;              /** worker thread for t-SNE layout computation */
+
+    mv::ForegroundTask                          _computationPreparationTask;    /** Task for reporting computation preparation progress */
 };
 
 // =============================================================================
