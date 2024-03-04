@@ -54,7 +54,7 @@ void SpidrPlugin::init()
     auto inputDataset = static_cast<mv::Dataset<Points>>(imagesDataset->getParent());
     
     // set the output data as derived from the parent data set (since the type differs from the input data set)
-    setOutputDataset(_core->createDerivedDataset("sp-tsne_embedding", inputDataset, inputDataset));
+    setOutputDataset(mv::data().createDerivedDataset("sp-tsne_embedding", inputDataset, inputDataset));
     auto outputDataset = getOutputDataset<Points>();
 
     // Automaticallt select the output data in the GUI data hierarchy
@@ -374,7 +374,7 @@ PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const mv::Datas
     if (PluginFactory::areAllDatasetsOfTheSameType(datasets, ImageType)) {
         if (datasets.count() >= 1) {
             auto pluginTriggerAction = new PluginTriggerAction(const_cast<SpidrPluginFactory*>(this), this, "Spidr analysis", "Perform spatially informed t-SNE analysis", getIcon(), [this, getPluginInstance, datasets](PluginTriggerAction& pluginTriggerAction) -> void {
-                for (auto dataset : datasets)
+                for (const auto& dataset : datasets)
                     getPluginInstance(dataset);
             });
 
@@ -406,7 +406,7 @@ QIcon SpidrPluginFactory::getIcon(const QColor& color /*= Qt::black*/) const
     painter.setRenderHint(QPainter::Antialiasing);
 
     // Get the text color from the application
-    const auto textColor = QApplication::palette().text().color();
+    const auto& textColor = QApplication::palette().text().color();
 
     // Configure painter
     painter.setPen(QPen(textColor, 1, Qt::SolidLine, Qt::SquareCap, Qt::SvgMiterJoin));
