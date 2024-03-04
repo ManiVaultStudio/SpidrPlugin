@@ -19,11 +19,10 @@ BackgroundSelectionAction::BackgroundSelectionAction(QObject* parent) :
 
     auto setDatasets = [this]() ->void {
         // Get unique identifier and gui names from all point data sets in the core
-        auto dataSets = Application::core()->requestAllDataSets(QVector<mv::DataType> {PointType});
+        auto dataSets = mv::data().getAllDatasets( {PointType});
 
         // Assign found dataset(s)
         _datasetPickerAction.setDatasets(dataSets);
-
     };
 
     setDatasets();
