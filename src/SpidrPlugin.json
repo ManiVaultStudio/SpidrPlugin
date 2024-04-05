@@ -1,5 +1,5 @@
 {
     "name" : "Spidr",
-    "version": "1",
+    "version": "1.2",
     "dependencies" : ["Points", "Images"]
 }
