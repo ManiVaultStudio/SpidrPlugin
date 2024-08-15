@@ -98,7 +98,6 @@ class SpidrPluginConan(ConanFile):
             packages.append('libxrandr-dev')
             packages.append('libxinerama-dev')
             installer.install_packages(packages)
-            self.run("sudo apt update && sudo apt install -y libtbb2-dev")
 
 
     def config_options(self):
@@ -138,6 +137,10 @@ class SpidrPluginConan(ConanFile):
         # Give the installation directory to CMake
         tc.variables["MV_INSTALL_DIR"] = self.install_dir
         
+        # Find ManiVault with find_package
+        self.manivault_dir = self.install_dir + '/cmake/mv/'
+        tc.variables["ManiVault_DIR"] = self.manivault_dir
+
         tc.generate()
         
     def _configure_cmake(self):
