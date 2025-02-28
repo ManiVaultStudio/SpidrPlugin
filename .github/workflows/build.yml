@@ -12,7 +12,6 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  MACENABLED: ${{ inputs.forceMacBuild }}
 
 # for matrix check https://docs.github.com/en/actions/reference/specifications-for-github-hosted-runners
 jobs:
@@ -24,7 +23,9 @@ jobs:
     - name: Get matrix from file
       id: matrix_setup
       uses: ManiVaultStudio/github-actions/matrix_setup@main
-      
+      with:
+        matrix_ids : 'windows_2022 linux_gcc13 macos_code14'
+
   cross-platform-build:
     name: Cross platform build
     needs: prepare_matrix
