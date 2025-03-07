@@ -5,6 +5,8 @@
 #include "PointData/InfoAction.h"
 
 #include "actions/PluginTriggerAction.h"
+#include "util/Icon.h"
+#include "util/StyledIcon.h"
 
 #include "SpidrSettingsAction.h"
 #include "SpidrAnalysisQtWrapper.h"
@@ -358,6 +360,11 @@ void SpidrPlugin::stopComputation() {
 // Factory
 // =============================================================================
 
+SpidrPluginFactory::SpidrPluginFactory()
+{
+    setIcon(mv::util::StyledIcon(mv::gui::createPluginIcon("HSNE")));
+}
+
 AnalysisPlugin* SpidrPluginFactory::produce()
 {
     return new SpidrPlugin(this);
@@ -373,7 +380,7 @@ PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const mv::Datas
 
     if (PluginFactory::areAllDatasetsOfTheSameType(datasets, ImageType)) {
         if (datasets.count() >= 1) {
-            auto pluginTriggerAction = new PluginTriggerAction(const_cast<SpidrPluginFactory*>(this), this, "Spidr analysis", "Perform spatially informed t-SNE analysis", getIcon(), [this, getPluginInstance, datasets](PluginTriggerAction& pluginTriggerAction) -> void {
+            auto pluginTriggerAction = new PluginTriggerAction(const_cast<SpidrPluginFactory*>(this), this, "Spidr analysis", "Perform spatially informed t-SNE analysis", icon(), [this, getPluginInstance, datasets](PluginTriggerAction& pluginTriggerAction) -> void {
                 for (const auto& dataset : datasets)
                     getPluginInstance(dataset);
             });
@@ -383,42 +390,4 @@ PluginTriggerActions SpidrPluginFactory::getPluginTriggerActions(const mv::Datas
     }
 
     return pluginTriggerActions;
-}
-
-
-QIcon SpidrPluginFactory::getIcon(const QColor& color /*= Qt::black*/) const
-{
-    const auto margin = 3;
-    const auto pixmapSize = QSize(100, 100);
-    const auto pixmapRect = QRect(QPoint(), pixmapSize).marginsRemoved(QMargins(margin, margin, margin, margin));
-    const auto halfSize = pixmapRect.size() / 2;
-
-    // Create pixmap
-    QPixmap pixmap(pixmapSize);
-
-    // Fill with a transparent background
-    pixmap.fill(Qt::transparent);
-
-    // Create a painter to draw in the pixmap
-    QPainter painter(&pixmap);
-
-    // Enable anti-aliasing
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    // Get the text color from the application
-    const auto& textColor = QApplication::palette().text().color();
-
-    // Configure painter
-    painter.setPen(QPen(textColor, 1, Qt::SolidLine, Qt::SquareCap, Qt::SvgMiterJoin));
-    painter.setFont(QFont("Arial", 38, 250));
-
-    const auto textOption = QTextOption(Qt::AlignCenter);
-
-    // Do the painting
-    painter.drawText(QRect(pixmapRect.topLeft(), halfSize), "S", textOption);
-    painter.drawText(QRect(QPoint(halfSize.width(), pixmapRect.top()), halfSize), "S", textOption);
-    painter.drawText(QRect(QPoint(pixmapRect.left(), halfSize.height()), halfSize), "N", textOption);
-    painter.drawText(QRect(QPoint(halfSize.width(), halfSize.height()), halfSize), "E", textOption);
-
-    return QIcon(pixmap);
 }

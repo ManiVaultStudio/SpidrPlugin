@@ -70,11 +70,8 @@ class SpidrPluginFactory : public AnalysisPluginFactory
                           FILE  "SpidrPlugin.json")
 
 public:
-    SpidrPluginFactory(void) {}
+    SpidrPluginFactory(void);
     ~SpidrPluginFactory(void) override {}
-
-    /** Returns the plugin icon */
-    QIcon getIcon(const QColor& color = Qt::black) const override;
 
     AnalysisPlugin* produce() override;
 
