@@ -128,15 +128,17 @@ endif()
 # Target installation
 # -----------------------------------------------------------------------------
 install(TARGETS ${SPIDRPLUGIN}
-    RUNTIME DESTINATION Plugins COMPONENT PLUGINS # Windows .dll
-    LIBRARY DESTINATION Plugins COMPONENT PLUGINS # Linux/Mac .so
+    RUNTIME DESTINATION Plugins COMPONENT SPIDR_PLUGIN # Windows .dll
+    LIBRARY DESTINATION Plugins COMPONENT SPIDR_PLUGIN # Linux/Mac .so
 )
 
 add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
-	COMMAND "${CMAKE_COMMAND}"
-	--install ${CMAKE_CURRENT_BINARY_DIR}
-	--config $<CONFIGURATION>
-	--prefix ${ManiVault_INSTALL_DIR}/$<CONFIGURATION>
+    COMMAND "${CMAKE_COMMAND}"
+    --install ${CMAKE_CURRENT_BINARY_DIR}
+    --component SPIDR_PLUGIN
+    --config $<CONFIGURATION>
+    --prefix ${ManiVault_INSTALL_DIR}/$<CONFIGURATION>
+    --verbose
 )
 
 # -----------------------------------------------------------------------------
