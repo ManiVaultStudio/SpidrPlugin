@@ -90,15 +90,7 @@ add_library(${SPIDRPLUGIN} SHARED ${SOURCES})
 target_compile_features(${SPIDRPLUGIN} PRIVATE cxx_std_20)
 
 # Hardware accelations: AVX
-check_and_link_AVX(${SPIDRPLUGIN} ${USE_AVX})
-
-if(MSVC)
-    message(STATUS "Prevent compilation error on MSVC: Use AVX instead of AVX2")
-    get_target_property(SPIDRPLUGIN_COMPILE_OPTIONS ${SPIDRPLUGIN} COMPILE_OPTIONS)
-    list(REMOVE_ITEM SPIDRPLUGIN_COMPILE_OPTIONS "/arch:AVX2")
-    list(APPEND SPIDRPLUGIN_COMPILE_OPTIONS "/arch:AVX")
-    set_target_properties(${SPIDRPLUGIN} PROPERTIES COMPILE_OPTIONS "${SPIDRPLUGIN_COMPILE_OPTIONS}")
-endif()
+mv_check_and_set_AVX(${SPIDRPLUGIN} ${USE_AVX})
 
 # -----------------------------------------------------------------------------
 # Target include directories
@@ -139,8 +131,6 @@ install(TARGETS ${SPIDRPLUGIN}
     RUNTIME DESTINATION Plugins COMPONENT PLUGINS # Windows .dll
     LIBRARY DESTINATION Plugins COMPONENT PLUGINS # Linux/Mac .so
 )
-
-install(FILES $<TARGET_FILE:glfw> DESTINATION .)
 
 add_custom_command(TARGET ${SPIDRPLUGIN} POST_BUILD
 	COMMAND "${CMAKE_COMMAND}"

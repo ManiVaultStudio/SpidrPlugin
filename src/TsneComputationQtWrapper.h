@@ -115,8 +115,9 @@ private:
 
 private:
     // TSNE structures
-    hdi::dr::HDJointProbabilityGenerator<float>::sparse_scalar_matrix_type _probabilityDistribution;
-    hdi::dr::GradientDescentTSNETexture _GPGPU_tSNE;
+    using HsneMatrix = hdi::dr::HDJointProbabilityGenerator<float>::sparse_scalar_matrix_type;
+    HsneMatrix _probabilityDistribution;
+    hdi::dr::GradientDescentTSNETexture<HsneMatrix> _GPGPU_tSNE;
     hdi::data::Embedding<float> _embedding;
 
     // Data

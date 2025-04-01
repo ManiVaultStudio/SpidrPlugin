@@ -103,8 +103,8 @@ void TsneComputationQtWrapper::initTSNE()
         hdi::dr::HDJointProbabilityGenerator<float>::Parameters probGenParams;
         probGenParams._perplexity = _perplexity;
         probGenParams._perplexity_multiplier = _perplexity_multiplier;
-        probGenParams._num_trees = _numTrees;
-        probGenParams._num_checks = _numChecks;
+        probGenParams._aknn_annoy_num_trees = _numTrees;
+        //probGenParams._num_checks = _numChecks;       // not used anyways
 
         spdlog::info("tSNE initialized.");
 
