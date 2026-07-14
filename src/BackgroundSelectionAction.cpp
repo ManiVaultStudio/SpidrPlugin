@@ -12,10 +12,10 @@ BackgroundSelectionAction::BackgroundSelectionAction(QObject* parent) :
 {
     setText("Background dataset");
 
-    addAction(&_datasetPickerAction);
-    addAction(&_reloadDataSets);
-    addAction(&_enableDisable);
-    addAction(&_idsInDataAction);
+    GroupAction::addAction(&_datasetPickerAction);
+    GroupAction::addAction(&_reloadDataSets);
+    GroupAction::addAction(&_enableDisable);
+    GroupAction::addAction(&_idsInDataAction);
 
     auto setDatasets = [this]() ->void {
         // Get unique identifier and gui names from all point data sets in the core
@@ -27,11 +27,11 @@ BackgroundSelectionAction::BackgroundSelectionAction(QObject* parent) :
 
     setDatasets();
 
-    connect(&_reloadDataSets, &TriggerAction::triggered, this, [this, setDatasets]() {
+    connect(&_reloadDataSets, &mv::gui::TriggerAction::triggered, this, [this, setDatasets]() {
         setDatasets();
         });
 
-    connect(&_enableDisable, &TriggerAction::triggered, this, [this]() {
+    connect(&_enableDisable, &mv::gui::TriggerAction::triggered, this, [this]() {
         _datasetPickerAction.setEnabled(!_datasetPickerAction.isEnabled());
         });
 

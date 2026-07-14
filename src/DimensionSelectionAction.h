@@ -11,7 +11,7 @@
  *
  * @author Thomas Kroes
  */
-class DimensionSelectionAction : public GroupAction
+class DimensionSelectionAction : public mv::gui::GroupAction
 {
 public:
 
