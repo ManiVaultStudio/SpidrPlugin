@@ -12,7 +12,7 @@
  *
  * @author Alexander Vieth
  */
-class BackgroundSelectionAction : public GroupAction
+class BackgroundSelectionAction : public mv::gui::GroupAction
 {
 public:
 
@@ -35,9 +35,9 @@ public: // Action getters
     bool getIDsInData() { return _idsInDataAction.isChecked();  }
 
 protected:
-    DatasetPickerAction     _datasetPickerAction;    /** Dataset picker action */
-    TriggerAction           _reloadDataSets;         /** Start computation action */
-    TriggerAction           _enableDisable;          /** Start computation action */
-    ToggleAction            _idsInDataAction;        /** Tick if data contains IDs for background (useful for loading backgorund IDs), otherwise assume the data is a subset and use the global data IDs */
+    mv::gui::DatasetPickerAction     _datasetPickerAction;    /** Dataset picker action */
+    mv::gui::TriggerAction           _reloadDataSets;         /** Start computation action */
+    mv::gui::TriggerAction           _enableDisable;          /** Start computation action */
+    mv::gui::ToggleAction            _idsInDataAction;        /** Tick if data contains IDs for background (useful for loading backgorund IDs), otherwise assume the data is a subset and use the global data IDs */
 
 };
